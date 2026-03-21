@@ -223,7 +223,7 @@ function cmdAudit() {
         severity: 'low',
         image: img.path,
         sizeKB: img.sizeKB,
-        message: `${(img.sizeKB / 1024).toFixed(1)}MB — optimize to <${config.maxFileSizeKB / 1024}MB`,
+        message: `${(img.sizeKB / 1024).toFixed(1)}MB — optimize to <${Math.round(config.maxFileSizeKB / 1024)}MB`,
       })
     }
   }
@@ -279,7 +279,7 @@ function cmdReport() {
 
   const oversized = registry.filter(e => e.sizeKB > (config.maxFileSizeKB || 2000))
   if (oversized.length) {
-    console.log(`\nOversized (>${(config.maxFileSizeKB || 2000) / 1024}MB):`)
+    console.log(`\nOversized (>${Math.round((config.maxFileSizeKB || 2000) / 1024)}MB):`)
     oversized.forEach(e => console.log(`  ${e.path} (${(e.sizeKB / 1024).toFixed(1)}MB)`))
   }
 }
