@@ -1,0 +1,147 @@
+{
+  "name": "VIS — Visual Audit (Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "visual-audit",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "vis-webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "vis-audit-webhook"
+    },
+    {
+      "parameters": {
+        "command": "cd /mnt/c/Users/Frank/FrankX && node scripts/audit-visual-health.mjs --json"
+      },
+      "id": "vis-webhook-run-audit",
+      "name": "Run Visual Health Audit",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse audit JSON and format Slack message\nconst rawOutput = $input.first().json.stdout;\nconst audit = JSON.parse(rawOutput);\nconst { summary } = audit;\n\n// Calculate health score (mirrors audit-visual-health.mjs logic)\nconst score = Math.max(0, 100 - (summary.high * 15) - (summary.medium * 5) - (summary.low * 2));\nlet status;\nif (score >= 90) status = 'EXCELLENT';\nelse if (score >= 70) status = 'GOOD';\nelse if (score >= 50) status = 'NEEDS ATTENTION';\nelse status = 'CRITICAL';\n\n// Build top actions\nconst actions = [];\nconst placeholders = audit.issues.filter(i => i.type === 'placeholder');\nconst oversized = audit.issues.filter(i => i.type === 'oversized');\nconst duplicates = audit.issues.filter(i => i.type === 'duplicate-hero');\n\nif (placeholders.length > 0) {\n  actions.push(`Replace ${placeholders.length} placeholder(s): ${placeholders.slice(0, 3).map(i => i.file).join(', ')}`);\n}\nif (oversized.length > 0) {\n  const savingsMB = (oversized.reduce((sum, i) => sum + (i.sizeKB - 2000), 0) / 1024).toFixed(0);\n  actions.push(`Optimize ${oversized.length} oversized images (~${savingsMB}MB savings potential)`);\n}\nif (duplicates.length > 0) {\n  actions.push(`Fix ${duplicates.length} duplicate hero image(s) in blog posts`);\n}\nif (actions.length === 0) {\n  actions.push('No urgent actions required');\n}\n\n// Score emoji\nlet scoreEmoji;\nif (score >= 90) scoreEmoji = ':white_check_mark:';\nelse if (score >= 70) scoreEmoji = ':large_blue_circle:';\nelse if (score >= 50) scoreEmoji = ':warning:';\nelse scoreEmoji = ':red_circle:';\n\nconst slackMessage = `:mag: *On-Demand Visual Health Report*\\n\\n${scoreEmoji} *Score: ${score}/100* (${status})\\n\\n:bar_chart: *Issues:*\\n\\u2022 :red_circle: HIGH: ${summary.high} (placeholders in production)\\n\\u2022 :large_yellow_circle: MEDIUM: ${summary.medium} (duplicate heroes)\\n\\u2022 :large_blue_circle: LOW: ${summary.low} (oversized images)\\n\\u2022 :information_source: INFO: ${summary.info} (orphaned images)\\n\\n:clipboard: *Top Actions:*\\n${actions.map((a, i) => `${i + 1}. ${a}`).join('\\n')}\\n\\n_Triggered manually at ${audit.timestamp}_`;\n\n// Determine Slack channel from webhook body or default\nconst channel = $('Webhook').first().json.body?.channel || '#visual-health';\n\nreturn [{ json: { text: slackMessage, channel, score, status, summary, audit, timestamp: audit.timestamp } }];"
+      },
+      "id": "vis-webhook-format",
+      "name": "Format Slack Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "channel": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $json.channel }}"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      },
+      "id": "vis-webhook-slack",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [960, 300],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_SLACK_CREDENTIAL_ID",
+          "name": "Slack OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, score: $json.score, status: $json.status, summary: $json.summary, timestamp: $json.timestamp }) }}"
+      },
+      "id": "vis-webhook-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Run Visual Health Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Visual Health Audit": {
+      "main": [
+        [
+          {
+            "node": "Format Slack Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Slack Message": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post to Slack": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "versionId": "vis-webhook-audit-v1",
+  "tags": [
+    {
+      "name": "VIS",
+      "createdAt": "2026-03-21T00:00:00.000Z",
+      "updatedAt": "2026-03-21T00:00:00.000Z"
+    },
+    {
+      "name": "visual-intelligence",
+      "createdAt": "2026-03-21T00:00:00.000Z",
+      "updatedAt": "2026-03-21T00:00:00.000Z"
+    }
+  ],
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  }
+}

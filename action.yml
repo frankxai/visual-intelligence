@@ -1,0 +1,29 @@
+name: 'VIS - Visual Intelligence Audit'
+description: 'Run visual health audit on your images. Detect placeholders, duplicates, orphans, and oversized files.'
+author: 'frankxai'
+branding:
+  icon: 'image'
+  color: 'green'
+inputs:
+  images-dir:
+    description: 'Path to images directory'
+    default: 'public/images'
+  max-file-size-kb:
+    description: 'Maximum image file size in KB'
+    default: '2000'
+  min-score:
+    description: 'Minimum health score to pass (0-100)'
+    default: '50'
+  comment-on-pr:
+    description: 'Post results as PR comment'
+    default: 'true'
+outputs:
+  score:
+    description: 'Visual health score (0-100)'
+  issues-count:
+    description: 'Total number of issues found'
+  high-count:
+    description: 'Number of HIGH severity issues'
+runs:
+  using: 'node20'
+  main: 'dist/action.mjs'

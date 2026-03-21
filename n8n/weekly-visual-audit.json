@@ -1,0 +1,128 @@
+{
+  "name": "VIS — Weekly Visual Health Audit",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9,
+              "triggerAtDay": 1
+            }
+          ]
+        }
+      },
+      "id": "vis-schedule-trigger",
+      "name": "Every Monday 9am UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /mnt/c/Users/Frank/FrankX && node scripts/audit-visual-health.mjs --json"
+      },
+      "id": "vis-run-audit",
+      "name": "Run Visual Health Audit",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse audit JSON and format Slack message\nconst rawOutput = $input.first().json.stdout;\nconst audit = JSON.parse(rawOutput);\nconst { summary } = audit;\n\n// Calculate health score (mirrors audit-visual-health.mjs logic)\nconst score = Math.max(0, 100 - (summary.high * 15) - (summary.medium * 5) - (summary.low * 2));\nlet status;\nif (score >= 90) status = 'EXCELLENT';\nelse if (score >= 70) status = 'GOOD';\nelse if (score >= 50) status = 'NEEDS ATTENTION';\nelse status = 'CRITICAL';\n\n// Count categories from registry (approximate from issues)\nconst categories = new Set();\nlet totalSizeKB = 0;\nfor (const issue of audit.issues) {\n  if (issue.image) {\n    const parts = issue.image.split('/');\n    if (parts.length >= 3) categories.add(parts[2]);\n  }\n  if (issue.sizeKB) totalSizeKB += issue.sizeKB;\n}\n\nconst totalSizeMB = (totalSizeKB / 1024).toFixed(0);\n\n// Build top actions\nconst actions = [];\nconst placeholders = audit.issues.filter(i => i.type === 'placeholder');\nconst oversized = audit.issues.filter(i => i.type === 'oversized');\nconst duplicates = audit.issues.filter(i => i.type === 'duplicate-hero');\n\nif (placeholders.length > 0) {\n  actions.push(`Replace ${placeholders.length} placeholder(s): ${placeholders.slice(0, 3).map(i => i.file).join(', ')}`);\n}\nif (oversized.length > 0) {\n  const savingsMB = (oversized.reduce((sum, i) => sum + (i.sizeKB - 2000), 0) / 1024).toFixed(0);\n  actions.push(`Optimize ${oversized.length} oversized images (~${savingsMB}MB savings potential)`);\n}\nif (duplicates.length > 0) {\n  actions.push(`Fix ${duplicates.length} duplicate hero image(s) in blog posts`);\n}\nif (actions.length === 0) {\n  actions.push('No urgent actions required');\n}\n\n// Score emoji\nlet scoreEmoji;\nif (score >= 90) scoreEmoji = ':white_check_mark:';\nelse if (score >= 70) scoreEmoji = ':large_blue_circle:';\nelse if (score >= 50) scoreEmoji = ':warning:';\nelse scoreEmoji = ':red_circle:';\n\nconst slackMessage = `:mag: *Weekly Visual Health Report*\\n\\n${scoreEmoji} *Score: ${score}/100* (${status})\\n\\n:bar_chart: *Issues:*\\n\\u2022 :red_circle: HIGH: ${summary.high} (placeholders in production)\\n\\u2022 :large_yellow_circle: MEDIUM: ${summary.medium} (duplicate heroes)\\n\\u2022 :large_blue_circle: LOW: ${summary.low} (oversized images)\\n\\u2022 :information_source: INFO: ${summary.info} (orphaned images)\\n\\n:chart_with_upwards_trend: *Registry:* ${audit.issues.length > 0 ? summary.total : 0} total issues found\\n\\n:clipboard: *Top Actions:*\\n${actions.map((a, i) => `${i + 1}. ${a}`).join('\\n')}\\n\\n_Timestamp: ${audit.timestamp}_\\n_Run \\`vis report --html\\` for full details_`;\n\nreturn [{ json: { text: slackMessage, score, status, summary, timestamp: audit.timestamp } }];"
+      },
+      "id": "vis-format-slack",
+      "name": "Format Slack Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "channel": {
+          "__rl": true,
+          "mode": "name",
+          "value": "#visual-health"
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {
+          "unfurl_links": false,
+          "unfurl_media": false
+        }
+      },
+      "id": "vis-slack-post",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [960, 300],
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "REPLACE_WITH_SLACK_CREDENTIAL_ID",
+          "name": "Slack OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Monday 9am UTC": {
+      "main": [
+        [
+          {
+            "node": "Run Visual Health Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Visual Health Audit": {
+      "main": [
+        [
+          {
+            "node": "Format Slack Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Slack Message": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "versionId": "vis-weekly-audit-v1",
+  "tags": [
+    {
+      "name": "VIS",
+      "createdAt": "2026-03-21T00:00:00.000Z",
+      "updatedAt": "2026-03-21T00:00:00.000Z"
+    },
+    {
+      "name": "visual-intelligence",
+      "createdAt": "2026-03-21T00:00:00.000Z",
+      "updatedAt": "2026-03-21T00:00:00.000Z"
+    }
+  ],
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  }
+}

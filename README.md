@@ -1,189 +1,130 @@
-# VIS — Visual Intelligence System
+# VIS — Visual Intelligence Audit
 
-**Agentic visual asset management for creators who ship.**
+A GitHub Action that runs automated visual health checks on your image assets. Detects placeholders, duplicates, orphaned files, and oversized images — then posts a scored report as a PR comment.
 
-VIS scans, tags, audits, and manages every image across your sites — so you never lose track of assets, ship placeholder images, or duplicate heroes again.
+## What it checks
 
----
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Placeholders | HIGH | Detects generic placeholder images (`placeholder.png`, `default-hero.png`, etc.) |
+| Duplicate heroes | MEDIUM | Finds MDX blog posts where the frontmatter hero image is repeated in the body |
+| Oversized files | LOW | Flags images exceeding the configurable size threshold |
+| Orphaned images | INFO | Identifies images not referenced in any content or code file |
 
-## The Problem
+## Scoring
 
-Creators using AI image generation (Midjourney, DALL-E, Gemini, Suno covers) accumulate hundreds of images with no systematic management:
+The health score starts at 100 and deducts points per issue:
 
-- Images scatter across 30+ directories with no searchable index
-- Placeholder SVGs ship on flagship pages because nobody noticed
-- Blog posts show the same hero image twice (frontmatter + body)
-- 7-9MB raw AI outputs bloat your build
-- 80%+ of generated images go unused — orphaned assets nobody references
+- HIGH: -15 points each
+- MEDIUM: -5 points each
+- LOW: -2 points each
+- INFO: tracked but does not affect score
 
-**VIS fixes this with a 6-layer system:**
+| Score | Rating |
+|-------|--------|
+| 90-100 | EXCELLENT |
+| 70-89 | GOOD |
+| 50-69 | NEEDS ATTENTION |
+| 0-49 | CRITICAL |
 
-```
-Layer 1: Registry ──── Auto-tagged, searchable image index
-Layer 2: Auditor ───── Placeholder, duplicate, orphan, size detection
-Layer 3: Brand DNA ─── Canonical visual standards enforcement
-Layer 4: Sitemap Map ─ Every page → its images → coverage status
-Layer 5: Council ───── 3-perspective quality review before deploy
-Layer 6: CLI ────────── vis scan / vis audit / vis report
-```
+## Usage
 
-## Quick Start
+Add this workflow to your repo:
 
-```bash
-# Clone into your project
-git clone https://github.com/frankxai/visual-intelligence.git .vis
+```yaml
+# .github/workflows/visual-audit.yml
+name: Visual Health
+on: [pull_request]
 
-# Or copy the scripts directly
-cp .vis/bin/vis.mjs scripts/
-cp .vis/vis.config.json .
-cp .vis/templates/brand-visual-dna.json data/
-
-# Initialize
-node scripts/vis.mjs init
-
-# Scan all images
-node scripts/vis.mjs scan
-
-# Run health audit
-node scripts/vis.mjs audit
-
-# Full report
-node scripts/vis.mjs report
-```
-
-### As an ACOS Plugin
-
-If you use [ACOS](https://frankx.ai/acos) (Agentic Creator OS for Claude Code):
-
-```bash
-# Copy the skill
-cp -r .vis/.claude/skills/vis/ .claude/skills/vis/
-
-# Copy commands
-cp .vis/.claude/commands/vis-*.md .claude/commands/
-
-# Copy scripts
-cp .vis/scripts/*.mjs scripts/
-
-# The skill auto-activates on: "image", "visual", "audit", "registry"
-# Commands: /vis-scan, /vis-audit, /vis-report
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: frankxai/visual-intelligence@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          min-score: 50
 ```
 
-## Case Study: FrankX.ai
+## Inputs
 
-Built from real need. FrankX.ai had 408 images across 37 directories and 268 pages.
+| Input | Default | Description |
+|-------|---------|-------------|
+| `images-dir` | `public/images` | Path to your images directory (relative to repo root) |
+| `max-file-size-kb` | `2000` | Maximum allowed image file size in KB |
+| `min-score` | `50` | Minimum health score to pass (0-100). Action fails if score is below this. |
+| `comment-on-pr` | `true` | Post audit results as a PR comment |
 
-**Before VIS:**
-| Metric | Value |
-|--------|-------|
-| Health Score | 1/100 |
-| Placeholder images on flagship posts | 2 |
-| Blog posts with duplicate hero | 3 |
-| Orphaned images (unreferenced) | 333 (82%) |
-| Oversized images (>2MB) | 12 |
-| Searchable index | None |
+## Outputs
 
-**After VIS:**
-| Metric | Value |
-|--------|-------|
-| Health Score | 51/100 → improving |
-| Placeholders replaced | All but 1 (data file reference) |
-| Duplicate heroes fixed | All 3 |
-| Images indexed with tags | 413 |
-| Pages mapped to images | 268 |
-| Automated audit | One command |
+| Output | Description |
+|--------|-------------|
+| `score` | Visual health score (0-100) |
+| `issues-count` | Total number of issues found |
+| `high-count` | Number of HIGH severity issues |
 
-## Commands
+### Using outputs in subsequent steps
 
-| Command | Description |
-|---------|-------------|
-| `vis init` | Initialize VIS in your project |
-| `vis scan` | Rebuild image registry with auto-tags |
-| `vis scan --diff` | Only add new/changed images |
-| `vis audit` | Run health audit with score |
-| `vis audit --json` | JSON output for CI/CD pipelines |
-| `vis report` | Full visual intelligence report |
+```yaml
+- uses: frankxai/visual-intelligence@v1
+  id: vis
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    min-score: 0  # Don't fail, just report
 
-## Data Files
-
-VIS creates and maintains these JSON files (all git-friendly):
-
-| File | Purpose |
-|------|---------|
-| `data/visual-registry.json` | Every image tagged with mood, theme, suitability |
-| `data/brand-visual-dna.json` | Your brand's visual standards |
-| `data/sitemap-image-map.json` | Page-to-image coverage map |
-| `vis.config.json` | Configuration |
-
-## Health Score
-
-The audit produces a score from 0-100:
-
-- **90-100**: EXCELLENT — no action needed
-- **70-89**: GOOD — minor issues
-- **50-69**: NEEDS ATTENTION — several issues to fix
-- **0-49**: CRITICAL — immediate action required
-
-**Scoring:** HIGH issues (placeholders) cost 15 points each. MEDIUM (duplicates) cost 5. LOW (oversized) cost 2.
-
-## Configuration
-
-`vis.config.json`:
-
-```json
-{
-  "imagesDir": "public/images",
-  "registryPath": "data/visual-registry.json",
-  "maxFileSizeKB": 2000,
-  "placeholderImages": ["blog-hero-aurora.svg", "placeholder.png"],
-  "skipSuffixes": ["_thumb.jpeg"]
-}
+- run: echo "Visual health score is ${{ steps.vis.outputs.score }}"
 ```
 
-## Auto-Tags
+## Examples
 
-VIS auto-detects tags from filenames and directories:
+### Strict mode — fail under 80
 
-| Pattern | Tag |
-|---------|-----|
-| `music`, `suno`, `audio` | `music` |
-| `ai`, `agent`, `claude` | `ai` |
-| `hero` | `hero` |
-| `diagram`, `architecture` | `technical` |
-| `nature`, `forest`, `garden` | `nature` |
-| `brand`, `logo` | `brand` |
+```yaml
+- uses: frankxai/visual-intelligence@v1
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    min-score: 80
+```
 
-## Quality Council
+### Custom images directory
 
-VIS includes a 3-perspective review system (defined in `brand-visual-dna.json`):
+```yaml
+- uses: frankxai/visual-intelligence@v1
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    images-dir: assets/img
+    max-file-size-kb: 1000
+```
 
-1. **Brand Guardian** — Does this match your visual DNA?
-2. **Conversion Optimizer** — Does this drive user action?
-3. **Accessibility Auditor** — Is this inclusive and accessible?
+### Report only — no failure
 
-## Requirements
+```yaml
+- uses: frankxai/visual-intelligence@v1
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    min-score: 0
+    comment-on-pr: true
+```
 
-- Node.js 18+
-- Works with any web framework (Next.js, Astro, Remix, static sites)
-- Zero cloud dependencies
-- Optional: `sharp` for image optimization
+## How it works
 
-## Roadmap
+The action is fully self-contained — no dependencies to install. It:
 
-- [ ] AI-powered auto-tagging (color extraction via node-vibrant)
-- [ ] Perceptual hash duplicate detection (sharp-phash)
-- [ ] n8n workflow templates for automated weekly audits
-- [ ] Slack/Discord notifications for council review
-- [ ] Image optimization pipeline (WebP/AVIF conversion)
-- [ ] Multi-site registry sync
-- [ ] CI/CD integration (GitHub Actions)
+1. Walks your images directory and catalogs every image file (PNG, JPG, JPEG, WebP, GIF, SVG, AVIF)
+2. Scans content directories (`content/`, `src/`, `app/`, `pages/`, `components/`, `lib/`, `data/`) for image references
+3. Runs four audit checks against the catalog
+4. Calculates a weighted health score
+5. Posts a formatted PR comment with the results (if enabled)
+6. Exits with code 1 if the score is below the threshold
 
 ## License
 
-MIT — [Frank Riemer](https://frankx.ai)
-
-## Links
-
-- [Blog: How I Built VIS](https://frankx.ai/blog/visual-intelligence-system-ai-image-management)
-- [Research Hub](https://frankx.ai/research/visual-intelligence)
-- [ACOS](https://frankx.ai/acos) — The creator OS that includes VIS
+MIT
