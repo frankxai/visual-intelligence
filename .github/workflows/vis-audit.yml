@@ -1,0 +1,117 @@
+name: VIS Audit
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'public/images/**'
+      - 'content/**'
+      - 'data/visual-registry.json'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  VIS_MIN_SCORE: 50
+
+jobs:
+  visual-audit:
+    name: Visual Health Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+
+      - name: Checkout main branch (for delta comparison)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: __main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Load budget config
+        id: budgets
+        run: |
+          if [ -f vis.config.json ]; then
+            echo "minScore=$(jq -r '.budgets.minScore // 50' vis.config.json)" >> "$GITHUB_OUTPUT"
+            echo "maxTotalSizeMB=$(jq -r '.budgets.maxTotalSizeMB // 500' vis.config.json)" >> "$GITHUB_OUTPUT"
+            echo "maxPlaceholderCount=$(jq -r '.budgets.maxPlaceholderCount // 0' vis.config.json)" >> "$GITHUB_OUTPUT"
+            echo "maxOversizedCount=$(jq -r '.budgets.maxOversizedCount // 20' vis.config.json)" >> "$GITHUB_OUTPUT"
+            echo "minCoveragePercent=$(jq -r '.budgets.minCoveragePercent // 30' vis.config.json)" >> "$GITHUB_OUTPUT"
+          else
+            echo "minScore=50" >> "$GITHUB_OUTPUT"
+            echo "maxTotalSizeMB=500" >> "$GITHUB_OUTPUT"
+            echo "maxPlaceholderCount=0" >> "$GITHUB_OUTPUT"
+            echo "maxOversizedCount=20" >> "$GITHUB_OUTPUT"
+            echo "minCoveragePercent=30" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run audit on PR branch
+        run: |
+          node scripts/audit-visual-health.mjs --json > /tmp/audit-pr.json
+
+      - name: Run audit on main branch
+        run: |
+          cd __main
+          if [ -f scripts/audit-visual-health.mjs ] && [ -f data/visual-registry.json ]; then
+            node scripts/audit-visual-health.mjs --json > /tmp/audit-main.json 2>/dev/null || echo '{"summary":{"total":0,"high":0,"medium":0,"low":0,"info":0},"issues":[]}' > /tmp/audit-main.json
+          else
+            echo '{"summary":{"total":0,"high":0,"medium":0,"low":0,"info":0},"issues":[]}' > /tmp/audit-main.json
+          fi
+
+      - name: Generate PR comment
+        id: comment
+        env:
+          BUDGET_MIN_SCORE: ${{ steps.budgets.outputs.minScore }}
+          BUDGET_MAX_SIZE: ${{ steps.budgets.outputs.maxTotalSizeMB }}
+          BUDGET_MAX_PLACEHOLDER: ${{ steps.budgets.outputs.maxPlaceholderCount }}
+          BUDGET_MAX_OVERSIZED: ${{ steps.budgets.outputs.maxOversizedCount }}
+          BUDGET_MIN_COVERAGE: ${{ steps.budgets.outputs.minCoveragePercent }}
+        run: |
+          node scripts/ci-comment.mjs \
+            --pr-audit /tmp/audit-pr.json \
+            --main-audit /tmp/audit-main.json \
+            --min-score "$BUDGET_MIN_SCORE" \
+            --max-total-size-mb "$BUDGET_MAX_SIZE" \
+            --max-placeholder-count "$BUDGET_MAX_PLACEHOLDER" \
+            --max-oversized-count "$BUDGET_MAX_OVERSIZED" \
+            --min-coverage-percent "$BUDGET_MIN_COVERAGE" \
+            > /tmp/vis-comment.md
+
+          RESULT=$(tail -1 /tmp/vis-comment.md)
+          sed -i '$ d' /tmp/vis-comment.md
+          if [ "$RESULT" = "FAIL" ]; then
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Find existing VIS comment
+        uses: peter-evans/find-comment@v3
+        id: find_comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'Visual Health Report'
+
+      - name: Post or update PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: /tmp/vis-comment.md
+          edit-mode: replace
+
+      - name: Enforce score threshold
+        if: steps.comment.outputs.passed == 'false'
+        env:
+          MIN_SCORE: ${{ steps.budgets.outputs.minScore }}
+        run: |
+          echo "::error::Visual health score dropped below threshold ($MIN_SCORE). See PR comment for details."
+          exit 1

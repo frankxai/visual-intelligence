@@ -21,5 +21,12 @@
   "notifications": {
     "slack": null,
     "discord": null
+  },
+  "budgets": {
+    "minScore": 50,
+    "maxTotalSizeMB": 500,
+    "maxPlaceholderCount": 0,
+    "maxOversizedCount": 20,
+    "minCoveragePercent": 30
   }
 }
