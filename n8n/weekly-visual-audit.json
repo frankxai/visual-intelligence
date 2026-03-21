@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "command": "cd /mnt/c/Users/Frank/FrankX && node scripts/audit-visual-health.mjs --json"
+        "command": "cd $VIS_PROJECT_ROOT && node scripts/audit-visual-health.mjs --json"
       },
       "id": "vis-run-audit",
       "name": "Run Visual Health Audit",

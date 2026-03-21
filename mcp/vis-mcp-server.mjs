@@ -4,14 +4,15 @@
  * Zero-dependency stdio MCP server exposing visual registry tools to Claude Code.
  * Tools: vis_search, vis_audit, vis_report, vis_coverage, vis_suggest
  *
- * Install:  claude mcp add vis-mcp -- node /mnt/c/Users/Frank/visual-intelligence/mcp/vis-mcp-server.mjs
+ * Install:  claude mcp add vis-mcp -- node path/to/vis-mcp-server.mjs
+ * Set VIS_ROOT env var to your project root, or run from the project directory.
  */
 import { createInterface } from 'readline'
 import fs from 'fs'
 import path from 'path'
 import { execFileSync } from 'child_process'
 
-const ROOT = '/mnt/c/Users/Frank/FrankX'
+const ROOT = process.env.VIS_ROOT || process.cwd()
 const REGISTRY_PATH = path.join(ROOT, 'data/visual-registry.json')
 const SITEMAP_PATH = path.join(ROOT, 'data/sitemap-image-map.json')
 const CONTENT_DIR = path.join(ROOT, 'content/blog')
