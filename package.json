@@ -1,0 +1,59 @@
+{
+  "name": "visual-intelligence",
+  "version": "0.1.0",
+  "description": "Agentic visual asset management for AI-native creators. Auto-tag, audit, and manage images across your sites with AI-powered quality enforcement.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "vis": "bin/vis.mjs"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node --test src/**/*.test.mjs",
+    "lint": "eslint src/",
+    "scan": "node bin/vis.mjs scan",
+    "audit": "node bin/vis.mjs audit",
+    "report": "node bin/vis.mjs report"
+  },
+  "keywords": [
+    "visual-assets",
+    "image-management",
+    "dam",
+    "digital-asset-management",
+    "ai-images",
+    "image-audit",
+    "brand-consistency",
+    "visual-intelligence",
+    "creator-tools",
+    "agentic",
+    "next-js",
+    "vercel"
+  ],
+  "author": {
+    "name": "Frank Riemer",
+    "url": "https://frankx.ai"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/frankxai/visual-intelligence"
+  },
+  "homepage": "https://frankx.ai/products/visual-intelligence",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
+  "optionalDependencies": {
+    "sharp": "^0.33.0"
+  },
+  "files": [
+    "dist/",
+    "bin/",
+    "templates/"
+  ]
+}

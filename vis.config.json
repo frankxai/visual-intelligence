@@ -1,0 +1,25 @@
+{
+  "imagesDir": "public/images",
+  "registryPath": "data/visual-registry.json",
+  "brandDnaPath": "data/brand-visual-dna.json",
+  "sitemapMapPath": "data/sitemap-image-map.json",
+  "skipSuffixes": ["_thumb.jpeg", "_thumb.jpg", "_thumb.png"],
+  "imageExtensions": [".png", ".jpg", ".jpeg", ".webp"],
+  "maxFileSizeKB": 2000,
+  "placeholderImages": ["blog-hero-aurora.svg", "placeholder.png", "default-hero.png"],
+  "contentDirs": ["content", "app", "data"],
+  "council": {
+    "enabled": true,
+    "perspectives": ["brand-guardian", "conversion-optimizer", "accessibility-auditor"]
+  },
+  "optimization": {
+    "enabled": false,
+    "formats": ["webp"],
+    "sizes": [640, 1280, 1920],
+    "quality": 85
+  },
+  "notifications": {
+    "slack": null,
+    "discord": null
+  }
+}

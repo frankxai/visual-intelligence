@@ -1,0 +1,56 @@
+{
+  "$schema": "https://raw.githubusercontent.com/frankxai/visual-intelligence/main/schemas/brand-visual-dna.schema.json",
+  "version": "1.0.0",
+  "brand": "Your Brand Name",
+  "description": "Define your brand's visual DNA. VIS uses this to enforce consistency across all visual assets.",
+
+  "palette": {
+    "primary": {
+      "background": "#0a0a0b",
+      "surface": "rgba(255,255,255,0.03)"
+    },
+    "accents": {
+      "primary": { "hex": "#10B981", "usage": "Primary CTA, success states" },
+      "secondary": { "hex": "#7C3AED", "usage": "Premium, featured content" },
+      "tertiary": { "hex": "#06B6D4", "usage": "Links, technology" }
+    }
+  },
+
+  "imageStandards": {
+    "heroImages": {
+      "aspectRatio": "16:9",
+      "minWidth": 1600,
+      "maxFileSizeKB": 2000,
+      "theme": "dark",
+      "notes": "Must work with gradient overlay on bottom 40%"
+    },
+    "ogImages": {
+      "dimensions": "1200x630",
+      "notes": "Must be readable at 300px thumbnail size"
+    },
+    "cardThumbnails": {
+      "aspectRatio": "16:10",
+      "minWidth": 600
+    }
+  },
+
+  "qualityCouncil": {
+    "perspectives": [
+      {
+        "role": "Brand Guardian",
+        "question": "Does this match our visual DNA?",
+        "rejectIf": "Off-brand colors, wrong theme, generic stock feel"
+      },
+      {
+        "role": "Conversion Optimizer",
+        "question": "Does this drive the user toward action?",
+        "rejectIf": "Distracting, information-dense at small sizes, competing hierarchy"
+      },
+      {
+        "role": "Accessibility Auditor",
+        "question": "Is this accessible to all users?",
+        "rejectIf": "Low contrast, empty alt text, color-only information"
+      }
+    ]
+  }
+}
