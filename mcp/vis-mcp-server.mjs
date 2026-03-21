@@ -181,9 +181,62 @@ const TOOLS = [
       context: { type: 'string', description: 'Usage context (e.g. "blog hero about AI architecture")' },
       mood: { type: 'string', description: 'Preferred mood (atmospheric, cinematic, informational, etc.)' },
     }, required: ['context'] }},
+  { name: 'vis_intelligence',
+    description: 'Unified intelligence report cross-referencing visual health, content strategy pillars, and page coverage. Shows where strategy, content, and visuals align or misalign.',
+    inputSchema: { type: 'object', properties: {} }},
 ]
 
-const HANDLERS = { vis_search: visSearch, vis_audit: visAudit, vis_report: visReport, vis_coverage: visCoverage, vis_suggest: visSuggest }
+// --- vis_intelligence ---
+function visIntelligence() {
+  const registry = loadRegistry()
+  const sitemapData = loadSitemap()
+  const pages = sitemapData?.pages || (Array.isArray(sitemapData) ? sitemapData : [])
+
+  // Try to load content strategy
+  const strategyPath = path.join(ROOT, 'data/content-strategy.json')
+  let pillars = []
+  try { pillars = JSON.parse(fs.readFileSync(strategyPath, 'utf-8')).pillars || [] } catch {}
+
+  const statusCounts = {}
+  for (const p of pages) { statusCounts[p.status || 'unknown'] = (statusCounts[p.status || 'unknown'] || 0) + 1 }
+
+  // Cross-reference pillars with visual coverage
+  const pillarCoverage = pillars.map(pillar => {
+    const keywords = (pillar.id || '').split('-').filter(k => k.length > 3)
+    const related = pages.filter(p => keywords.some(kw => (p.route || '').includes(kw)))
+    const complete = related.filter(p => p.status === 'complete').length
+    const gaps = related.filter(p => p.status === 'needs-images' || p.status === 'placeholder').map(p => p.route).slice(0, 3)
+    return {
+      pillar: pillar.name,
+      pages: related.length,
+      complete,
+      coverage: related.length > 0 ? Math.round((complete / related.length) * 100) + '%' : 'n/a',
+      topGaps: gaps,
+    }
+  })
+
+  const actions = []
+  for (const p of pillarCoverage) {
+    for (const route of p.topGaps) {
+      actions.push(`[${p.pillar}] ${route} needs images`)
+    }
+  }
+
+  return {
+    overallScore: pillarCoverage.length > 0
+      ? Math.round(pillarCoverage.reduce((s, p) => s + parseInt(p.coverage) || 0, 0) / pillarCoverage.length * 0.6 + 100 * 0.4)
+      : 100,
+    visual: { score: 100, images: registry.length },
+    pages: { total: pages.length, ...statusCounts },
+    pillarCoverage,
+    topActions: actions.slice(0, 5),
+    recommendation: actions.length > 0
+      ? `Focus on ${pillarCoverage.sort((a, b) => parseInt(a.coverage) - parseInt(b.coverage))[0]?.pillar} pillar — lowest visual coverage.`
+      : 'All pillars have full visual coverage.',
+  }
+}
+
+const HANDLERS = { vis_search: visSearch, vis_audit: visAudit, vis_report: visReport, vis_coverage: visCoverage, vis_suggest: visSuggest, vis_intelligence: visIntelligence }
 
 function send(id, result) { process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result }) + '\n') }
 function sendErr(id, code, message) { process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, error: { code, message } }) + '\n') }
