@@ -15,31 +15,45 @@
 
 import fs from 'fs'
 import path from 'path'
-import { execFileSync } from 'child_process'
 
 const REGISTRY_PATH = path.resolve('data/visual-registry.json')
 const CONTENT_DIR = path.resolve('content/blog')
 const PLACEHOLDER_IMAGES = ['blog-hero-aurora.svg', 'placeholder.png', 'default-hero.png']
+const SKIP_FILES = ['CONTENT_SCHEMA', 'visual-registry', 'content-index.json', 'vault-manifest.json', 'sitemap-image-map.json']
 
 function loadRegistry() {
   return JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf-8'))
 }
 
+// Cross-platform recursive file search (replaces grep -rn)
+function walkFiles(dir, extensions) {
+  const results = []
+  if (!fs.existsSync(dir)) return results
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === '_originals') continue
+      results.push(...walkFiles(full, extensions))
+    } else if (extensions.some(ext => entry.name.endsWith(ext))) {
+      results.push(full)
+    }
+  }
+  return results
+}
+
 function findPlaceholderUsage() {
   const issues = []
-  for (const placeholder of PLACEHOLDER_IMAGES) {
-    try {
-      const result = execFileSync('grep', [
-        '-rn', placeholder,
-        'content/', 'app/', 'data/',
-        '--include=*.mdx', '--include=*.tsx', '--include=*.json',
-      ], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] })
+  const files = [
+    ...walkFiles('content', ['.mdx']),
+    ...walkFiles('app', ['.tsx']),
+    ...walkFiles('data', ['.json']),
+  ]
 
-      for (const line of result.split('\n').filter(Boolean)) {
-        const [filePath] = line.split(':')
-        if (filePath.includes('CONTENT_SCHEMA') || filePath.includes('visual-registry')
-          || filePath.includes('content-index.json') || filePath.includes('vault-manifest.json')
-          || filePath.includes('sitemap-image-map.json')) continue
+  for (const filePath of files) {
+    if (SKIP_FILES.some(s => filePath.includes(s))) continue
+    const content = fs.readFileSync(filePath, 'utf-8')
+    for (const placeholder of PLACEHOLDER_IMAGES) {
+      if (content.includes(placeholder)) {
         issues.push({
           type: 'placeholder',
           severity: 'high',
@@ -48,8 +62,6 @@ function findPlaceholderUsage() {
           message: `Uses generic placeholder "${placeholder}" — needs unique image`,
         })
       }
-    } catch {
-      // grep exits non-zero when no matches — expected
     }
   }
   return issues
@@ -107,19 +119,21 @@ function findOrphanedImages() {
   const registry = loadRegistry()
   const issues = []
 
-  let referencedPaths = new Set()
-  try {
-    const result = execFileSync('grep', [
-      '-roh', '/images/[^"\'\\)\\s]*',
-      'app/', 'components/', 'content/', 'data/', 'lib/',
-      '--include=*.tsx', '--include=*.mdx', '--include=*.json', '--include=*.ts',
-    ], { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] })
+  // Cross-platform image reference scanner (replaces grep -roh)
+  const referencedPaths = new Set()
+  const imagePattern = /\/images\/[^"'\)\s\]]+/g
+  const codeFiles = [
+    ...walkFiles('app', ['.tsx', '.ts']),
+    ...walkFiles('components', ['.tsx', '.ts']),
+    ...walkFiles('content', ['.mdx', '.md']),
+    ...walkFiles('data', ['.json']),
+    ...walkFiles('lib', ['.ts', '.tsx']),
+  ]
 
-    for (const line of result.split('\n').filter(Boolean)) {
-      referencedPaths.add(line.trim())
-    }
-  } catch {
-    // grep may exit non-zero
+  for (const filePath of codeFiles) {
+    const content = fs.readFileSync(filePath, 'utf-8')
+    const matches = content.match(imagePattern)
+    if (matches) matches.forEach(m => referencedPaths.add(m))
   }
 
   for (const img of registry) {
