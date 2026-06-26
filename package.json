@@ -17,6 +17,7 @@
     "audit": "node bin/vis.mjs audit",
     "report": "node bin/vis.mjs report",
     "dashboard": "node bin/vis.mjs dashboard",
+    "doctor": "node bin/vis.mjs doctor",
     "mcp": "node mcp/vis-mcp-server.mjs"
   },
   "keywords": [
@@ -44,7 +45,7 @@
   },
   "homepage": "https://frankx.ai/products/visual-intelligence",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.13.0"
   },
   "dependencies": {},
   "devDependencies": {

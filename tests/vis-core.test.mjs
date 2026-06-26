@@ -5,8 +5,10 @@ import os from 'os'
 import path from 'path'
 import {
   createCurationPacket,
+  detectDimensions,
   getSummary,
   indexProject,
+  loadConfig,
   openVisDatabase,
   recordPublication,
   searchAssets,
@@ -71,6 +73,31 @@ test('indexes assets, usage, trace, and dry-run publication records', () => {
     } finally {
       db.close()
     }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('reports malformed VIS config with a useful error', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-bad-config-'))
+  try {
+    fs.writeFileSync(path.join(root, 'vis.config.json'), '{ bad json')
+    assert.throws(() => loadConfig(root), /Invalid VIS config JSON/)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('reads SVG dimensions from comma or whitespace separated viewBox values', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-svg-'))
+  try {
+    const svgPath = path.join(root, 'art.svg')
+    fs.writeFileSync(svgPath, '<svg viewBox="0, 0, 1024, 512"></svg>')
+    assert.deepEqual(detectDimensions(svgPath, Buffer.alloc(0), '.svg'), {
+      width: 1024,
+      height: 512,
+      durationSeconds: null,
+    })
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }

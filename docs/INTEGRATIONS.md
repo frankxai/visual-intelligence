@@ -11,6 +11,23 @@
 
 Adapters should not become source of truth. They should read VIS records, produce dry-run manifests, and only write after explicit human approval.
 
+Before adopting any library, SDK, CLI, or upstream project, check `docs/OPEN_SOURCE_TECH_RADAR.md`. The default is permissive-license code for core and adapter-only treatment for AGPL/GPL/BSL/source-available/proprietary tools.
+
+## Agent/MCP Install Health
+
+Run:
+
+```powershell
+node bin\vis.mjs doctor
+node bin\vis.mjs mcp-info
+```
+
+The MCP server defaults to protocol `2025-06-18`. Older clients can set:
+
+```powershell
+$env:VIS_MCP_PROTOCOL_VERSION = "2024-11-05"
+```
+
 ## R2
 
 Use for approved masters and sovereign backups. Store `storage_object` records with provider, bucket, key, checksum, status, and URL.
@@ -38,4 +55,3 @@ Use for NFT metadata and storage exports. VIS creates readiness reports and mani
 ## C2PA / IPTC / ExifTool
 
 Use for embedded metadata where feasible. VIS ledger remains the operational source because many platforms strip metadata.
-

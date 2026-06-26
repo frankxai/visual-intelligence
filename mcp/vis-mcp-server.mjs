@@ -31,11 +31,12 @@ import {
 const ROOT = path.resolve(process.env.VIS_ROOT || findProjectRoot(process.cwd()))
 const CONFIG = loadConfig(ROOT)
 const WRITE_ENABLED = process.env.VIS_ENABLE_WRITES === '1'
+const MCP_PROTOCOL_VERSION = process.env.VIS_MCP_PROTOCOL_VERSION || '2025-06-18'
 const ALLOWED_ROOTS = [
   ROOT,
   ...(process.env.VIS_ALLOWED_ROOTS || '').split(path.delimiter).filter(Boolean),
   ...(CONFIG.allowedRoots || []),
-].map(p => path.resolve(p).toLowerCase())
+].filter(Boolean).map(resolveAllowedRoot)
 
 function withDb(fn) {
   const db = openVisDatabase(ROOT, CONFIG)
@@ -360,9 +361,18 @@ function booleanProp(description) {
 
 function isAllowedPath(value) {
   if (!value || typeof value !== 'string') return true
-  if (!/^[a-zA-Z]:\\|^\//.test(value)) return true
-  const normalized = path.resolve(value).toLowerCase()
+  if (!path.isAbsolute(value)) return true
+  const normalized = normalizePathForAllowlist(value)
   return ALLOWED_ROOTS.some(root => normalized === root || normalized.startsWith(root + path.sep))
+}
+
+function resolveAllowedRoot(value) {
+  const resolved = path.isAbsolute(value) ? path.resolve(value) : path.resolve(ROOT, value)
+  return normalizePathForAllowlist(resolved)
+}
+
+function normalizePathForAllowlist(value) {
+  return path.resolve(value).replace(/[\\/]+$/, '').toLowerCase()
 }
 
 function redactOutsideAllowlist(value) {
@@ -402,7 +412,7 @@ rl.on('line', (line) => {
   try {
     if (method === 'initialize') {
       send(id, {
-        protocolVersion: '2025-06-18',
+        protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: { tools: {}, resources: {} },
         serverInfo: { name: 'vis-mcp', version: '2.0.0', root: ROOT, readOnlyDefault: !WRITE_ENABLED },
       })

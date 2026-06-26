@@ -4,6 +4,8 @@ Date: 2026-06-26
 
 VIS should build the unique agentic layer and adapt the mature infrastructure that already exists.
 
+For license posture and GitHub-by-GitHub adoption stance, see `docs/OPEN_SOURCE_TECH_RADAR.md`.
+
 ## Anchors
 
 - Model Context Protocol: use MCP resources and tools for agent access to assets, provenance, and curation packets. See https://modelcontextprotocol.io/docs/getting-started/intro.
@@ -36,6 +38,10 @@ VIS should build the unique agentic layer and adapt the mature infrastructure th
 - C2PA/IPTC/ExifTool-compatible metadata for embedded evidence.
 - IPFS/thirdweb/manifold-style tooling for Web3 drops.
 
+## License Rule
+
+The VIS core should stay MIT-compatible. Permissive libraries can be considered for first-party packages; AGPL/GPL/BSL/source-available/proprietary systems should remain optional adapters, external services, or inspiration unless Frank explicitly accepts the obligations.
+
 ## Avoid Building First
 
 - Full photo backup and mobile camera roll sync.
@@ -57,4 +63,3 @@ The market has asset libraries, DAMs, photo apps, NFT tooling, and social schedu
 - Web3 metadata readiness.
 
 The product thesis is an intelligence layer across existing systems, not a replacement for every system.
-

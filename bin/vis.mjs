@@ -347,6 +347,90 @@ function cmdMcpInfo() {
   }
 }
 
+function cmdDoctor() {
+  const root = projectRoot()
+  const configPath = path.join(root, 'vis.config.json')
+  const config = loadConfig(root)
+  const indexPath = path.isAbsolute(config.indexPath) ? config.indexPath : path.join(root, config.indexPath)
+  const dashboardPath = path.isAbsolute(config.dashboardPath) ? config.dashboardPath : path.join(root, config.dashboardPath)
+  const mcpPath = path.resolve(__dirname, '..', 'mcp', 'vis-mcp-server.mjs')
+  const checks = [
+    check('repoRoot', fs.existsSync(path.join(root, 'package.json')), root),
+    check('config', fs.existsSync(configPath), configPath),
+    check('nodeVersion', isSupportedNode(), process.version),
+    check('sqliteIndex', fs.existsSync(indexPath), indexPath),
+    check('dashboard', fs.existsSync(dashboardPath), dashboardPath),
+    check('mcpServer', fs.existsSync(mcpPath), mcpPath),
+  ]
+  let summary = null
+  if (fs.existsSync(indexPath)) {
+    const db = openVisDatabase(root, config)
+    try {
+      summary = getSummary(db)
+    } finally {
+      db.close()
+    }
+  }
+  const result = {
+    ok: checks.every(item => item.ok),
+    root,
+    version: VIS_VERSION,
+    checks,
+    summary,
+    mcp: {
+      command: `node ${mcpPath}`,
+      env: {
+        VIS_ROOT: root,
+        VIS_ALLOWED_ROOTS: root,
+        VIS_ENABLE_WRITES: '0',
+      },
+      readOnlyDefault: true,
+    },
+    nextActions: doctorNextActions(checks, summary),
+  }
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log('\n=== VIS DOCTOR ===\n')
+  for (const item of checks) console.log(`${item.ok ? 'OK ' : 'NO '} ${item.name}: ${item.detail}`)
+  if (summary) {
+    console.log('\nGraph:')
+    console.log(`  assets:      ${summary.assets}`)
+    console.log(`  versions:    ${summary.versions}`)
+    console.log(`  locations:   ${summary.locations}`)
+    console.log(`  usageEdges:  ${summary.usageEdges}`)
+    console.log(`  prompts:     ${summary.prompts}`)
+  }
+  console.log('\nMCP:')
+  console.log(`  ${result.mcp.command}`)
+  console.log(`  VIS_ROOT=${root}`)
+  console.log(`  VIS_ALLOWED_ROOTS=${root}`)
+  if (result.nextActions.length) {
+    console.log('\nNext actions:')
+    for (const action of result.nextActions) console.log(`  - ${action}`)
+  }
+}
+
+function check(name, ok, detail) {
+  return { name, ok: Boolean(ok), detail }
+}
+
+function isSupportedNode() {
+  const [major, minor] = process.versions.node.split('.').map(Number)
+  return major > 22 || (major === 22 && minor >= 13)
+}
+
+function doctorNextActions(checks, summary) {
+  const actions = []
+  if (!checks.find(item => item.name === 'config')?.ok) actions.push('Run: node bin/vis.mjs init')
+  if (!checks.find(item => item.name === 'nodeVersion')?.ok) actions.push('Install Node.js 22.13+; Node 24+ is recommended for this repo.')
+  if (!checks.find(item => item.name === 'sqliteIndex')?.ok) actions.push('Run: node bin/vis.mjs scan --media-root <asset-root>')
+  if (!checks.find(item => item.name === 'dashboard')?.ok) actions.push('Run: node bin/vis.mjs dashboard --limit 3000')
+  if (summary && !summary.usageEdges) actions.push('Run: node bin/vis.mjs usage --usage-root <website-or-content-repo>')
+  return actions
+}
+
 function printIndexSummary(result) {
   console.log('\n=== VIS INDEX COMPLETE ===\n')
   console.log(`Root:          ${result.root}`)
@@ -379,6 +463,7 @@ const commands = {
   'cloudinary-manifest': cmdCloudinaryManifest,
   'nft-report': cmdNftReport,
   optimize: cmdOptimize,
+  doctor: cmdDoctor,
   'mcp-info': cmdMcpInfo,
 }
 
@@ -406,6 +491,7 @@ Commands:
   vis cloudinary-manifest          Dry-run Cloudinary upload manifest
   vis nft-report                   Dry-run NFT metadata readiness report
   vis optimize                     Dry-run oversized asset report
+  vis doctor                       Check local install, graph, dashboard, MCP info
   vis mcp-info                     Print MCP install info
 
 Options:

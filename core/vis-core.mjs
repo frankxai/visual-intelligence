@@ -91,10 +91,16 @@ export function findProjectRoot(dir = process.cwd()) {
 
 export function loadConfig(root = findProjectRoot()) {
   const configPath = path.join(root, 'vis.config.json')
-  const local = fs.existsSync(configPath)
-    ? JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-    : {}
+  const local = fs.existsSync(configPath) ? readConfigFile(configPath) : {}
   return normalizeConfig({ ...DEFAULT_CONFIG, ...local })
+}
+
+function readConfigFile(configPath) {
+  try {
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+  } catch (error) {
+    throw new Error(`Invalid VIS config JSON at ${configPath}: ${error.message}`)
+  }
 }
 
 export function normalizeConfig(config) {
@@ -481,9 +487,9 @@ export function buildAssetEntry(root, mediaRoot, filePath, config = DEFAULT_CONF
   if (!mediaType) return null
 
   const stats = fs.statSync(filePath)
-  const bytes = fs.readFileSync(filePath)
-  const sha256 = crypto.createHash('sha256').update(bytes).digest('hex')
-  const versionHash = crypto.createHash('sha256').update(bytes).update('\0').update(mediaType).digest('hex')
+  const hashes = hashFileSync(filePath, mediaType)
+  const sha256 = hashes.sha256
+  const versionHash = hashes.versionHash
   const versionId = `ver_${versionHash.slice(0, 32)}`
   const assetId = `asset_${sha256.slice(0, 24)}`
   const relRoot = slash(path.relative(root, filePath))
@@ -492,7 +498,7 @@ export function buildAssetEntry(root, mediaRoot, filePath, config = DEFAULT_CONF
   const category = detectCategory(filePath, mediaRoot, root)
   const tags = detectTags(`${relRoot} ${category} ${path.basename(filePath)}`)
   const mood = detectMood(filePath, category, mediaType)
-  const dims = detectDimensions(filePath, bytes, ext)
+  const dims = detectDimensions(filePath, readDimensionHeader(filePath, ext), ext)
   const sidecars = findPromptSidecars(filePath, config)
 
   return {
@@ -1385,6 +1391,43 @@ export function detectMimeType(ext) {
   return map[lowerExt(ext)] || 'application/octet-stream'
 }
 
+function hashFileSync(filePath, mediaType) {
+  const fileHash = crypto.createHash('sha256')
+  const versionHash = crypto.createHash('sha256')
+  const buffer = Buffer.allocUnsafe(1024 * 1024)
+  const fd = fs.openSync(filePath, 'r')
+  try {
+    let bytesRead = 0
+    do {
+      bytesRead = fs.readSync(fd, buffer, 0, buffer.length, null)
+      if (bytesRead > 0) {
+        const chunk = buffer.subarray(0, bytesRead)
+        fileHash.update(chunk)
+        versionHash.update(chunk)
+      }
+    } while (bytesRead > 0)
+  } finally {
+    fs.closeSync(fd)
+  }
+  return {
+    sha256: fileHash.digest('hex'),
+    versionHash: versionHash.update('\0').update(mediaType).digest('hex'),
+  }
+}
+
+function readDimensionHeader(filePath, ext) {
+  if (ext === '.svg') return Buffer.alloc(0)
+  const maxBytes = ext === '.jpg' || ext === '.jpeg' ? 1024 * 1024 : 256 * 1024
+  const fd = fs.openSync(filePath, 'r')
+  try {
+    const buffer = Buffer.allocUnsafe(maxBytes)
+    const bytesRead = fs.readSync(fd, buffer, 0, maxBytes, 0)
+    return buffer.subarray(0, bytesRead)
+  } finally {
+    fs.closeSync(fd)
+  }
+}
+
 export function detectDimensions(filePath, bytes, ext) {
   try {
     if (ext === '.png' && bytes.toString('ascii', 1, 4) === 'PNG') {
@@ -1452,15 +1495,30 @@ function readSvgDimensions(filePath) {
   const width = parseSvgNumber(text.match(/\bwidth=["']([^"']+)["']/)?.[1])
   const height = parseSvgNumber(text.match(/\bheight=["']([^"']+)["']/)?.[1])
   if (width && height) return { width, height, durationSeconds: null }
-  const viewBox = text.match(/\bviewBox=["']([^"']+)["']/)?.[1]?.trim().split(/\s+/).map(Number)
-  if (viewBox?.length === 4) return { width: viewBox[2], height: viewBox[3], durationSeconds: null }
+  const viewBox = parseSvgViewBox(text.match(/\bviewBox=["']([^"']+)["']/)?.[1])
+  if (viewBox) return { width: viewBox.width, height: viewBox.height, durationSeconds: null }
   return { width: null, height: null, durationSeconds: null }
 }
 
 function parseSvgNumber(value) {
   if (!value) return null
-  const match = String(value).match(/[\d.]+/)
-  return match ? Math.round(Number(match[0])) : null
+  const match = String(value).match(/-?(?:\d+\.?\d*|\.\d+)/)
+  const parsed = match ? Number(match[0]) : null
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : null
+}
+
+function parseSvgViewBox(value) {
+  if (!value) return null
+  const parts = String(value)
+    .trim()
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map(Number)
+  if (parts.length !== 4 || parts.some(part => !Number.isFinite(part))) return null
+  const width = parts[2]
+  const height = parts[3]
+  if (width <= 0 || height <= 0) return null
+  return { width: Math.round(width), height: Math.round(height) }
 }
 
 export function detectCategory(filePath, mediaRoot, root) {

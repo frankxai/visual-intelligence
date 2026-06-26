@@ -10,7 +10,41 @@ Repository:
 https://github.com/frankxai/visual-intelligence.git
 ```
 
+Active branch:
+
+```text
+codex/visual-intelligence-os-v02
+```
+
+Pull request:
+
+```text
+https://github.com/frankxai/visual-intelligence/pull/7
+```
+
 This report is intended for cross-check by Claude/Codex/Grok on Frank's other PC.
+
+## Main Merge Recommendation
+
+Do not direct-push this work to `main`. Keep it in PR #7 until the other PC Claude cross-check passes.
+
+Current recommendation:
+
+- Use `codex/visual-intelligence-os-v02` as the implementation branch.
+- Use `origin/claude/asset-os-coordination` as a coordination/reference branch only.
+- After other-PC verification, mark PR #7 ready for review and merge into `main`.
+- Do not merge Claude's coordination branch over this branch without a file-by-file review, because that branch is mostly docs/coordination and would remove the new SQLite core, dashboard, schemas, and tests if applied as-is.
+
+Merge gates:
+
+- `npm run lint` passes.
+- `npm test` passes.
+- `node bin\vis.mjs doctor` passes.
+- MCP smoke test returns an asset.
+- Dashboard opens and renders local images.
+- No generated `data/` files are staged.
+- Other PC regenerates its own local SQLite/dashboard state.
+- Rights and write/publish gates are explicitly reviewed before any public use.
 
 ## Implemented Layers
 
@@ -21,6 +55,18 @@ This report is intended for cross-check by Claude/Codex/Grok on Frank's other PC
 - Product docs in `docs/`
 - JSON schemas in `schemas/`
 - Core regression test in `tests/vis-core.test.mjs`
+- Open-source/license tech radar in `docs/OPEN_SOURCE_TECH_RADAR.md`
+- Install/health check command: `node bin\vis.mjs doctor`
+
+## Review Hardening Added After PR Feedback
+
+- Node engine now reflects `node:sqlite`: `>=22.13.0`, with Node 24+ recommended.
+- Scanner hashes media files in chunks instead of reading full files into memory.
+- Config parse errors now report the exact invalid `vis.config.json` path.
+- SVG `viewBox` parsing now handles comma/space separated values and rejects invalid dimensions.
+- MCP path allowlist resolution now resolves relative roots against `VIS_ROOT` and redacts paths outside normalized allowed roots.
+- MCP protocol version is configurable through `VIS_MCP_PROTOCOL_VERSION`; default remains the tested `2025-06-18`, with `2024-11-05` available for older clients.
+- Regression tests cover malformed config and SVG viewBox parsing.
 
 ## Local Runtime State
 
@@ -76,6 +122,7 @@ Code gates:
 ```powershell
 npm run lint
 npm test
+node bin\vis.mjs doctor
 ```
 
 Result: passed.
@@ -183,14 +230,39 @@ node bin\vis.mjs search arcanea --limit 3
 node bin\vis.mjs packet <asset_id> --use "cross-machine validation"
 ```
 
+Expected `doctor` signal:
+
+```text
+repoRoot: OK
+config: OK
+nodeVersion: OK
+sqliteIndex: OK after scan
+dashboard: OK after dashboard generation
+mcpServer: OK
+```
+
 ## Cross-Check Tasks For Other PC Claude
 
 - Compare this branch with `claude/asset-os-coordination`.
+- Confirm PR #7 is the branch that should graduate to `main`, not a direct push.
 - Confirm MCP resources and tools list correctly.
 - Confirm dashboard opens and images render.
 - Confirm `record_publication` remains dry-run unless writes are explicitly enabled.
 - Confirm no generated SQLite/JSON/dashboard files are staged.
 - Review rights/default status policy before any public publishing.
+- Run `node bin\vis.mjs doctor --json` and paste the result into the PR or a follow-up report.
+- Run a selected asset through `node bin\vis.mjs packet <asset_id> --use "other laptop validation"` and confirm the local path is valid on that laptop.
+
+## Technology Absorption Policy
+
+The radar in `docs/OPEN_SOURCE_TECH_RADAR.md` is now the rulebook for absorbing other GitHub projects.
+
+Default stance:
+
+- MIT/Apache/BSD/public-domain dependencies can be considered for core.
+- AGPL/GPL/BSL/source-available/proprietary projects stay adapter-only or inspiration-only.
+- Every adopted external project gets source, license, version, and credit recorded before productization.
+- R2, Cloudinary, Postiz, Drive, OneDrive, IPFS, thirdweb, C2PA, IPTC, ExifTool, and similar systems remain adapters unless a future product decision explicitly changes that.
 
 ## Known Gaps
 
@@ -198,4 +270,3 @@ node bin\vis.mjs packet <asset_id> --use "cross-machine validation"
 - C2PA/IPTC embedding is not implemented yet; VIS ledger is the current provenance source.
 - R2, Cloudinary, Postiz, Drive, OneDrive, and IPFS/thirdweb are dry-run manifests or planned adapters, not live upload/post/mint flows.
 - Native desktop/mobile app is deferred; current UI is static local dashboard.
-
