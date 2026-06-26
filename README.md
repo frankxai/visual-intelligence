@@ -1,130 +1,111 @@
-# VIS — Visual Intelligence Audit
+# VIS — Visual Intelligence OS
 
-A GitHub Action that runs automated visual health checks on your image assets. Detects placeholders, duplicates, orphaned files, and oversized images — then posts a scored report as a PR comment.
+Local-first visual asset intelligence for AI-native creators and agentic teams.
 
-## What it checks
+VIS indexes images, video, and audio into a SQLite asset graph with stable `asset_id`s, immutable `version_id`s, local locations, route usage, prompts, provenance events, rights, evaluations, publication records, and agent-ready curation packets.
 
-| Check | Severity | Description |
-|-------|----------|-------------|
-| Placeholders | HIGH | Detects generic placeholder images (`placeholder.png`, `default-hero.png`, etc.) |
-| Duplicate heroes | MEDIUM | Finds MDX blog posts where the frontmatter hero image is repeated in the body |
-| Oversized files | LOW | Flags images exceeding the configurable size threshold |
-| Orphaned images | INFO | Identifies images not referenced in any content or code file |
+## What Changed In V0.2
 
-## Scoring
+- SQLite source of truth at `data/vis.sqlite`.
+- Compatibility exports at `data/visual-registry.json` and `data/vis-atlas.json`.
+- Local dashboard export at `data/vis-dashboard.html`.
+- MCP resources and tools for `visual://asset/{asset_id}`.
+- Dry-run Cloudinary and NFT manifests.
+- Dry-run publication recording by default.
+- Product docs and JSON schemas.
 
-The health score starts at 100 and deducts points per issue:
+## Quick Start
 
-- HIGH: -15 points each
-- MEDIUM: -5 points each
-- LOW: -2 points each
-- INFO: tracked but does not affect score
-
-| Score | Rating |
-|-------|--------|
-| 90-100 | EXCELLENT |
-| 70-89 | GOOD |
-| 50-69 | NEEDS ATTENTION |
-| 0-49 | CRITICAL |
-
-## Usage
-
-Add this workflow to your repo:
-
-```yaml
-# .github/workflows/visual-audit.yml
-name: Visual Health
-on: [pull_request]
-
-jobs:
-  audit:
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: frankxai/visual-intelligence@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          min-score: 50
+```powershell
+npm run lint
+npm test
+node bin/vis.mjs scan --media-root "C:\Users\frank\starlight\repos"
+node bin/vis.mjs usage --usage-root "C:\Users\frank\starlight\repos\frankx.ai-vercel-website"
+node bin/vis.mjs dashboard
 ```
 
-## Inputs
+Open the generated dashboard:
 
-| Input | Default | Description |
-|-------|---------|-------------|
-| `images-dir` | `public/images` | Path to your images directory (relative to repo root) |
-| `max-file-size-kb` | `2000` | Maximum allowed image file size in KB |
-| `min-score` | `50` | Minimum health score to pass (0-100). Action fails if score is below this. |
-| `comment-on-pr` | `true` | Post audit results as a PR comment |
-
-## Outputs
-
-| Output | Description |
-|--------|-------------|
-| `score` | Visual health score (0-100) |
-| `issues-count` | Total number of issues found |
-| `high-count` | Number of HIGH severity issues |
-
-### Using outputs in subsequent steps
-
-```yaml
-- uses: frankxai/visual-intelligence@v1
-  id: vis
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    min-score: 0  # Don't fail, just report
-
-- run: echo "Visual health score is ${{ steps.vis.outputs.score }}"
+```text
+data/vis-dashboard.html
 ```
 
-## Examples
+## CLI
 
-### Strict mode — fail under 80
-
-```yaml
-- uses: frankxai/visual-intelligence@v1
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    min-score: 80
+```powershell
+node bin/vis.mjs init
+node bin/vis.mjs scan
+node bin/vis.mjs scan --media-root <path>
+node bin/vis.mjs usage --usage-root <path>
+node bin/vis.mjs report
+node bin/vis.mjs dashboard
+node bin/vis.mjs search "arcanea guardian"
+node bin/vis.mjs trace <asset_id|visual://asset/...|path>
+node bin/vis.mjs packet <asset_id|visual://asset/...|path> --use "homepage hero"
+node bin/vis.mjs duplicates
+node bin/vis.mjs orphans
+node bin/vis.mjs score <asset_id>
+node bin/vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum
+node bin/vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum --execute
+node bin/vis.mjs cloudinary-manifest --category brand
+node bin/vis.mjs nft-report --query "anime character"
 ```
 
-### Custom images directory
+`record-publication` is dry-run unless `--execute` is passed. The MCP server is stricter: it also requires `VIS_ENABLE_WRITES=1`.
 
-```yaml
-- uses: frankxai/visual-intelligence@v1
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    images-dir: assets/img
-    max-file-size-kb: 1000
+## MCP
+
+Run:
+
+```powershell
+$env:VIS_ROOT = "C:\Users\frank\starlight\repos\visual-intelligence"
+$env:VIS_ALLOWED_ROOTS = "C:\Users\frank\starlight\repos"
+node mcp/vis-mcp-server.mjs
 ```
 
-### Report only — no failure
+Resources:
 
-```yaml
-- uses: frankxai/visual-intelligence@v1
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    min-score: 0
-    comment-on-pr: true
+- `visual://asset/{asset_id}`
+- `visual://asset/{asset_id}/versions`
+- `visual://asset/{asset_id}/provenance`
+- `visual://collection/{collection_id}`
+- `visual://brand/{brand}/approved`
+
+Tools:
+
+- `search_assets`
+- `get_asset`
+- `trace_asset`
+- `map_usage`
+- `find_duplicates`
+- `find_orphans`
+- `score_asset`
+- `score_collection`
+- `create_curation_packet`
+- `record_publication`
+- `export_cloudinary_manifest`
+- `export_nft_metadata_report`
+
+Legacy aliases remain: `vis_search`, `vis_report`, `vis_audit`, `vis_suggest`, `vis_intelligence`.
+
+## Architecture
+
+```text
+core/       scanner, SQLite schema, graph API, scoring, manifests
+bin/        CLI
+mcp/        MCP server
+web/        dashboard exporter
+schemas/    JSON schemas
+docs/       PRD, architecture, workflows, security, integrations, AGDLC
 ```
 
-## How it works
+## Security
 
-The action is fully self-contained — no dependencies to install. It:
+- Local-first by default.
+- Generated data stays under `data/` and is ignored by Git.
+- MCP read-only by default.
+- Write/publication operations require explicit gates.
+- Paths outside the MCP allowlist are redacted.
+- Secrets, `.env`, private keys, wallet files, and private memory folders should not be indexed.
 
-1. Walks your images directory and catalogs every image file (PNG, JPG, JPEG, WebP, GIF, SVG, AVIF)
-2. Scans content directories (`content/`, `src/`, `app/`, `pages/`, `components/`, `lib/`, `data/`) for image references
-3. Runs four audit checks against the catalog
-4. Calculates a weighted health score
-5. Posts a formatted PR comment with the results (if enabled)
-6. Exits with code 1 if the score is below the threshold
-
-## License
-
-MIT
+See [docs/SECURITY.md](docs/SECURITY.md).
