@@ -49,6 +49,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add dry-run-first batch rename for selected designer/music assets across core, CLI, MCP, docs, and tests.
 - [x] Add project status/report command plus Google Tasks reminder layer.
 - [x] Add dry-run-first derivative/export plans for website, social, Music IS release media, NFT/Web3, and Cloudinary variants.
+- [x] Add selected-asset dashboard command shelf for batch Codex packets, derivative plans, website/social use, and Music IS handoff.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.

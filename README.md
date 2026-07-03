@@ -37,7 +37,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Plans and initializes the Google Drive `Starlight Creative Vault` folder contract for two laptops, two phones, Eagle, VIS, and Music IS.
 - Guards public-use packets and export manifests so unknown, blocked, or unapproved assets stay visible but not publish-ready.
 - Builds Music IS handoff packets that group audio, cover art, Canvas/video, proof docs, prompts, rights, approval, and next release-gate action.
-- Generates a static dashboard/PWA shell for fast visual browsing, local media previews, smart collections, and asset detail drawers.
+- Generates a static dashboard/PWA shell for fast visual browsing, local media previews, smart collections, selected-asset command shelf, and asset detail drawers.
 - Exposes MCP resources and tools for agents via `visual://asset/{asset_id}`.
 - Produces Codex-ready curation packets with path, `visual://` URI, rights, provenance, and next action.
 - Produces dry-run Cloudinary manifests, NFT readiness reports, and publication records.

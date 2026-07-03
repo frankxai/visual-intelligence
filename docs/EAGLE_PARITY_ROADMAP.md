@@ -85,6 +85,7 @@ Recommended naming:
 - Human-gated rights and approval review so website, social, NFT, and Music IS handoffs cannot quietly treat unknown assets as publishable.
 - Public-use gates in packets and export manifests so Cloudinary, NFT, website, social, and Music IS handoffs surface blockers before any external action.
 - Dry-run-first derivative/export plans for website, social, Music IS release media, NFT/Web3, and Cloudinary variants so agents know which files should exist before any Sharp, FFmpeg, Cloudinary, R2, Postiz, IPFS, or thirdweb adapter executes.
+- Dashboard selected-asset command shelf that copies batch Codex packets, website/social handoffs, Music IS handoffs, and derivative-plan CLI/MCP packets for the selected set.
 
 ### E2: Eagle Adapter
 

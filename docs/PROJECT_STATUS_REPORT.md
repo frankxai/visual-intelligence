@@ -7,9 +7,9 @@ GitHub repo: https://github.com/frankxai/visual-intelligence
 
 ## Summary
 
-- Total issues in registry: 26
+- Total issues in registry: 27
 - Open issues: 17
-- Completed issues: 9
+- Completed issues: 10
 - Blocked issues: 1
 - Human-gated open issues: 4
 - GitHub Projects v2: pending_project_scope
@@ -19,7 +19,7 @@ GitHub repo: https://github.com/frankxai/visual-intelligence
 | Milestone | Open | Done | Next Visible Work |
 | --- | ---: | ---: | --- |
 | M0 Personal Estate Setup | 6 | 3 | [#8 VIS-001](https://github.com/frankxai/visual-intelligence/issues/8), [#9 VIS-002](https://github.com/frankxai/visual-intelligence/issues/9), [#10 VIS-003](https://github.com/frankxai/visual-intelligence/issues/10) |
-| M1 Daily Cockpit | 3 | 4 | [#12 VIS-005](https://github.com/frankxai/visual-intelligence/issues/12), [#15 VIS-008](https://github.com/frankxai/visual-intelligence/issues/15), [#23 VIS-016](https://github.com/frankxai/visual-intelligence/issues/23) |
+| M1 Daily Cockpit | 3 | 5 | [#12 VIS-005](https://github.com/frankxai/visual-intelligence/issues/12), [#15 VIS-008](https://github.com/frankxai/visual-intelligence/issues/15), [#23 VIS-016](https://github.com/frankxai/visual-intelligence/issues/23) |
 | M2 Asset Intelligence | 4 | 2 | [#13 VIS-006](https://github.com/frankxai/visual-intelligence/issues/13), [#14 VIS-007](https://github.com/frankxai/visual-intelligence/issues/14), [#18 VIS-011](https://github.com/frankxai/visual-intelligence/issues/18) |
 | M3 Media Expansion | 1 | 0 | [#16 VIS-009](https://github.com/frankxai/visual-intelligence/issues/16) |
 | M4 Product Beta | 3 | 0 | [#20 VIS-013](https://github.com/frankxai/visual-intelligence/issues/20), [#21 VIS-014](https://github.com/frankxai/visual-intelligence/issues/21), [#31 VIS-024](https://github.com/frankxai/visual-intelligence/issues/31) |

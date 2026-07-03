@@ -35,6 +35,11 @@ test('generates a PWA-ready dashboard shell and local media server', async () =>
     assert.match(html, /rel="manifest"/)
     assert.match(html, /serviceWorker\.register/)
     assert.match(html, /__vis_media/)
+    assert.match(html, /Selected command shelf/)
+    assert.match(html, /data-derivative-preset/)
+    assert.match(html, /vis_derivative_plan_handoff/)
+    assert.match(html, /plan_asset_derivatives/)
+    assert.match(html, /vis_music_is_batch_handoff/)
 
     const db = openVisDatabase(root)
     let assetId

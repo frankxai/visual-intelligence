@@ -677,3 +677,29 @@ Acceptance:
 - [x] Music release planning keeps Music IS canonical for release state, rights, AI disclosure, credits, and distribution gates.
 - [x] CLI, MCP, docs, schema, and tests expose the same dry-run contract.
 ```
+
+## Issue 27: Add selected-asset dashboard command shelf
+
+Labels: `dashboard`, `product`, `mcp`, `music`
+Milestone: `M1 Daily Cockpit`
+Status: `done`
+
+Body:
+
+```markdown
+Make selected assets operational from the static cockpit by copying batch Codex packets, website/social handoffs, Music IS handoffs, and derivative-plan CLI/MCP packets.
+
+Tasks:
+- [x] Add derivative preset data to the dashboard export payload.
+- [x] Add selected command shelf to the dashboard side rail.
+- [x] Add copy actions for selected Codex packet, website use, social use, Music IS handoff, and derivative plans.
+- [x] Include dry-run CLI commands and MCP tool payloads in copied handoffs.
+- [x] Preserve human-gated public-use, adapter, and Music IS boundaries.
+- [x] Add generated dashboard assertions and docs.
+
+Acceptance:
+- [x] Selected assets can be turned into one batch handoff without opening every detail drawer.
+- [x] Derivative buttons expose website, social, music-release, NFT/Web3, and Cloudinary plan packets.
+- [x] Music handoff keeps Music IS canonical and refuses external distribution from VIS.
+- [x] Dashboard generation and tests prove the shelf is present.
+```

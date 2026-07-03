@@ -10,6 +10,7 @@ import {
   getSummary,
   listAssetActionRecipes,
   listAssets,
+  listDerivativePresets,
   listSavedSearches,
   listSmartCollections,
   loadConfig,
@@ -32,6 +33,7 @@ export function generateDashboard(root, options = {}) {
     const savedSearches = listSavedSearches(db)
     const smartCollections = listSmartCollections(db)
     const actionRecipes = listAssetActionRecipes()
+    const derivativePresets = listDerivativePresets()
     const packetSamples = Object.fromEntries(
       assets.slice(0, 300).map(asset => [asset.asset_id, createCurationPacket(db, asset.asset_id)]),
     )
@@ -56,6 +58,7 @@ export function generateDashboard(root, options = {}) {
       smartCollections,
       savedSearches,
       actionRecipes,
+      derivativePresets,
       packetSamples,
       scores,
       ...facets,
@@ -492,6 +495,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .recipe-item{border-top:1px solid var(--border);padding-top:8px;font-size:12px;color:var(--muted);display:grid;gap:6px}
 .recipe-item strong{color:var(--ink);font-size:12px}
 .recipe-item button{justify-self:start;min-height:30px;font-size:12px}
+.command-shelf{display:grid;gap:8px}
+.command-row{border-top:1px solid var(--border);padding-top:8px;display:grid;gap:7px;font-size:12px;color:var(--muted)}
+.command-row strong{font-size:12px;color:var(--ink)}
+.command-actions{display:flex;gap:6px;flex-wrap:wrap}
+.command-actions button{min-height:30px;font-size:12px;padding:0 9px}
+.command-note{color:var(--muted);font-size:12px;line-height:1.45}
 .drawer{
   position:fixed;right:0;top:0;width:min(590px,100vw);height:100vh;background:#070A11;border-left:1px solid var(--border);
   transform:translateX(100%);transition:transform .18s ease;z-index:20;display:flex;flex-direction:column;
@@ -624,6 +633,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <section class="boards">
         <div class="grid" id="grid"></div>
         <aside class="side">
+          <div class="panel">
+            <h3>Selected command shelf</h3>
+            <div class="command-shelf" id="commandShelf"></div>
+          </div>
           <div class="panel">
             <h3>Selected packet tray</h3>
             <div class="mini-list" id="selectionTray"></div>
@@ -806,6 +819,23 @@ function packetFor(asset){
     codex_prompt: "Use this VIS asset: " + asset.visual_uri + "\\nLocal path: " + (asset.absolute_path || "") + "\\nPublic-use gate: " + (asset.publish_gate?.status || "unknown")
   };
 }
+function selectedAssets(){
+  return [...selectedIds].map(id => DATA.assets.find(asset => asset.asset_id === id)).filter(Boolean);
+}
+function assetBrief(asset){
+  return {
+    asset_id: asset.asset_id,
+    visual_uri: asset.visual_uri,
+    title: asset.title,
+    media_type: asset.media_type,
+    media_role: asset.media_role,
+    workflow: asset.workflow,
+    rights_status: asset.rights_status,
+    approval_status: asset.approval_status,
+    publish_ready: asset.publish_gate?.allowed === true,
+    path: asset.absolute_path || asset.relative_path
+  };
+}
 function publicHandoff(kind, asset, packet){
   const gate = packet.publish_gate || asset.publish_gate || {};
   const allowed = gate.allowed === true;
@@ -827,6 +857,9 @@ function musicPacketFor(asset){
     vis_packet: packet,
     next_gate: "Create or update the Music IS proof folder with audio, cover, Canvas, lyrics, credits, AI disclosure, rights, and release checklist before distribution."
   };
+}
+function isMusicAsset(asset){
+  return asset.workflow === "music-release" || asset.media_type === "audio" || asset.media_role === "cover-art" || asset.media_role === "music-canvas" || (asset.tags || []).includes("music");
 }
 function renderMetrics(){
   const s = DATA.summary || {};
@@ -961,11 +994,49 @@ function recipeCommand(recipeId, ids){
   const base = "node bin\\\\vis.mjs action-recipe " + shellArg(recipeId);
   return ids.length ? base + " " + ids.map(shellArg).join(" ") : base + " --limit 50";
 }
+function renderCommandShelf(){
+  const assets = selectedAssets();
+  const ids = assets.map(asset => asset.asset_id);
+  const musicCount = assets.filter(isMusicAsset).length;
+  const publishReady = assets.filter(asset => asset.publish_gate?.allowed === true).length;
+  const derivativeButtons = (DATA.derivativePresets || []).map(preset => (
+    '<button data-derivative-preset="'+esc(preset.id)+'">'+esc(preset.id)+'</button>'
+  )).join("");
+  $("commandShelf").innerHTML = (
+    '<div class="command-row">' +
+      '<strong>'+fmt(assets.length)+' selected assets</strong>' +
+      '<div class="command-note">'+(assets.length ? esc(publishReady + " publish-ready, " + musicCount + " music/audio candidates. Clipboard actions are dry-run packets only.") : 'Select assets from the grid or a smart collection to activate batch handoffs.')+'</div>' +
+      '<div class="command-actions">' +
+        '<button data-batch-copy="packets">Codex packet</button>' +
+        '<button data-batch-copy="website">Website use</button>' +
+        '<button data-batch-copy="social">Social use</button>' +
+        '<button data-batch-copy="music">Music IS</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="command-row">' +
+      '<strong>Derivative plans</strong>' +
+      '<div class="command-note">Copy a manifest command for selected assets before any Sharp, FFmpeg, Cloudinary, R2, Postiz, IPFS, or thirdweb adapter runs.</div>' +
+      '<div class="command-actions">'+derivativeButtons+'</div>' +
+    '</div>'
+  );
+  for (const btn of $("commandShelf").querySelectorAll("[data-batch-copy]")) {
+    btn.addEventListener("click", () => {
+      const kind = btn.getAttribute("data-batch-copy");
+      if (kind === "packets") return copySelectedPackets();
+      if (kind === "website" || kind === "social") return copyBatchPublicHandoff(kind);
+      if (kind === "music") return copyMusicBatchHandoff();
+    });
+  }
+  for (const btn of $("commandShelf").querySelectorAll("[data-derivative-preset]")) {
+    btn.addEventListener("click", () => copyDerivativePlan(btn.getAttribute("data-derivative-preset")));
+  }
+}
 function renderSide(){
+  renderCommandShelf();
   renderActionRecipes();
-  const selectedAssets = [...selectedIds].map(id => DATA.assets.find(asset => asset.asset_id === id)).filter(Boolean);
-  $("selectionTray").innerHTML = selectedAssets.length
-    ? selectedAssets.slice(0,15).map(asset => miniAssetItem(asset, "Inspect")).join("")
+  const assets = selectedAssets();
+  $("selectionTray").innerHTML = assets.length
+    ? assets.slice(0,15).map(asset => miniAssetItem(asset, "Inspect")).join("")
     : '<div class="mini-item">Select assets to create a multi-asset Codex packet.</div>';
   const music = DATA.assets.filter(asset => smartMatches(asset, "music")).slice(0,12);
   $("musicQueue").innerHTML = music.length
@@ -999,7 +1070,7 @@ function openAsset(assetId){
   if (!asset) return;
   const packet = packetFor(asset);
   const score = assetScore(asset);
-  const isMusic = asset.workflow === "music-release" || asset.media_type === "audio" || asset.media_role === "cover-art" || asset.media_role === "music-canvas";
+  const isMusic = isMusicAsset(asset);
   $("drawerTitle").textContent = asset.title || asset.asset_id;
   $("drawerBody").innerHTML = (
     '<div class="preview">'+mediaPreview(asset, "detail")+'</div>' +
@@ -1052,12 +1123,12 @@ function openAsset(assetId){
   $("drawer").setAttribute("aria-hidden","false");
 }
 function copySelectedPackets(){
-  const assets = [...selectedIds].map(id => DATA.assets.find(asset => asset.asset_id === id)).filter(Boolean);
+  const assets = selectedAssets();
   const packets = assets.map(asset => packetFor(asset));
   copy(JSON.stringify({ generatedAt: new Date().toISOString(), count: packets.length, packets }, null, 2));
 }
 function copyBatchCurationCommand(){
-  const assets = [...selectedIds].map(id => DATA.assets.find(asset => asset.asset_id === id)).filter(Boolean);
+  const assets = selectedAssets();
   if (!assets.length) return toast("Select assets first");
   const ids = assets.map(asset => asset.asset_id);
   const command = "node bin\\\\vis.mjs batch-annotate " + ids.map(shellArg).join(" ") + " --tag review --curation-status needs-review --collection " + shellArg("VIS Review Queue");
@@ -1076,11 +1147,11 @@ function copyBatchCurationCommand(){
         execute: false
       }
     },
-    assets: assets.map(asset => ({ asset_id: asset.asset_id, visual_uri: asset.visual_uri, title: asset.title, media_type: asset.media_type, path: asset.absolute_path || asset.relative_path }))
+    assets: assets.map(assetBrief)
   }, null, 2));
 }
 function copyReviewCommand(){
-  const assets = [...selectedIds].map(id => DATA.assets.find(asset => asset.asset_id === id)).filter(Boolean);
+  const assets = selectedAssets();
   if (!assets.length) return toast("Select assets first");
   const ids = assets.map(asset => asset.asset_id);
   const command = "node bin\\\\vis.mjs review-assets " + ids.map(shellArg).join(" ") + " --rights-status needs-review --approval-status needs-review --reason " + shellArg("Dashboard selected assets require human rights and approval review");
@@ -1099,7 +1170,101 @@ function copyReviewCommand(){
         execute: false
       }
     },
-    assets: assets.map(asset => ({ asset_id: asset.asset_id, visual_uri: asset.visual_uri, title: asset.title, rights_status: asset.rights_status, approval_status: asset.approval_status, path: asset.absolute_path || asset.relative_path }))
+    assets: assets.map(assetBrief)
+  }, null, 2));
+}
+function copyDerivativePlan(preset){
+  const assets = selectedAssets();
+  if (!assets.length) return toast("Select assets first");
+  const ids = assets.map(asset => asset.asset_id);
+  const presetInfo = (DATA.derivativePresets || []).find(item => item.id === preset) || { id: preset };
+  copy(JSON.stringify({
+    type: "vis_derivative_plan_handoff",
+    generatedAt: new Date().toISOString(),
+    preset,
+    preset_label: presetInfo.label || preset,
+    selected_count: ids.length,
+    command: derivativePlanCommand(preset, ids),
+    mcp_tool: {
+      name: "plan_asset_derivatives",
+      arguments: {
+        preset,
+        asset_ids: ids,
+        execute: false
+      }
+    },
+    gates: [
+      "Dry-run only. Review rights and approval blockers before public use.",
+      "No local transform, upload, social post, mint, wallet action, or cloud write happens from this packet.",
+      "Use an explicit human-gated adapter later for Sharp, FFmpeg, Cloudinary, R2, Postiz, IPFS, or thirdweb execution."
+    ],
+    music_boundary: preset === "music-release" ? "Music IS remains canonical for release state, rights, credits, AI disclosure, and distribution gates. VIS plans media derivatives only." : null,
+    assets: assets.map(assetBrief)
+  }, null, 2));
+}
+function derivativePlanCommand(preset, ids){
+  return "node bin\\\\vis.mjs derivative-plan --preset " + shellArg(preset) + " " + ids.map(shellArg).join(" ") + " --json";
+}
+function copyBatchPublicHandoff(kind){
+  const assets = selectedAssets();
+  if (!assets.length) return toast("Select assets first");
+  const ids = assets.map(asset => asset.asset_id);
+  copy(JSON.stringify({
+    type: "vis_public_use_handoff",
+    generatedAt: new Date().toISOString(),
+    intended_use: kind,
+    selected_count: ids.length,
+    derivative_plan: {
+      command: derivativePlanCommand(kind === "website" ? "website" : "social", ids),
+      mcp_tool: {
+        name: "plan_asset_derivatives",
+        arguments: {
+          preset: kind === "website" ? "website" : "social",
+          asset_ids: ids,
+          execute: false
+        }
+      }
+    },
+    handoffs: assets.map(asset => publicHandoff(kind, asset, packetFor(asset))),
+    blocked_assets: assets.filter(asset => asset.publish_gate?.allowed !== true).map(assetBrief),
+    next: "Resolve blockers, generate approved derivatives, use Codex/Claude to place or prepare the asset, then record publication/usage in VIS."
+  }, null, 2));
+}
+function copyMusicBatchHandoff(){
+  const assets = selectedAssets();
+  if (!assets.length) return toast("Select assets first");
+  const musicAssets = assets.filter(isMusicAsset);
+  if (!musicAssets.length) return toast("No music assets selected");
+  const ids = musicAssets.map(asset => asset.asset_id);
+  copy(JSON.stringify({
+    type: "vis_music_is_batch_handoff",
+    generatedAt: new Date().toISOString(),
+    canonical_system: "Music IS",
+    selected_count: ids.length,
+    derivative_plan: {
+      command: derivativePlanCommand("music-release", ids),
+      mcp_tool: {
+        name: "plan_asset_derivatives",
+        arguments: {
+          preset: "music-release",
+          asset_ids: ids,
+          execute: false
+        }
+      }
+    },
+    release_packets: musicAssets.map(asset => ({
+      command: "node bin\\\\vis.mjs music-packet " + shellArg(asset.asset_id) + " --json",
+      mcp_tool: {
+        name: "create_music_release_packet",
+        arguments: {
+          asset_id: asset.asset_id,
+          intended_use: "Music IS release proof folder review"
+        }
+      },
+      asset: assetBrief(asset)
+    })),
+    release_gate: "Music IS must hold audio, metadata, lyrics, prompt, rights notes, AI disclosure, credits, cover, Canvas, shorts, distribution checklist, and human gate before release.",
+    next: "Use this packet to update the Music IS proof folder or ask an agent to prepare the missing release assets. Do not distribute or upload externally from VIS."
   }, null, 2));
 }
 function shellArg(value){
