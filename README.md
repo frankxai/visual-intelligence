@@ -28,6 +28,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Scans website/content routes to map where assets appear.
 - Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
 - Supports dry-run-first batch curation for Eagle-style multi-select review, tagging, and collection moves.
+- Supports dry-run-first asset action recipes for designer inbox, Music IS release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity groups.
 - Supports dry-run-first rights and approval review with provenance before website, social, NFT, or music release use.
 - Guards public-use packets and export manifests so unknown, blocked, or unapproved assets stay visible but not publish-ready.
 - Builds Music IS handoff packets that group audio, cover art, Canvas/video, proof docs, prompts, rights, approval, and next release-gate action.
@@ -147,6 +148,10 @@ node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --co
 node bin\vis.mjs batch-annotate <asset_id> <asset_id> --tag review --curation-status needs-review --collection "VIS Review Queue"
 node bin\vis.mjs batch-annotate <asset_id> <asset_id> --tag review --curation-status needs-review --collection "VIS Review Queue" --execute
 node bin\vis.mjs review-assets <asset_id> <asset_id> --rights-status generated-owned --approval-status approved --reason "Human rights review complete"
+node bin\vis.mjs action-recipes
+node bin\vis.mjs action-recipe prompt-gap-review --limit 50
+node bin\vis.mjs action-recipe music-release-inbox --query "suno cover" --tag release-candidate
+node bin\vis.mjs action-recipe website-candidates <asset_id> <asset_id> --collection "Homepage candidates" --execute
 node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite
 node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite --execute
 node bin\vis.mjs saved-searches
@@ -191,6 +196,8 @@ Tools:
 - `annotate_asset`
 - `bulk_annotate_assets`
 - `review_assets`
+- `list_asset_action_recipes`
+- `run_asset_action_recipe`
 - `list_saved_searches`
 - `save_search`
 - `list_music_releases`
@@ -226,6 +233,7 @@ Build in VIS:
 - Rights, approval, evaluation, and publication records
 - Agent run and skill run capture
 - Portable `.vis.provenance.json` sidecars for generated images, video, audio, and music release assets
+- Dry-run asset action recipes that turn Eagle-style curation and agentic media operations into safe repeatable workflows
 
 Use through adapters:
 

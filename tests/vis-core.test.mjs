@@ -19,6 +19,7 @@ import {
   findSimilarAssets,
   indexProject,
   importEagleLibrary,
+  listAssetActionRecipes,
   listScanProfiles,
   listSavedSearches,
   listMusicReleasePackets,
@@ -28,6 +29,7 @@ import {
   recordPublication,
   createMusicReleasePacket,
   reviewAssets,
+  runAssetActionRecipe,
   resolveScanProfile,
   saveSearch,
   searchAssets,
@@ -385,6 +387,64 @@ test('batch annotates assets dry-run first and records collection provenance on 
       assert.equal(getSummary(db).annotations, 2)
       assert.equal(db.prepare('SELECT COUNT(*) AS count FROM collection_item').get().count, 2)
       assert.equal(db.prepare("SELECT COUNT(*) AS count FROM provenance_event WHERE event_type = 'annotated'").get().count, 2)
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('runs asset action recipes as dry-run first curation workflows', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-action-recipe-'))
+  try {
+    const mediaRoot = path.join(root, 'public', 'images')
+    const musicRoot = path.join(root, 'verticals', 'music-is', 'catalog', 'proof', 'single')
+    fs.mkdirSync(mediaRoot, { recursive: true })
+    fs.mkdirSync(musicRoot, { recursive: true })
+    fs.writeFileSync(path.join(mediaRoot, 'homepage-hero.svg'), '<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="navy"/></svg>')
+    fs.writeFileSync(path.join(mediaRoot, 'homepage-hero.prompt.md'), 'Prompt: website hero with clean product UI')
+    fs.writeFileSync(path.join(mediaRoot, 'loose-concept.svg'), '<svg viewBox="0 0 320 180"><rect width="320" height="180" fill="teal"/></svg>')
+    fs.writeFileSync(path.join(musicRoot, 'final-master.wav'), Buffer.from('RIFFfake-wave-master'))
+    fs.writeFileSync(path.join(musicRoot, 'cover-art.svg'), '<svg viewBox="0 0 3000 3000"><rect width="3000" height="3000" fill="black"/></svg>')
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      mediaRoots: ['public/images', 'verticals/music-is/catalog/proof'],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    indexProject({ root })
+    const db = openVisDatabase(root)
+    try {
+      assert.ok(listAssetActionRecipes().some(recipe => recipe.id === 'prompt-gap-review'))
+
+      const dryRun = runAssetActionRecipe(db, {
+        recipe: 'prompt-gap-review',
+        limit: 10,
+      })
+      assert.equal(dryRun.dryRun, true)
+      assert.equal(dryRun.selected, 3)
+      assert.equal(getSummary(db).annotations, 0)
+      assert.ok(dryRun.command.includes('action-recipe prompt-gap-review'))
+
+      const executed = runAssetActionRecipe(db, {
+        recipe: 'prompt-gap-review',
+        limit: 10,
+        execute: true,
+      })
+      assert.equal(executed.dryRun, false)
+      assert.equal(executed.actions.annotation.annotated, 3)
+      assert.equal(getSummary(db).annotations, 3)
+      assert.equal(db.prepare("SELECT COUNT(*) AS count FROM provenance_event WHERE event_type = 'asset-action-recipe-applied'").get().count, 3)
+
+      const musicDryRun = runAssetActionRecipe(db, {
+        recipe: 'music-release-inbox',
+        limit: 10,
+      })
+      assert.equal(musicDryRun.dryRun, true)
+      assert.equal(musicDryRun.selected, 2)
+      assert.ok(musicDryRun.items.every(item => item.workflow === 'music-release' || item.media_type === 'audio' || item.media_role === 'cover-art'))
     } finally {
       db.close()
     }

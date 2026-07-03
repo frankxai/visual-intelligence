@@ -8,6 +8,7 @@ import {
   findOrphans,
   findSimilarAssets,
   getSummary,
+  listAssetActionRecipes,
   listAssets,
   listSavedSearches,
   loadConfig,
@@ -28,6 +29,7 @@ export function generateDashboard(root, options = {}) {
     const orphans = findOrphans(db, { limit: 60 })
     const similar = findSimilarAssets(db, { limit: 20, minScore: 58 })
     const savedSearches = listSavedSearches(db)
+    const actionRecipes = listAssetActionRecipes()
     const packetSamples = Object.fromEntries(
       assets.slice(0, 300).map(asset => [asset.asset_id, createCurationPacket(db, asset.asset_id)]),
     )
@@ -50,6 +52,7 @@ export function generateDashboard(root, options = {}) {
       orphans,
       similar,
       savedSearches,
+      actionRecipes,
       packetSamples,
       scores,
       ...facets,
@@ -502,6 +505,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .mini-item{border-top:1px solid var(--border);padding-top:8px;font-size:12px;color:var(--muted)}
 .mini-item strong{display:block;color:var(--ink);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mini-item button{margin-top:6px;min-height:30px;font-size:12px}
+.recipe-list{display:grid;gap:8px}
+.recipe-item{border-top:1px solid var(--border);padding-top:8px;font-size:12px;color:var(--muted);display:grid;gap:6px}
+.recipe-item strong{color:var(--ink);font-size:12px}
+.recipe-item button{justify-self:start;min-height:30px;font-size:12px}
 .drawer{
   position:fixed;right:0;top:0;width:min(590px,100vw);height:100vh;background:#070A11;border-left:1px solid var(--border);
   transform:translateX(100%);transition:transform .18s ease;z-index:20;display:flex;flex-direction:column;
@@ -637,6 +644,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
           <div class="panel">
             <h3>Selected packet tray</h3>
             <div class="mini-list" id="selectionTray"></div>
+          </div>
+          <div class="panel">
+            <h3>Action recipes</h3>
+            <div class="recipe-list" id="actionRecipes"></div>
           </div>
           <div class="panel">
             <h3>Music release queue</h3>
@@ -921,7 +932,40 @@ function renderGrid(){
 function miniAssetItem(asset, actionLabel){
   return '<div class="mini-item"><strong>'+esc(asset.title || asset.asset_id)+'</strong>'+esc(asset.media_role || asset.workflow || asset.relative_path || "")+'<br><button data-open-mini="'+esc(asset.asset_id)+'">'+esc(actionLabel || "Open")+'</button></div>';
 }
+function renderActionRecipes(){
+  const selected = [...selectedIds];
+  const recipes = DATA.actionRecipes || [];
+  $("actionRecipes").innerHTML = recipes.slice(0,10).map(recipe => {
+    return '<div class="recipe-item"><strong>'+esc(recipe.label)+'</strong><span>'+esc(recipe.description || "")+'</span><button data-recipe-copy="'+esc(recipe.id)+'">Copy dry-run</button></div>';
+  }).join("") || '<div class="mini-item">No recipes available.</div>';
+  for (const btn of $("actionRecipes").querySelectorAll("[data-recipe-copy]")) {
+    btn.addEventListener("click", () => {
+      const recipe = recipes.find(item => item.id === btn.getAttribute("data-recipe-copy"));
+      const ids = [...selectedIds];
+      copy(JSON.stringify({
+        generatedAt: new Date().toISOString(),
+        recipe,
+        selected_count: ids.length,
+        command: recipeCommand(recipe.id, ids),
+        note: ids.length ? "Dry-run against selected assets. Add --execute only after review." : "Dry-run against the recipe's matching queue. Add --execute only after review.",
+        mcp_tool: {
+          name: "run_asset_action_recipe",
+          arguments: {
+            recipe: recipe.id,
+            asset_ids: ids,
+            execute: false
+          }
+        }
+      }, null, 2));
+    });
+  }
+}
+function recipeCommand(recipeId, ids){
+  const base = "node bin\\\\vis.mjs action-recipe " + shellArg(recipeId);
+  return ids.length ? base + " " + ids.map(shellArg).join(" ") : base + " --limit 50";
+}
 function renderSide(){
+  renderActionRecipes();
   const selectedAssets = [...selectedIds].map(id => DATA.assets.find(asset => asset.asset_id === id)).filter(Boolean);
   $("selectionTray").innerHTML = selectedAssets.length
     ? selectedAssets.slice(0,15).map(asset => miniAssetItem(asset, "Inspect")).join("")

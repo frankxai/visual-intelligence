@@ -42,6 +42,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add project operating system, issue templates, weekly review checklist, and Google Tasks reminder boundary.
 - [x] Teach GitHub task sync to use explicit registry statuses, including done and blocked.
 - [x] Add agent generation provenance sidecars across scanner, CLI, MCP, curation packets, and tests.
+- [x] Add VIS asset action recipes for designer inbox, Music IS release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity review.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.

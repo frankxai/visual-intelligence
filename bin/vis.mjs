@@ -25,6 +25,7 @@ import {
   getSummary,
   indexProject,
   importEagleLibrary,
+  listAssetActionRecipes,
   listScanProfiles,
   listSavedSearches,
   listMusicReleasePackets,
@@ -33,6 +34,7 @@ import {
   recordGenerationProvenance,
   recordPublication,
   reviewAssets,
+  runAssetActionRecipe,
   resolveAssetId,
   resolveMediaRoots,
   resolveScanProfile,
@@ -79,6 +81,7 @@ const VALUE_FLAGS = new Set([
   '--prompt', '--negative-prompt', '--negative', '--model', '--provider', '--seed', '--settings',
   '--settings-json', '--agent', '--coding-agent', '--repo', '--thread', '--session', '--skill',
   '--sidecar', '--output-path', '--source', '--summary',
+  '--recipe', '--filter-tag', '--filter-rights-status', '--filter-approval-status',
 ])
 
 function positionalArgs() {
@@ -504,6 +507,42 @@ function cmdReviewAssets() {
   printJson(result)
 }
 
+function cmdActionRecipes() {
+  printJson(listAssetActionRecipes())
+}
+
+function cmdActionRecipe() {
+  const root = projectRoot()
+  const recipe = getFlag('--recipe') || positionalArgs()[0]
+  if (!recipe) throw new Error('Usage: vis action-recipe <recipe> [asset...] [--query <query>] [--execute]')
+  const refs = assetRefArgs().filter(ref => ref !== recipe)
+  const result = runAssetActionRecipe(root, {
+    recipe,
+    assetRefs: refs,
+    query: getFlag('--query'),
+    mediaType: getFlag('--media-type'),
+    category: getFlag('--category'),
+    mood: getFlag('--mood'),
+    filterTag: getFlag('--filter-tag'),
+    filterRightsStatus: getFlag('--filter-rights-status'),
+    filterApprovalStatus: getFlag('--filter-approval-status'),
+    tags: getAllFlags('--tag'),
+    note: getFlag('--note') || getFlag('--notes'),
+    rating: getFlag('--rating'),
+    color: getFlag('--color'),
+    curationStatus: getFlag('--curation-status') || getFlag('--status'),
+    collection: getFlag('--collection'),
+    rightsStatus: getFlag('--rights-status'),
+    approvalStatus: getFlag('--approval-status'),
+    reason: getFlag('--reason') || getFlag('--note') || getFlag('--notes'),
+    replaceTags: hasFlag('--replace-tags'),
+    actor: 'vis-cli',
+    limit: Number(getFlag('--limit', 50)),
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
 function cmdRecordGeneration() {
   const root = projectRoot()
   const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri')
@@ -807,6 +846,11 @@ const commands = {
   'bulk-annotate': cmdBatchAnnotate,
   'review-assets': cmdReviewAssets,
   'approve-assets': cmdReviewAssets,
+  'action-recipes': cmdActionRecipes,
+  recipes: cmdActionRecipes,
+  'action-recipe': cmdActionRecipe,
+  'run-recipe': cmdActionRecipe,
+  'ai-action': cmdActionRecipe,
   'record-generation': cmdRecordGeneration,
   'record-provenance': cmdRecordGeneration,
   'saved-searches': cmdSavedSearches,
@@ -851,6 +895,8 @@ Commands:
   vis annotate <asset>             Dry-run or save tags, notes, rating, color, collection
   vis batch-annotate <asset...>     Dry-run or save curation metadata across assets
   vis review-assets <asset...>      Dry-run or save rights and approval status
+  vis action-recipes                List dry-run asset action recipes
+  vis action-recipe <recipe>         Dry-run or apply recipe curation across matching assets
   vis record-generation <asset>     Dry-run or save prompt/model/agent/skill provenance sidecar
   vis saved-searches               List saved smart-folder searches
   vis save-search --name <name>     Dry-run or save a smart search

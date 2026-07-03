@@ -21,6 +21,7 @@ import {
   getAsset,
   getSummary,
   importEagleLibrary,
+  listAssetActionRecipes,
   createMusicReleasePacket,
   listSavedSearches,
   listMusicReleasePackets,
@@ -31,6 +32,7 @@ import {
   recordGenerationProvenance,
   recordPublication,
   reviewAssets,
+  runAssetActionRecipe,
   saveSearch,
   scoreAsset,
   scoreCollection,
@@ -194,6 +196,46 @@ function toolReviewAssets(args = {}) {
   }))
 }
 
+function toolListAssetActionRecipes() {
+  return listAssetActionRecipes()
+}
+
+function toolRunAssetActionRecipe(args = {}) {
+  const assetRefs = [
+    ...(Array.isArray(args.asset_ids) ? args.asset_ids : []),
+    ...(Array.isArray(args.assetIds) ? args.assetIds : []),
+    ...(Array.isArray(args.assets) ? args.assets : []),
+    ...(Array.isArray(args.uris) ? args.uris : []),
+    ...(Array.isArray(args.paths) ? args.paths : []),
+    args.asset_id,
+    args.assetId,
+    args.uri,
+    args.path,
+  ].filter(Boolean)
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: runAssetActionRecipe(db, { ...args, assetRefs, execute: false }),
+    }))
+  }
+  return withDb(db => runAssetActionRecipe(db, {
+    ...args,
+    assetRefs,
+    recipe: args.recipe || args.name || args.action,
+    mediaType: args.media_type || args.mediaType,
+    curationStatus: args.curation_status || args.curationStatus || args.status,
+    filterTag: args.filter_tag || args.filterTag,
+    filterRightsStatus: args.filter_rights_status || args.filterRightsStatus,
+    filterApprovalStatus: args.filter_approval_status || args.filterApprovalStatus,
+    rightsStatus: args.rights_status || args.rightsStatus || args.rights,
+    approvalStatus: args.approval_status || args.approvalStatus || args.approval,
+    tags: args.tags || args.tag || [],
+    actor: 'vis-mcp',
+    execute: args.execute === true && WRITE_ENABLED,
+  }))
+}
+
 function toolListSavedSearches() {
   return withDb(db => listSavedSearches(db))
 }
@@ -335,6 +377,9 @@ const TOOL_HANDLERS = {
   annotate_asset: toolAnnotateAsset,
   bulk_annotate_assets: toolBulkAnnotateAssets,
   review_assets: toolReviewAssets,
+  list_asset_action_recipes: toolListAssetActionRecipes,
+  run_asset_action_recipe: toolRunAssetActionRecipe,
+  run_action_recipe: toolRunAssetActionRecipe,
   list_saved_searches: toolListSavedSearches,
   save_search: toolSaveSearch,
   list_music_releases: toolListMusicReleases,
@@ -440,6 +485,29 @@ const TOOLS = [
     approval_status: stringProp('candidate, approved, rejected, or needs-review'),
     reason: stringProp('Human review reason or evidence note'),
     execute: booleanProp('Persist review when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('list_asset_action_recipes', 'List VIS dry-run asset action recipes for designer inbox, music release inbox, provenance gaps, website/social candidates, NFT/Web3, orphans, duplicates, and similarity review.', {}),
+  tool('run_asset_action_recipe', 'Dry-run or apply a VIS asset action recipe. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
+    recipe: stringProp('designer-inbox, music-release-inbox, prompt-gap-review, provenance-gap-review, website-candidates, social-candidates, nft-trait-review, orphan-review, duplicate-review, or similar-review'),
+    asset_ids: { type: 'array', items: { type: 'string' }, description: 'Optional explicit VIS asset_ids' },
+    assets: { type: 'array', items: { type: 'string' }, description: 'Optional asset ids, visual URIs, or paths' },
+    uris: { type: 'array', items: { type: 'string' }, description: 'Optional visual://asset/{asset_id} URIs' },
+    paths: { type: 'array', items: { type: 'string' }, description: 'Optional local or relative paths' },
+    query: stringProp('Optional query filter when selecting recipe matches'),
+    media_type: stringProp('Optional image, video, or audio filter'),
+    category: stringProp('Optional category filter'),
+    filter_tag: stringProp('Optional existing tag that assets must already have'),
+    tags: { type: 'array', items: { type: 'string' }, description: 'Additional custom tags to add' },
+    note: stringProp('Override curation note'),
+    rating: numberProp('Rating 1-5'),
+    color: stringProp('Color label'),
+    curation_status: stringProp('curated, favorite, approved, rejected, needs-review'),
+    collection: stringProp('Collection name override'),
+    rights_status: stringProp('Optional rights status to set during the recipe review step'),
+    approval_status: stringProp('Optional approval status to set during the recipe review step'),
+    reason: stringProp('Human review reason if setting rights or approval'),
+    limit: numberProp('Maximum selected assets'),
+    execute: booleanProp('Persist recipe annotations/reviews when VIS_ENABLE_WRITES=1'),
   }),
   tool('list_saved_searches', 'List saved VIS smart-folder searches.', {}),
   tool('save_search', 'Dry-run or save a VIS smart-folder search. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {

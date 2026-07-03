@@ -415,3 +415,29 @@ Acceptance:
 - [ ] VIS dashboard exposes the first Eagle-inspired cockpit slice.
 - [ ] Eagle remains optional and no proprietary Eagle code is copied.
 ```
+
+## Issue 17: Add VIS asset action recipes for agentic curation queues
+
+Labels: `product`, `mcp`, `dashboard`, `music`
+Milestone: `M2 Asset Intelligence`
+Status: `done`
+
+Body:
+
+```markdown
+Add Eagle-inspired but VIS-native dry-run action recipes for designer asset management, Music IS release media, provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity groups.
+
+Tasks:
+- [x] Add recipe catalog for designer inbox, music release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity review.
+- [x] Add core dry-run-first recipe runner that uses existing annotation, collection, rights review, and provenance paths.
+- [x] Add CLI commands action-recipes and action-recipe with execute gating.
+- [x] Add MCP tools list_asset_action_recipes and run_asset_action_recipe with VIS_ENABLE_WRITES gating.
+- [x] Add dashboard recipe tray that copies dry-run CLI and MCP payloads.
+- [x] Add schema, docs, and tests.
+
+Acceptance:
+- [x] A recipe dry-run selects matching assets without mutating the graph.
+- [x] Executing a recipe records annotations/collections and asset-action-recipe-applied provenance.
+- [x] Music release assets can be queued without making VIS the Music IS source of truth.
+- [x] MCP writes stay disabled unless VIS_ENABLE_WRITES=1 and execute:true are both present.
+```

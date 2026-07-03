@@ -54,6 +54,19 @@ node bin\vis.mjs record-generation <asset> --prompt "..." --model gpt-image-1 --
 
 Through MCP, use `record_generation_provenance`. Writes require `VIS_ENABLE_WRITES=1` and `execute: true`.
 
+Agents should prefer dry-run asset action recipes before bulk curation:
+
+```powershell
+node bin\vis.mjs action-recipes
+node bin\vis.mjs action-recipe designer-inbox --limit 50
+node bin\vis.mjs action-recipe music-release-inbox --query "cover canvas"
+node bin\vis.mjs action-recipe prompt-gap-review --execute
+```
+
+Through MCP, use `run_asset_action_recipe`. Writes require `VIS_ENABLE_WRITES=1` and `execute: true`.
+
+Recipes never delete, upload, publish, mint, or auto-approve rights. They only produce or persist local curation, review, collection, and provenance records.
+
 ## Quality Gates
 
 - Security scan before unfamiliar installs/builds.

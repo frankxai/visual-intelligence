@@ -82,6 +82,25 @@ node bin\vis.mjs record-generation <asset> --prompt "..." --model gpt-image-1 --
 
 The MCP tool is `record_generation_provenance`. MCP writes remain disabled unless the server is started with `VIS_ENABLE_WRITES=1` and the tool call includes `execute: true`.
 
+## Asset Action Recipes
+
+VIS has an Eagle-inspired but VIS-native recipe layer. Recipes select assets from the graph, propose curation writes, and persist through existing annotation, collection, rights-review, and provenance paths only after explicit execution.
+
+Initial recipes:
+
+- `designer-inbox`
+- `music-release-inbox`
+- `prompt-gap-review`
+- `provenance-gap-review`
+- `website-candidates`
+- `social-candidates`
+- `nft-trait-review`
+- `orphan-review`
+- `duplicate-review`
+- `similar-review`
+
+Recipes do not delete files, upload media, publish posts, mint NFTs, or auto-approve rights. They create repeatable review queues and MCP-safe action plans for agents.
+
 ## Agent Interfaces
 
 MCP resources:
@@ -103,6 +122,8 @@ MCP tools:
 - `score_asset`
 - `score_collection`
 - `create_curation_packet`
+- `list_asset_action_recipes`
+- `run_asset_action_recipe`
 - `record_generation_provenance`
 - `record_publication`
 - `export_cloudinary_manifest`

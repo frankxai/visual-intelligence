@@ -1246,6 +1246,9 @@ SELECT
   an.updated_at AS annotated_at,
   COALESCE(u.usage_count, 0) AS usage_count,
   COALESCE(p.prompt_count, 0) AS prompt_count,
+  COALESCE(gen.generation_count, 0) AS generation_count,
+  COALESCE(ar.agent_run_count, 0) AS agent_run_count,
+  COALESCE(sr.skill_run_count, 0) AS skill_run_count,
   COALESCE(pub.publication_count, 0) AS publication_count,
   COALESCE(ev.eval_count, 0) AS eval_count
 FROM asset a
@@ -1254,6 +1257,9 @@ LEFT JOIN asset_version v ON v.version_id = l.version_id
 LEFT JOIN asset_annotation an ON an.asset_id = a.asset_id
 LEFT JOIN (SELECT asset_id, COUNT(*) AS usage_count FROM asset_usage GROUP BY asset_id) u ON u.asset_id = a.asset_id
 LEFT JOIN (SELECT asset_id, COUNT(*) AS prompt_count FROM prompt GROUP BY asset_id) p ON p.asset_id = a.asset_id
+LEFT JOIN (SELECT asset_id, COUNT(*) AS generation_count FROM generation_event GROUP BY asset_id) gen ON gen.asset_id = a.asset_id
+LEFT JOIN (SELECT asset_id, COUNT(*) AS agent_run_count FROM agent_run GROUP BY asset_id) ar ON ar.asset_id = a.asset_id
+LEFT JOIN (SELECT asset_id, COUNT(*) AS skill_run_count FROM skill_run GROUP BY asset_id) sr ON sr.asset_id = a.asset_id
 LEFT JOIN (SELECT asset_id, COUNT(*) AS publication_count FROM publication GROUP BY asset_id) pub ON pub.asset_id = a.asset_id
 LEFT JOIN (SELECT asset_id, COUNT(*) AS eval_count FROM eval_record GROUP BY asset_id) ev ON ev.asset_id = a.asset_id
 WHERE l.location_id IS NOT NULL OR NOT EXISTS (SELECT 1 FROM asset_location lx WHERE lx.asset_id = a.asset_id AND lx.exists_now = 1)
@@ -2408,6 +2414,118 @@ export function reviewAssets(dbOrRoot, assetRefs = [], args = {}) {
   }
 }
 
+export function listAssetActionRecipes() {
+  return Object.entries(ACTION_RECIPES).map(([id, recipe]) => ({
+    id,
+    label: recipe.label,
+    description: recipe.description,
+    default_collection: recipe.collection,
+    default_tags: recipe.tags,
+    default_curation_status: recipe.curationStatus,
+    default_color_label: recipe.color,
+    write_model: 'dry-run-first annotation/review/provenance',
+  }))
+}
+
+export function runAssetActionRecipe(dbOrRoot, args = {}) {
+  const recipeId = normalizeRecipeId(args.recipe || args.name || args.action || args.action_recipe || 'designer-inbox')
+  const recipe = ACTION_RECIPES[recipeId]
+  if (!recipe) {
+    throw new Error(`Unknown asset action recipe: ${recipeId}. Known recipes: ${Object.keys(ACTION_RECIPES).join(', ')}`)
+  }
+
+  const refs = normalizeAssetRefs(args.assetRefs || args.asset_refs || args.assets || args.asset_ids || args.assetIds || args.refs || [])
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const execute = args.execute === true
+    const actor = args.actor || 'vis-cli'
+    const limit = Number(args.limit || 50)
+    const poolLimit = Number(args.poolLimit || args.pool_limit || Math.max(limit * 5, 1000))
+    const context = buildRecipeContext(db, recipeId)
+    const pool = listAssets(db, { limit: poolLimit })
+    const byId = new Map(pool.map(asset => [asset.asset_id, asset]))
+    const candidates = refs.length
+      ? refs.map(ref => byId.get(resolveAssetId(db, ref))).filter(Boolean)
+      : pool.filter(asset => assetMatchesActionFilters(asset, args)).filter(asset => recipe.matcher(asset, context))
+    const selected = candidates.slice(0, limit)
+    const selectedIds = selected.map(asset => asset.asset_id)
+
+    const annotationArgs = {
+      tags: uniq([...recipe.tags, ...normalizeTagInput(args.tags ?? args.tag ?? [])]),
+      note: normalizeNullable(args.note ?? args.notes ?? recipe.note),
+      rating: args.rating ?? recipe.rating ?? null,
+      color: args.color || args.colorLabel || args.color_label || recipe.color,
+      curationStatus: args.curationStatus || args.curation_status || args.status || recipe.curationStatus,
+      collection: args.collection || recipe.collection,
+      replaceTags: args.replaceTags === true || args.replace_tags === true,
+      actor,
+      execute,
+    }
+    const reviewArgs = {
+      rightsStatus: args.rightsStatus || args.rights_status || args.rights,
+      approvalStatus: args.approvalStatus || args.approval_status || args.approval,
+      reason: args.reason || args.reviewReason || args.review_reason || null,
+      actor,
+      execute,
+    }
+    const shouldReview = Boolean(reviewArgs.rightsStatus || reviewArgs.approvalStatus)
+    const annotation = selectedIds.length
+      ? annotateAssets(db, selectedIds, annotationArgs)
+      : {
+          dryRun: !execute,
+          requested: 0,
+          annotated: 0,
+          failed: 0,
+          items: [],
+          errors: [],
+          operation: annotationArgs,
+        }
+    const review = shouldReview && selectedIds.length ? reviewAssets(db, selectedIds, reviewArgs) : null
+
+    if (execute && selectedIds.length) {
+      for (const assetId of selectedIds) {
+        recordProvenance(db, {
+          assetId,
+          eventType: 'asset-action-recipe-applied',
+          actor,
+          source: 'vis-action-recipe',
+          payload: {
+            recipe: recipeId,
+            filters: recipeFilterSummary(args),
+            annotation: annotationArgs,
+            review: shouldReview ? reviewArgs : null,
+          },
+        })
+      }
+    }
+
+    return {
+      dryRun: !execute,
+      recipe: {
+        id: recipeId,
+        label: recipe.label,
+        description: recipe.description,
+        default_collection: recipe.collection,
+      },
+      filters: recipeFilterSummary(args),
+      requested: refs.length || candidates.length,
+      selected: selectedIds.length,
+      limit,
+      actions: {
+        annotation,
+        review,
+      },
+      items: selected.map(asset => recipeAssetSummary(asset, recipeId, context)),
+      command: buildRecipeCommand(recipeId, selectedIds, args),
+      note: execute
+        ? 'Asset action recipe applied with annotation/review provenance events.'
+        : 'Dry run only. Review selected assets and pass execute:true or CLI --execute to persist.',
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
 export function listSavedSearches(dbOrRoot) {
   const { db, close } = resolveDbArgs(dbOrRoot)
   try {
@@ -3481,6 +3599,264 @@ export function parseJson(value, fallback) {
   } catch {
     return fallback
   }
+}
+
+const ACTION_RECIPES = {
+  'designer-inbox': {
+    label: 'Designer inbox',
+    description: 'Queue image and motion assets for Eagle-style visual library triage without changing rights.',
+    collection: 'VIS Designer Inbox',
+    tags: ['designer-inbox', 'needs-curation'],
+    curationStatus: 'needs-review',
+    color: 'violet',
+    note: 'Review for design library fit, source, rights, and website/social use.',
+    matcher: asset => ['image', 'video'].includes(asset.media_type) && asset.approval_status !== 'rejected',
+  },
+  'music-release-inbox': {
+    label: 'Music release inbox',
+    description: 'Queue audio, cover, Canvas, and music proof assets for Music IS release packet work.',
+    collection: 'Music IS Media Review',
+    tags: ['music-is', 'release-review'],
+    curationStatus: 'needs-review',
+    color: 'mint',
+    note: 'Route through Music IS proof folder with audio, cover, Canvas, lyrics, credits, rights, and release gate status.',
+    matcher: asset => isMusicActionAsset(asset),
+  },
+  'prompt-gap-review': {
+    label: 'Prompt gap review',
+    description: 'Find generated-looking media without prompt links and queue sidecar/provenance capture.',
+    collection: 'VIS Prompt Gap Review',
+    tags: ['prompt-gap', 'provenance-needed'],
+    curationStatus: 'needs-review',
+    color: 'gold',
+    note: 'Attach prompt, model, provider, seed/settings, and agent/skill sidecar before public reuse.',
+    matcher: asset => Number(asset.prompt_count || 0) === 0 && ['image', 'video', 'audio'].includes(asset.media_type),
+  },
+  'provenance-gap-review': {
+    label: 'Generation provenance gap',
+    description: 'Queue assets with no generation/agent/skill run evidence for sidecar repair.',
+    collection: 'VIS Provenance Gap Review',
+    tags: ['provenance-gap', 'agent-log-needed'],
+    curationStatus: 'needs-review',
+    color: 'gold',
+    note: 'Record generation, agent run, skill run, and output paths before agent teams reuse this asset.',
+    matcher: asset => Number(asset.generation_count || 0) === 0 && Number(asset.agent_run_count || 0) === 0 && ['image', 'video', 'audio'].includes(asset.media_type),
+  },
+  'website-candidates': {
+    label: 'Website candidates',
+    description: 'Queue small approved image assets that are safe candidates for owned website routes.',
+    collection: 'Website Candidate Assets',
+    tags: ['website-candidate'],
+    curationStatus: 'curated',
+    color: 'blue',
+    note: 'Candidate for route placement; create derivative, record route usage, then record publication URL.',
+    matcher: asset => asset.media_type === 'image' && assetPublishGate(asset, { intendedUse: 'website' }).allowed === true && Number(asset.sizeKB || 0) <= 2000,
+  },
+  'social-candidates': {
+    label: 'Social candidates',
+    description: 'Queue approved image/video assets for channel variants and Postiz/manual publishing handoff.',
+    collection: 'Social Candidate Assets',
+    tags: ['social-candidate'],
+    curationStatus: 'curated',
+    color: 'blue',
+    note: 'Create channel variant, queue human-approved post, then record platform URL and metrics.',
+    matcher: asset => ['image', 'video'].includes(asset.media_type) && assetPublishGate(asset, { intendedUse: 'social' }).allowed === true,
+  },
+  'nft-trait-review': {
+    label: 'NFT trait review',
+    description: 'Queue NFT/Web3-like assets for trait, rights, metadata, storage, and mint-readiness review.',
+    collection: 'NFT Trait Review',
+    tags: ['nft-trait-review', 'web3-review'],
+    curationStatus: 'needs-review',
+    color: 'rose',
+    note: 'Map traits, rights, metadata JSON, IPFS/R2 locations, and human mint approval before any drop.',
+    matcher: asset => asset.category === 'nft-web3' || (asset.tags || []).includes('web3'),
+  },
+  'orphan-review': {
+    label: 'Orphan review',
+    description: 'Queue assets with no detected website/content usage so they can be used, archived, or ignored.',
+    collection: 'VIS Orphan Review',
+    tags: ['orphan-review'],
+    curationStatus: 'needs-review',
+    color: 'slate',
+    note: 'Choose a target use, attach context, or leave archived as unused.',
+    matcher: asset => Number(asset.usage_count || 0) === 0,
+  },
+  'duplicate-review': {
+    label: 'Duplicate review',
+    description: 'Queue duplicate content groups for merge/delete/archive decisions without deleting files.',
+    collection: 'VIS Duplicate Review',
+    tags: ['duplicate-review'],
+    curationStatus: 'needs-review',
+    color: 'slate',
+    note: 'Compare locations, keep best master, and never delete without a separate human-approved cleanup.',
+    matcher: (asset, context) => context.duplicateIds.has(asset.asset_id),
+  },
+  'similar-review': {
+    label: 'Similarity review',
+    description: 'Queue visually adjacent assets for curation, series grouping, or derivative selection.',
+    collection: 'VIS Similarity Review',
+    tags: ['similar-review'],
+    curationStatus: 'needs-review',
+    color: 'slate',
+    note: 'Review similar assets as a set; choose hero/master/variant and record the decision.',
+    matcher: (asset, context) => context.similarIds.has(asset.asset_id),
+  },
+}
+
+function normalizeRecipeId(value) {
+  const id = slugify(value || 'designer-inbox')
+  const aliases = {
+    action: 'designer-inbox',
+    inbox: 'designer-inbox',
+    design: 'designer-inbox',
+    designer: 'designer-inbox',
+    music: 'music-release-inbox',
+    'music-is': 'music-release-inbox',
+    'prompt-gap': 'prompt-gap-review',
+    'prompt-gaps': 'prompt-gap-review',
+    provenance: 'provenance-gap-review',
+    'provenance-gap': 'provenance-gap-review',
+    website: 'website-candidates',
+    social: 'social-candidates',
+    nft: 'nft-trait-review',
+    web3: 'nft-trait-review',
+    orphan: 'orphan-review',
+    orphans: 'orphan-review',
+    duplicate: 'duplicate-review',
+    duplicates: 'duplicate-review',
+    similar: 'similar-review',
+  }
+  return aliases[id] || id
+}
+
+function buildRecipeContext(db, recipeId) {
+  const duplicateIds = new Set()
+  const similarIds = new Set()
+  if (recipeId === 'duplicate-review') {
+    for (const group of findDuplicates(db, { limit: 500 })) {
+      for (const asset of group.assets || []) duplicateIds.add(asset.asset_id)
+    }
+  }
+  if (recipeId === 'similar-review') {
+    const groups = findSimilarAssets(db, { limit: 100, minScore: 58 })
+    for (const group of groups.groups || []) {
+      for (const asset of group.assets || []) similarIds.add(asset.asset_id)
+    }
+  }
+  return { duplicateIds, similarIds }
+}
+
+function assetMatchesActionFilters(asset, args = {}) {
+  const query = normalizeNullable(args.query)
+  const mediaType = args.mediaType || args.media_type
+  const category = args.category
+  const mood = args.mood
+  const tag = args.filterTag || args.filter_tag || args.requiredTag || args.required_tag
+  const curationStatus = args.curationStatus || args.curation_status
+  const rightsStatus = args.filterRightsStatus || args.filter_rights_status
+  const approvalStatus = args.filterApprovalStatus || args.filter_approval_status
+  if (mediaType && asset.media_type !== mediaType) return false
+  if (category && asset.category !== category) return false
+  if (mood && asset.mood !== mood) return false
+  if (tag && !(asset.tags || []).includes(String(tag).toLowerCase())) return false
+  if (curationStatus && asset.curation_status !== curationStatus) return false
+  if (rightsStatus && asset.rights_status !== rightsStatus) return false
+  if (approvalStatus && asset.approval_status !== approvalStatus) return false
+  if (query && !assetMatchesQuery(asset, query)) return false
+  return true
+}
+
+function assetMatchesQuery(asset, query) {
+  const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean)
+  if (!words.length) return true
+  const hay = [
+    asset.asset_id,
+    asset.title,
+    asset.relative_path,
+    asset.absolute_path,
+    asset.public_path,
+    asset.category,
+    asset.mood,
+    asset.media_role,
+    asset.workflow,
+    asset.annotation_notes,
+    asset.rights_status,
+    asset.approval_status,
+    ...(asset.tags || []),
+  ].join(' ').toLowerCase()
+  return words.every(word => hay.includes(word))
+}
+
+function recipeFilterSummary(args = {}) {
+  return {
+    query: args.query || null,
+    media_type: args.mediaType || args.media_type || null,
+    category: args.category || null,
+    mood: args.mood || null,
+    tag: args.filterTag || args.filter_tag || null,
+    curation_status: args.curationStatus || args.curation_status || null,
+    rights_status: args.filterRightsStatus || args.filter_rights_status || null,
+    approval_status: args.filterApprovalStatus || args.filter_approval_status || null,
+  }
+}
+
+function recipeAssetSummary(asset, recipeId, context = {}) {
+  return {
+    asset_id: asset.asset_id,
+    visual_uri: asset.visual_uri,
+    title: asset.title,
+    media_type: asset.media_type,
+    media_role: asset.media_role,
+    workflow: asset.workflow,
+    category: asset.category,
+    rights_status: asset.rights_status,
+    approval_status: asset.approval_status,
+    curation_status: asset.curation_status || null,
+    prompt_count: Number(asset.prompt_count || 0),
+    generation_count: Number(asset.generation_count || 0),
+    usage_count: Number(asset.usage_count || 0),
+    path: asset.absolute_path || asset.relative_path || asset.primary_path,
+    match_reason: recipeMatchReason(asset, recipeId, context),
+  }
+}
+
+function recipeMatchReason(asset, recipeId, context = {}) {
+  if (recipeId === 'designer-inbox') return `${asset.media_type} asset ready for visual curation`
+  if (recipeId === 'music-release-inbox') return asset.workflow === 'music-release' ? 'Music IS release workflow asset' : `${asset.media_type} music-related asset`
+  if (recipeId === 'prompt-gap-review') return `${Number(asset.prompt_count || 0)} prompt records`
+  if (recipeId === 'provenance-gap-review') return `${Number(asset.generation_count || 0)} generation events and ${Number(asset.agent_run_count || 0)} agent runs`
+  if (recipeId === 'website-candidates') return 'Approved small image candidate for owned route'
+  if (recipeId === 'social-candidates') return 'Approved image/video candidate for channel variant'
+  if (recipeId === 'nft-trait-review') return 'NFT/Web3 category or tag'
+  if (recipeId === 'orphan-review') return `${Number(asset.usage_count || 0)} usage edges`
+  if (recipeId === 'duplicate-review') return context.duplicateIds?.has(asset.asset_id) ? 'Duplicate SHA-256 review group member' : 'Duplicate review candidate'
+  if (recipeId === 'similar-review') return context.similarIds?.has(asset.asset_id) ? 'Similarity review group member' : 'Similarity review candidate'
+  return 'Recipe match'
+}
+
+function buildRecipeCommand(recipeId, assetIds, args = {}) {
+  const parts = ['node', 'bin\\vis.mjs', 'action-recipe', recipeId]
+  if (assetIds.length) parts.push(...assetIds)
+  if (args.query) parts.push('--query', args.query)
+  if (args.mediaType || args.media_type) parts.push('--media-type', args.mediaType || args.media_type)
+  if (args.category) parts.push('--category', args.category)
+  if (args.collection) parts.push('--collection', args.collection)
+  if (args.limit) parts.push('--limit', String(args.limit))
+  return parts.map(shellToken).join(' ')
+}
+
+function shellToken(value) {
+  const text = String(value)
+  return /^[A-Za-z0-9_./:\\-]+$/.test(text) ? text : `"${text.replace(/"/g, '\\"')}"`
+}
+
+function isMusicActionAsset(asset) {
+  return asset.workflow === 'music-release' ||
+    asset.media_type === 'audio' ||
+    ['cover-art', 'music-canvas', 'music-stem', 'song-master', 'song-demo', 'song-audio', 'music-sample'].includes(asset.media_role) ||
+    asset.category === 'music-releases' ||
+    (asset.tags || []).includes('music')
 }
 
 function groupCount(rows, key) {
