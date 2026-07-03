@@ -101,6 +101,33 @@ VIS treats Google Drive/OneDrive/Eagle as external storage surfaces, not as the 
 
 VIS has an Eagle-inspired but VIS-native recipe layer. Recipes select assets from the graph, propose curation writes, and persist through existing annotation, collection, rights-review, and provenance paths only after explicit execution.
 
+## Smart Collections
+
+VIS smart collections are live, read-first queues over the SQLite graph. They give the dashboard, CLI, MCP server, and future desktop/PWA app the same Eagle-style views without duplicating filter logic.
+
+Initial smart collections:
+
+- `inbox`
+- `rights-review`
+- `prompt-gaps`
+- `provenance-gaps`
+- `website-used`
+- `orphans`
+- `duplicates`
+- `similar-review`
+- `curated`
+- `favorites`
+- `unannotated`
+- `music`
+- `video-motion`
+- `nft-web3`
+- `website-ready`
+- `social-ready`
+
+Actionable smart collections expose an attached dry-run recipe. The write boundary stays in the recipe runner: the smart view is read-only, the recipe dry-run is safe, and persistence still requires explicit `--execute` or MCP `VIS_ENABLE_WRITES=1` plus `execute: true`.
+
+## Asset Action Recipe Catalog
+
 Initial recipes:
 
 - `designer-inbox`
@@ -139,6 +166,8 @@ MCP tools:
 - `create_curation_packet`
 - `plan_creative_vault`
 - `init_creative_vault`
+- `list_smart_collections`
+- `evaluate_smart_collection`
 - `list_asset_action_recipes`
 - `run_asset_action_recipe`
 - `record_generation_provenance`

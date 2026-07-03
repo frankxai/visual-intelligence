@@ -17,6 +17,7 @@ import {
   createCurationPacket,
   exportCloudinaryManifest,
   exportNftMetadataReport,
+  evaluateSmartCollection,
   findDuplicates,
   findOrphans,
   findSimilarAssets,
@@ -28,6 +29,7 @@ import {
   listAssetActionRecipes,
   listScanProfiles,
   listSavedSearches,
+  listSmartCollections,
   listMusicReleasePackets,
   loadConfig,
   openVisDatabase,
@@ -84,7 +86,7 @@ const VALUE_FLAGS = new Set([
   '--settings-json', '--agent', '--coding-agent', '--repo', '--thread', '--session', '--skill',
   '--sidecar', '--output-path', '--source', '--summary',
   '--recipe', '--filter-tag', '--filter-rights-status', '--filter-approval-status',
-  '--vault-root',
+  '--vault-root', '--sample-limit',
 ])
 
 function positionalArgs() {
@@ -546,6 +548,52 @@ function cmdActionRecipe() {
   printJson(result)
 }
 
+function cmdSmartCollections() {
+  const root = projectRoot()
+  const result = listSmartCollections(root, {
+    sampleLimit: Number(getFlag('--sample-limit', 0)),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log('\n=== VIS SMART COLLECTIONS ===\n')
+  for (const collection of result) {
+    const recipe = collection.action_recipe ? ` | recipe: ${collection.action_recipe}` : ''
+    console.log(`${collection.id} | ${collection.label} | ${collection.count}${recipe}`)
+    console.log(`  ${collection.description}`)
+  }
+}
+
+function cmdSmartCollection() {
+  const root = projectRoot()
+  const collection = getFlag('--collection') || positionalArgs()[0]
+  if (!collection) throw new Error('Usage: vis smart-collection <id> [--query <query>] [--limit <n>] [--json]')
+  const result = evaluateSmartCollection(root, {
+    collection,
+    query: getFlag('--query'),
+    mediaType: getFlag('--media-type'),
+    category: getFlag('--category'),
+    mood: getFlag('--mood'),
+    filterTag: getFlag('--filter-tag') || getFlag('--tag'),
+    filterRightsStatus: getFlag('--filter-rights-status'),
+    filterApprovalStatus: getFlag('--filter-approval-status'),
+    limit: Number(getFlag('--limit', 50)),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log(`\n=== VIS SMART COLLECTION: ${result.label} ===\n`)
+  console.log(`${result.description}`)
+  console.log(`Selected: ${result.total_selected}`)
+  if (result.commands.recipe_dry_run) console.log(`Recipe dry-run: ${result.commands.recipe_dry_run}`)
+  for (const item of result.items.slice(0, Number(getFlag('--limit', 50)))) {
+    console.log(`- ${item.asset_id} | ${item.media_type} | ${item.match_reason}`)
+    console.log(`  ${item.path}`)
+  }
+}
+
 function cmdRecordGeneration() {
   const root = projectRoot()
   const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri')
@@ -908,6 +956,10 @@ const commands = {
   'action-recipe': cmdActionRecipe,
   'run-recipe': cmdActionRecipe,
   'ai-action': cmdActionRecipe,
+  'smart-collections': cmdSmartCollections,
+  'smart-views': cmdSmartCollections,
+  'smart-collection': cmdSmartCollection,
+  smart: cmdSmartCollection,
   'record-generation': cmdRecordGeneration,
   'record-provenance': cmdRecordGeneration,
   'saved-searches': cmdSavedSearches,
@@ -956,6 +1008,8 @@ Commands:
   vis review-assets <asset...>      Dry-run or save rights and approval status
   vis action-recipes                List dry-run asset action recipes
   vis action-recipe <recipe>         Dry-run or apply recipe curation across matching assets
+  vis smart-collections             List live Eagle-style smart views with counts
+  vis smart-collection <id>          Inspect one smart view and copy the attached dry-run recipe
   vis record-generation <asset>     Dry-run or save prompt/model/agent/skill provenance sidecar
   vis saved-searches               List saved smart-folder searches
   vis save-search --name <name>     Dry-run or save a smart search

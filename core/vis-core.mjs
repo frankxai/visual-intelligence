@@ -2620,6 +2620,77 @@ export function runAssetActionRecipe(dbOrRoot, args = {}) {
   }
 }
 
+export function listSmartCollections(dbOrRoot, options = {}) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const assets = listAssets(db, { limit: Number(options.poolLimit || options.pool_limit || 10000) })
+    const context = buildSmartCollectionContext(db)
+    return SMART_COLLECTIONS.map(collection => {
+      const matching = assets.filter(asset => assetMatchesSmartCollection(asset, collection.id, context))
+      return smartCollectionDescriptor(collection, {
+        count: matching.length,
+        sample: matching.slice(0, Number(options.sampleLimit || options.sample_limit || 0)).map(asset => smartCollectionAssetSummary(asset, collection, context)),
+      })
+    })
+  } finally {
+    if (close) db.close()
+  }
+}
+
+export function evaluateSmartCollection(dbOrRoot, args = {}) {
+  const smartId = normalizeSmartCollectionId(args.collection || args.collection_id || args.id || args.smart || args.name || 'inbox')
+  const collection = SMART_COLLECTIONS.find(item => item.id === smartId)
+  if (!collection) {
+    throw new Error(`Unknown smart collection: ${smartId}. Known collections: ${SMART_COLLECTIONS.map(item => item.id).join(', ')}`)
+  }
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const limit = Number(args.limit || 50)
+    const poolLimit = Number(args.poolLimit || args.pool_limit || Math.max(limit * 5, 1000))
+    const context = buildSmartCollectionContext(db)
+    const pool = listAssets(db, { limit: poolLimit })
+    const matching = pool
+      .filter(asset => assetMatchesActionFilters(asset, args))
+      .filter(asset => assetMatchesSmartCollection(asset, collection.id, context))
+    const items = matching
+      .slice(0, limit)
+      .map(asset => smartCollectionAssetSummary(asset, collection, context))
+    return {
+      ...smartCollectionDescriptor(collection, { count: matching.length }),
+      total_selected: items.length,
+      pool_limit: poolLimit,
+      applied_filters: recipeFilterSummary(args),
+      items,
+      commands: {
+        view: buildSmartCollectionCommand(collection.id, args),
+        recipe_dry_run: collection.recipe ? buildRecipeCommand(collection.recipe, items.map(item => item.asset_id), { limit: items.length || limit }) : null,
+      },
+      mcp: {
+        view: {
+          name: 'evaluate_smart_collection',
+          arguments: {
+            collection: collection.id,
+            limit,
+          },
+        },
+        recipe_dry_run: collection.recipe ? {
+          name: 'run_asset_action_recipe',
+          arguments: {
+            recipe: collection.recipe,
+            asset_ids: items.map(item => item.asset_id),
+            execute: false,
+          },
+        } : null,
+      },
+      note: collection.recipe
+        ? 'Read-only smart collection. Use recipe_dry_run, then execute the recipe only after human review.'
+        : 'Read-only smart collection. No write action is attached to this view.',
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
 export function listSavedSearches(dbOrRoot) {
   const { db, close } = resolveDbArgs(dbOrRoot)
   try {
@@ -3967,6 +4038,121 @@ const ACTION_RECIPES = {
   },
 }
 
+const SMART_COLLECTIONS = [
+  {
+    id: 'inbox',
+    label: 'Inbox / uncurated',
+    description: 'Assets that still need a human curation decision.',
+    recipe: 'designer-inbox',
+    filters: { approval_status: ['candidate', 'needs-review'] },
+  },
+  {
+    id: 'rights-review',
+    label: 'Rights review',
+    description: 'Assets that cannot be used publicly until rights are reviewed.',
+    recipe: null,
+    filters: { rights_status: ['unknown', 'needs-review'] },
+  },
+  {
+    id: 'prompt-gaps',
+    label: 'Prompt gaps',
+    description: 'Media missing prompt records or prompt sidecars.',
+    recipe: 'prompt-gap-review',
+    filters: { prompt_count: 0 },
+  },
+  {
+    id: 'provenance-gaps',
+    label: 'Agent provenance gaps',
+    description: 'Generated-looking media missing generation, agent, or skill run evidence.',
+    recipe: 'provenance-gap-review',
+    filters: { generation_count: 0, agent_run_count: 0 },
+  },
+  {
+    id: 'website-used',
+    label: 'Used on sites',
+    description: 'Assets with detected website or content route usage.',
+    recipe: null,
+    filters: { min_usage_count: 1 },
+  },
+  {
+    id: 'orphans',
+    label: 'Orphans',
+    description: 'Assets with no detected website/content usage.',
+    recipe: 'orphan-review',
+    filters: { usage_count: 0 },
+  },
+  {
+    id: 'duplicates',
+    label: 'Duplicate sample',
+    description: 'Assets that share byte-identical versions and need a keep/archive decision.',
+    recipe: 'duplicate-review',
+    filters: { duplicate: true },
+  },
+  {
+    id: 'similar-review',
+    label: 'Similarity review',
+    description: 'Visually adjacent assets that should be grouped, promoted, or archived together.',
+    recipe: 'similar-review',
+    filters: { similar: true },
+  },
+  {
+    id: 'curated',
+    label: 'Curated',
+    description: 'Assets with local notes, tags, ratings, color labels, or collection state.',
+    recipe: null,
+    filters: { annotated: true },
+  },
+  {
+    id: 'favorites',
+    label: 'Favorites',
+    description: 'Highly rated or favorite assets for fast reuse.',
+    recipe: null,
+    filters: { min_rating: 4, curation_status: ['favorite', 'approved'] },
+  },
+  {
+    id: 'unannotated',
+    label: 'Needs notes',
+    description: 'Assets that have not been curated locally yet.',
+    recipe: 'designer-inbox',
+    filters: { annotated: false },
+  },
+  {
+    id: 'music',
+    label: 'Music / audio',
+    description: 'Audio, cover art, Canvas, release media, and Music IS handoff candidates.',
+    recipe: 'music-release-inbox',
+    filters: { workflow: 'music-release' },
+  },
+  {
+    id: 'video-motion',
+    label: 'Video / motion',
+    description: 'Video and motion assets for Canvas, reels, shorts, and website motion.',
+    recipe: 'social-candidates',
+    filters: { media_type: 'video' },
+  },
+  {
+    id: 'nft-web3',
+    label: 'NFT / Web3',
+    description: 'Trait, character, collection, metadata, and Web3 drop candidates.',
+    recipe: 'nft-trait-review',
+    filters: { category: 'nft-web3', tag: 'web3' },
+  },
+  {
+    id: 'website-ready',
+    label: 'Website ready',
+    description: 'Approved, rights-cleared image assets that can become website derivatives.',
+    recipe: 'website-candidates',
+    filters: { media_type: 'image', public_use: 'website', max_size_kb: 2000 },
+  },
+  {
+    id: 'social-ready',
+    label: 'Social ready',
+    description: 'Approved, rights-cleared image or video assets for social variants.',
+    recipe: 'social-candidates',
+    filters: { media_type: ['image', 'video'], public_use: 'social' },
+  },
+]
+
 function normalizeRecipeId(value) {
   const id = slugify(value || 'designer-inbox')
   const aliases = {
@@ -3993,6 +4179,39 @@ function normalizeRecipeId(value) {
   return aliases[id] || id
 }
 
+function normalizeSmartCollectionId(value) {
+  const id = slugify(value || 'inbox')
+  const aliases = {
+    smart: 'inbox',
+    action: 'inbox',
+    design: 'inbox',
+    designer: 'inbox',
+    uncurated: 'inbox',
+    rights: 'rights-review',
+    prompts: 'prompt-gaps',
+    prompt: 'prompt-gaps',
+    'prompt-gap': 'prompt-gaps',
+    provenance: 'provenance-gaps',
+    'agent-provenance': 'provenance-gaps',
+    usage: 'website-used',
+    used: 'website-used',
+    orphan: 'orphans',
+    duplicate: 'duplicates',
+    similar: 'similar-review',
+    favorite: 'favorites',
+    notes: 'unannotated',
+    music: 'music',
+    audio: 'music',
+    video: 'video-motion',
+    motion: 'video-motion',
+    nft: 'nft-web3',
+    web3: 'nft-web3',
+    website: 'website-ready',
+    social: 'social-ready',
+  }
+  return aliases[id] || id
+}
+
 function buildRecipeContext(db, recipeId) {
   const duplicateIds = new Set()
   const similarIds = new Set()
@@ -4008,6 +4227,107 @@ function buildRecipeContext(db, recipeId) {
     }
   }
   return { duplicateIds, similarIds }
+}
+
+function buildSmartCollectionContext(db) {
+  const duplicateIds = new Set()
+  for (const group of findDuplicates(db, { limit: 500 })) {
+    for (const asset of group.assets || []) duplicateIds.add(asset.asset_id)
+  }
+  const similarIds = new Set()
+  const groups = findSimilarAssets(db, { limit: 100, minScore: 58 })
+  for (const group of groups.groups || []) {
+    for (const asset of group.assets || []) similarIds.add(asset.asset_id)
+  }
+  return { duplicateIds, similarIds }
+}
+
+function smartCollectionDescriptor(collection, extras = {}) {
+  return {
+    id: collection.id,
+    label: collection.label,
+    description: collection.description,
+    filters: collection.filters,
+    action_recipe: collection.recipe || null,
+    command: buildSmartCollectionCommand(collection.id, extras),
+    write_model: collection.recipe ? 'read-first smart view with dry-run recipe handoff' : 'read-only smart view',
+    ...extras,
+  }
+}
+
+function assetMatchesSmartCollection(asset, id, context = {}) {
+  const smartId = normalizeSmartCollectionId(id)
+  if (smartId === 'inbox') return asset.approval_status !== 'approved' && asset.approval_status !== 'rejected'
+  if (smartId === 'rights-review') return ['unknown', 'needs-review'].includes(asset.rights_status)
+  if (smartId === 'prompt-gaps') return Number(asset.prompt_count || 0) === 0 && ['image', 'video', 'audio'].includes(asset.media_type)
+  if (smartId === 'provenance-gaps') return Number(asset.generation_count || 0) === 0 && Number(asset.agent_run_count || 0) === 0 && ['image', 'video', 'audio'].includes(asset.media_type)
+  if (smartId === 'website-used') return Number(asset.usage_count || 0) > 0
+  if (smartId === 'orphans') return Number(asset.usage_count || 0) === 0
+  if (smartId === 'duplicates') return context.duplicateIds?.has(asset.asset_id) === true
+  if (smartId === 'similar-review') return context.similarIds?.has(asset.asset_id) === true
+  if (smartId === 'curated') return Boolean(asset.annotation)
+  if (smartId === 'favorites') return Number(asset.rating || 0) >= 4 || ['favorite', 'approved'].includes(asset.curation_status)
+  if (smartId === 'unannotated') return !asset.annotation
+  if (smartId === 'music') return isMusicActionAsset(asset)
+  if (smartId === 'video-motion') return asset.media_type === 'video'
+  if (smartId === 'nft-web3') return asset.category === 'nft-web3' || (asset.tags || []).includes('web3')
+  if (smartId === 'website-ready') return asset.media_type === 'image' && assetPublishGate(asset, { intendedUse: 'website' }).allowed === true && Number(asset.sizeKB || 0) <= 2000
+  if (smartId === 'social-ready') return ['image', 'video'].includes(asset.media_type) && assetPublishGate(asset, { intendedUse: 'social' }).allowed === true
+  return true
+}
+
+function smartCollectionAssetSummary(asset, collection = null, context = {}) {
+  return {
+    asset_id: asset.asset_id,
+    visual_uri: asset.visual_uri,
+    title: asset.title,
+    media_type: asset.media_type,
+    media_role: asset.media_role,
+    workflow: asset.workflow,
+    category: asset.category,
+    rights_status: asset.rights_status,
+    approval_status: asset.approval_status,
+    curation_status: asset.curation_status || null,
+    rating: asset.rating ?? null,
+    color_label: asset.color_label || null,
+    prompt_count: Number(asset.prompt_count || 0),
+    generation_count: Number(asset.generation_count || 0),
+    agent_run_count: Number(asset.agent_run_count || 0),
+    skill_run_count: Number(asset.skill_run_count || 0),
+    usage_count: Number(asset.usage_count || 0),
+    path: asset.absolute_path || asset.relative_path || asset.primary_path,
+    match_reason: smartCollectionMatchReason(asset, typeof collection === 'string' ? collection : collection?.id, context),
+  }
+}
+
+function smartCollectionMatchReason(asset, smartId, context = {}) {
+  const id = normalizeSmartCollectionId(smartId || 'inbox')
+  if (id === 'inbox') return `Approval is ${asset.approval_status || 'candidate'}`
+  if (id === 'rights-review') return `Rights are ${asset.rights_status || 'unknown'}`
+  if (id === 'prompt-gaps') return `${Number(asset.prompt_count || 0)} prompt records`
+  if (id === 'provenance-gaps') return `${Number(asset.generation_count || 0)} generation events and ${Number(asset.agent_run_count || 0)} agent runs`
+  if (id === 'website-used') return `${Number(asset.usage_count || 0)} usage edges`
+  if (id === 'orphans') return 'No detected website/content usage'
+  if (id === 'duplicates') return context.duplicateIds?.has(asset.asset_id) ? 'Byte-identical duplicate group member' : 'Duplicate candidate'
+  if (id === 'similar-review') return context.similarIds?.has(asset.asset_id) ? 'Similarity group member' : 'Similarity candidate'
+  if (id === 'curated') return 'Has VIS curation metadata'
+  if (id === 'favorites') return `Rating ${asset.rating ?? 'none'}; status ${asset.curation_status || 'uncurated'}`
+  if (id === 'unannotated') return 'No local VIS annotation'
+  if (id === 'music') return asset.workflow === 'music-release' ? 'Music IS release workflow asset' : `${asset.media_type} music-related asset`
+  if (id === 'video-motion') return 'Video or motion asset'
+  if (id === 'nft-web3') return 'NFT/Web3 category or tag'
+  if (id === 'website-ready') return 'Rights-cleared approved image under website size threshold'
+  if (id === 'social-ready') return 'Rights-cleared approved image/video asset'
+  return 'Smart collection match'
+}
+
+function buildSmartCollectionCommand(collectionId, args = {}) {
+  const parts = ['node', 'bin\\vis.mjs', 'smart-collection', collectionId]
+  if (args.query) parts.push('--query', args.query)
+  if (args.mediaType || args.media_type) parts.push('--media-type', args.mediaType || args.media_type)
+  if (args.category) parts.push('--category', args.category)
+  if (args.limit) parts.push('--limit', String(args.limit))
+  return parts.map(shellToken).join(' ')
 }
 
 function assetMatchesActionFilters(asset, args = {}) {

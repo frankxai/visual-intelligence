@@ -24,7 +24,9 @@ import {
   initCreativeVault,
   listAssetActionRecipes,
   createMusicReleasePacket,
+  evaluateSmartCollection,
   listSavedSearches,
+  listSmartCollections,
   listMusicReleasePackets,
   loadConfig,
   mapUsage,
@@ -242,6 +244,24 @@ function toolListSavedSearches() {
   return withDb(db => listSavedSearches(db))
 }
 
+function toolListSmartCollections(args = {}) {
+  return withDb(db => listSmartCollections(db, {
+    sampleLimit: args.sample_limit || args.sampleLimit || 0,
+  }))
+}
+
+function toolEvaluateSmartCollection(args = {}) {
+  return withDb(db => evaluateSmartCollection(db, {
+    ...args,
+    collection: args.collection || args.collection_id || args.id || args.smart || args.name,
+    mediaType: args.media_type || args.mediaType,
+    filterTag: args.filter_tag || args.filterTag || args.tag,
+    filterRightsStatus: args.filter_rights_status || args.filterRightsStatus,
+    filterApprovalStatus: args.filter_approval_status || args.filterApprovalStatus,
+    limit: args.limit || 50,
+  }))
+}
+
 function toolSaveSearch(args = {}) {
   if (args.execute === true && !WRITE_ENABLED) {
     return withDb(db => ({
@@ -405,6 +425,9 @@ const TOOL_HANDLERS = {
   list_asset_action_recipes: toolListAssetActionRecipes,
   run_asset_action_recipe: toolRunAssetActionRecipe,
   run_action_recipe: toolRunAssetActionRecipe,
+  list_smart_collections: toolListSmartCollections,
+  evaluate_smart_collection: toolEvaluateSmartCollection,
+  get_smart_collection: toolEvaluateSmartCollection,
   list_saved_searches: toolListSavedSearches,
   save_search: toolSaveSearch,
   list_music_releases: toolListMusicReleases,
@@ -535,6 +558,19 @@ const TOOLS = [
     reason: stringProp('Human review reason if setting rights or approval'),
     limit: numberProp('Maximum selected assets'),
     execute: booleanProp('Persist recipe annotations/reviews when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('list_smart_collections', 'List live VIS smart collections with counts, Eagle-style queue labels, and attached dry-run recipe handoffs.', {
+    sample_limit: numberProp('Optional sample assets per smart collection'),
+  }),
+  tool('evaluate_smart_collection', 'Inspect one live VIS smart collection. Read-only; use attached recipe_dry_run before any write-gated action.', {
+    collection: stringProp('inbox, rights-review, prompt-gaps, provenance-gaps, website-used, orphans, duplicates, similar-review, curated, favorites, unannotated, music, video-motion, nft-web3, website-ready, or social-ready'),
+    query: stringProp('Optional query filter'),
+    media_type: stringProp('Optional image, video, or audio filter'),
+    category: stringProp('Optional category filter'),
+    filter_tag: stringProp('Optional existing tag required on matching assets'),
+    filter_rights_status: stringProp('Optional rights status filter'),
+    filter_approval_status: stringProp('Optional approval status filter'),
+    limit: numberProp('Maximum selected assets'),
   }),
   tool('list_saved_searches', 'List saved VIS smart-folder searches.', {}),
   tool('save_search', 'Dry-run or save a VIS smart-folder search. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {

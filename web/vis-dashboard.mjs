@@ -11,6 +11,7 @@ import {
   listAssetActionRecipes,
   listAssets,
   listSavedSearches,
+  listSmartCollections,
   loadConfig,
   openVisDatabase,
   parseJson,
@@ -29,6 +30,7 @@ export function generateDashboard(root, options = {}) {
     const orphans = findOrphans(db, { limit: 60 })
     const similar = findSimilarAssets(db, { limit: 20, minScore: 58 })
     const savedSearches = listSavedSearches(db)
+    const smartCollections = listSmartCollections(db)
     const actionRecipes = listAssetActionRecipes()
     const packetSamples = Object.fromEntries(
       assets.slice(0, 300).map(asset => [asset.asset_id, createCurationPacket(db, asset.asset_id)]),
@@ -51,6 +53,7 @@ export function generateDashboard(root, options = {}) {
       duplicates,
       orphans,
       similar,
+      smartCollections,
       savedSearches,
       actionRecipes,
       packetSamples,
@@ -294,29 +297,7 @@ function contentType(filePath) {
 
 function deriveDashboardFacets(assets, duplicates, orphans, similar) {
   const duplicateAssetIds = new Set(duplicates.flatMap(group => (group.assets || []).map(asset => asset.asset_id)))
-  const orphanIds = new Set(orphans.map(asset => asset.asset_id))
   const similarAssetIds = new Set((similar.groups || []).flatMap(group => (group.assets || []).map(asset => asset.asset_id)))
-  const smartCollections = [
-    ['inbox', 'Inbox / uncurated', asset => asset.approval_status !== 'approved' && asset.approval_status !== 'rejected'],
-    ['rights-review', 'Rights review', asset => ['unknown', 'needs-review'].includes(asset.rights_status)],
-    ['provenance-gaps', 'Prompt gaps', asset => Number(asset.prompt_count || 0) === 0],
-    ['website-used', 'Used on sites', asset => Number(asset.usage_count || 0) > 0],
-    ['orphans', 'Orphans', asset => orphanIds.has(asset.asset_id) || Number(asset.usage_count || 0) === 0],
-    ['duplicates', 'Duplicate sample', asset => duplicateAssetIds.has(asset.asset_id)],
-    ['similar-review', 'Similarity review', asset => similarAssetIds.has(asset.asset_id)],
-    ['curated', 'Curated', asset => Boolean(asset.annotation)],
-    ['favorites', 'Favorites', asset => Number(asset.rating || 0) >= 4 || ['favorite', 'approved'].includes(asset.curation_status)],
-    ['unannotated', 'Needs notes', asset => !asset.annotation],
-    ['music', 'Music / audio', asset => asset.workflow === 'music-release' || asset.media_type === 'audio' || (asset.tags || []).includes('music')],
-    ['video-motion', 'Video / motion', asset => asset.media_type === 'video'],
-    ['nft-web3', 'NFT / Web3', asset => asset.category === 'nft-web3' || (asset.tags || []).includes('web3')],
-    ['website-ready', 'Website ready', asset => asset.media_type === 'image' && asset.publish_gate?.allowed === true && Number(asset.sizeKB || 0) <= 2000],
-    ['social-ready', 'Social ready', asset => ['image', 'video'].includes(asset.media_type) && asset.publish_gate?.allowed === true],
-  ].map(([id, label, matcher]) => ({
-    id,
-    label,
-    count: assets.filter(matcher).length,
-  }))
 
   return {
     duplicateAssetIds: [...duplicateAssetIds],
@@ -324,7 +305,6 @@ function deriveDashboardFacets(assets, duplicates, orphans, similar) {
     sources: topCounts(assets.map(sourceLabel), 20),
     folders: topCounts(assets.map(folderLabel), 30),
     tags: topCounts(assets.flatMap(asset => asset.tags || []), 40),
-    smartCollections,
   }
 }
 
@@ -732,7 +712,8 @@ function smartMatches(asset, id){
   if (!id) return true;
   if (id === "inbox") return asset.approval_status !== "approved" && asset.approval_status !== "rejected";
   if (id === "rights-review") return ["unknown","needs-review"].includes(asset.rights_status);
-  if (id === "provenance-gaps") return Number(asset.prompt_count || 0) === 0;
+  if (id === "prompt-gaps") return Number(asset.prompt_count || 0) === 0;
+  if (id === "provenance-gaps") return Number(asset.generation_count || 0) === 0 && Number(asset.agent_run_count || 0) === 0;
   if (id === "website-used") return Number(asset.usage_count || 0) > 0;
   if (id === "orphans") return Number(asset.usage_count || 0) === 0;
   if (id === "duplicates") return DUPLICATE_IDS.has(asset.asset_id);

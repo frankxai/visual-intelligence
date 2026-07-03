@@ -11,6 +11,7 @@ import {
   detectDimensions,
   detectMediaRole,
   detectSuitability,
+  evaluateSmartCollection,
   expandPathTokens,
   exportCloudinaryManifest,
   exportNftMetadataReport,
@@ -23,6 +24,7 @@ import {
   listAssetActionRecipes,
   listScanProfiles,
   listSavedSearches,
+  listSmartCollections,
   listMusicReleasePackets,
   loadConfig,
   openVisDatabase,
@@ -488,6 +490,21 @@ test('runs asset action recipes as dry-run first curation workflows', () => {
       assert.equal(musicDryRun.dryRun, true)
       assert.equal(musicDryRun.selected, 2)
       assert.ok(musicDryRun.items.every(item => item.workflow === 'music-release' || item.media_type === 'audio' || item.media_role === 'cover-art'))
+
+      const smartCollections = listSmartCollections(db)
+      const promptGaps = smartCollections.find(collection => collection.id === 'prompt-gaps')
+      assert.equal(promptGaps.action_recipe, 'prompt-gap-review')
+      assert.equal(promptGaps.count, 3)
+
+      const promptSmartView = evaluateSmartCollection(db, { collection: 'prompt-gaps', limit: 10 })
+      assert.equal(promptSmartView.total_selected, 3)
+      assert.equal(promptSmartView.action_recipe, 'prompt-gap-review')
+      assert.ok(promptSmartView.commands.recipe_dry_run.includes('action-recipe prompt-gap-review'))
+
+      const musicSmartView = evaluateSmartCollection(db, { collection: 'music', limit: 10 })
+      assert.equal(musicSmartView.total_selected, 2)
+      assert.equal(musicSmartView.action_recipe, 'music-release-inbox')
+      assert.ok(musicSmartView.items.every(item => item.workflow === 'music-release' || item.media_type === 'audio' || item.media_role === 'cover-art'))
     } finally {
       db.close()
     }

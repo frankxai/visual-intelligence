@@ -27,6 +27,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Finds local similarity review groups with dependency-free metadata heuristics while semantic embeddings remain adapter-planned.
 - Scans website/content routes to map where assets appear.
 - Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
+- Lists and evaluates live Eagle-style smart collections for inbox, rights review, prompt/provenance gaps, usage, orphans, duplicates, music, video, NFT/Web3, website-ready, and social-ready queues.
 - Supports dry-run-first batch curation for Eagle-style multi-select review, tagging, and collection moves.
 - Supports dry-run-first asset action recipes for designer inbox, Music IS release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity groups.
 - Supports dry-run-first rights and approval review with provenance before website, social, NFT, or music release use.
@@ -152,6 +153,9 @@ node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --co
 node bin\vis.mjs batch-annotate <asset_id> <asset_id> --tag review --curation-status needs-review --collection "VIS Review Queue"
 node bin\vis.mjs batch-annotate <asset_id> <asset_id> --tag review --curation-status needs-review --collection "VIS Review Queue" --execute
 node bin\vis.mjs review-assets <asset_id> <asset_id> --rights-status generated-owned --approval-status approved --reason "Human rights review complete"
+node bin\vis.mjs smart-collections
+node bin\vis.mjs smart-collection prompt-gaps --limit 50
+node bin\vis.mjs smart-collection music --query "cover canvas" --json
 node bin\vis.mjs action-recipes
 node bin\vis.mjs action-recipe prompt-gap-review --limit 50
 node bin\vis.mjs action-recipe music-release-inbox --query "suno cover" --tag release-candidate
@@ -200,6 +204,8 @@ Tools:
 - `annotate_asset`
 - `bulk_annotate_assets`
 - `review_assets`
+- `list_smart_collections`
+- `evaluate_smart_collection`
 - `list_asset_action_recipes`
 - `run_asset_action_recipe`
 - `list_saved_searches`

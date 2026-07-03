@@ -346,17 +346,17 @@
       "summary": "Benchmark Eagle capabilities without copying proprietary UX, then ship the VIS-specific advantage layer.",
       "tasks": [
         "Keep docs/EAGLE_PARITY_ROADMAP.md current.",
-        "Add smart collections for inbox, rights, prompt gaps, usage, orphans, duplicates, music, video, NFT/Web3, website-ready, and social-ready.",
+        "Done: Add smart collections for inbox, rights, prompt gaps, usage, orphans, duplicates, music, video, NFT/Web3, website-ready, and social-ready.",
         "Done: Add source/folder navigation and batch curation packet copy.",
         "Done: Add dry-run-first batch curation command copy plus CLI/MCP write gates.",
-        "Add VIS curation memory: notes, tags, ratings, color labels, collections, and saved searches.",
-        "Add audio preview and Music IS packet handoff.",
-        "Add Eagle metadata adapter research for folders, tags, notes, and source URLs.",
-        "Document what remains Eagle-owned versus VIS-owned."
+        "Done: Add VIS curation memory: notes, tags, ratings, color labels, collections, and saved searches.",
+        "Done: Add audio preview and Music IS packet handoff.",
+        "Done: Add Eagle metadata adapter research for folders, tags, notes, and source URLs.",
+        "Done: Document what remains Eagle-owned versus VIS-owned."
       ],
       "acceptance": [
         "Frank can use Eagle for daily designer browsing while VIS shows provenance, usage, MCP, and agent packets.",
-        "VIS dashboard exposes the first Eagle-inspired cockpit slice.",
+        "Done: VIS dashboard exposes the first Eagle-inspired cockpit slice.",
         "Eagle remains optional and no proprietary Eagle code is copied."
       ]
     },
@@ -402,6 +402,28 @@
         "Done: Execute mode creates the vault folders, README, and manifest in a chosen local path.",
         "Done: The manifest records Google Photos, Eagle, Music IS, and human-gate boundaries.",
         "Done: Tests prove dry-run and execute behavior."
+      ]
+    },
+    {
+      "key": "VIS-019",
+      "title": "Add live smart collection evaluation for Eagle-style queues",
+      "milestone": "M1 Daily Cockpit",
+      "status": "done",
+      "labels": ["dashboard", "product", "mcp", "music"],
+      "summary": "Promote dashboard-only smart views into a shared VIS contract so CLI, MCP, dashboard, and future desktop/PWA layers can evaluate the same Eagle-style queues and attached dry-run recipe handoffs.",
+      "tasks": [
+        "Done: Add core smart collection catalog for inbox, rights review, prompt gaps, provenance gaps, usage, orphans, duplicates, similarity review, curated, favorites, unannotated, music, video, NFT/Web3, website-ready, and social-ready.",
+        "Done: Add read-only smart collection evaluator with item summaries, match reasons, CLI commands, and MCP recipe dry-run payloads.",
+        "Done: Add CLI commands smart-collections and smart-collection.",
+        "Done: Add MCP tools list_smart_collections and evaluate_smart_collection.",
+        "Done: Update dashboard to consume the shared smart collection catalog instead of owning separate labels.",
+        "Done: Add smart-collection schema, docs, and tests."
+      ],
+      "acceptance": [
+        "Done: Agents can list smart collections and inspect a queue without mutating the graph.",
+        "Done: Actionable smart collections include a dry-run recipe handoff while writes remain gated.",
+        "Done: Music smart collection routes to Music IS release inbox without making VIS the music source of truth.",
+        "Done: Dashboard, CLI, and MCP use the same smart collection catalog."
       ]
     }
   ]
