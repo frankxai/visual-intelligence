@@ -25,6 +25,7 @@ import {
   importEagleLibrary,
   listScanProfiles,
   listSavedSearches,
+  listMusicReleasePackets,
   loadConfig,
   openVisDatabase,
   recordPublication,
@@ -37,6 +38,7 @@ import {
   saveSearch,
   searchAssets,
   traceAsset,
+  createMusicReleasePacket,
 } from '../core/vis-core.mjs'
 import { generateDashboard } from '../web/vis-dashboard.mjs'
 
@@ -396,6 +398,34 @@ function cmdSavedSearches() {
   printJson(listSavedSearches(root))
 }
 
+function cmdMusicReleases() {
+  const root = projectRoot()
+  const results = listMusicReleasePackets(root, {
+    query: getFlag('--query') || positionalArgs().join(' '),
+    limit: Number(getFlag('--limit', 50)),
+  })
+  if (hasFlag('--json')) {
+    printJson(results)
+    return
+  }
+  console.log(`\n=== VIS MUSIC RELEASE PACKETS: ${results.length} ===\n`)
+  for (const packet of results) {
+    console.log(`${packet.release_id} | ${packet.title}`)
+    console.log(`  ${packet.gate_status}: ${packet.next_action}`)
+    console.log(`  assets ${packet.counts.assets} | audio ${packet.counts.audio} | covers ${packet.counts.covers} | canvas/video ${packet.counts.canvas + packet.counts.videos} | docs ${packet.counts.documents}`)
+    console.log(`  ${packet.release_path}`)
+  }
+}
+
+function cmdMusicPacket() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri') || getFlag('--query')
+  const packet = createMusicReleasePacket(root, ref, { intendedUse: getFlag('--use') })
+  if (!packet) throw new Error(`Music release packet not found: ${ref || 'latest'}`)
+  if (hasFlag('--json')) printJson(packet)
+  else console.log(packet.codex_prompt)
+}
+
 function cmdSaveSearch() {
   const root = projectRoot()
   const name = getFlag('--name') || positionalArgs()[0]
@@ -633,6 +663,8 @@ const commands = {
   annotate: cmdAnnotate,
   'saved-searches': cmdSavedSearches,
   'save-search': cmdSaveSearch,
+  'music-releases': cmdMusicReleases,
+  'music-packet': cmdMusicPacket,
   'record-publication': cmdRecordPublication,
   'cloudinary-manifest': cmdCloudinaryManifest,
   'nft-report': cmdNftReport,
@@ -669,6 +701,8 @@ Commands:
   vis annotate <asset>             Dry-run or save tags, notes, rating, color, collection
   vis saved-searches               List saved smart-folder searches
   vis save-search --name <name>     Dry-run or save a smart search
+  vis music-releases               List Music IS release media packets
+  vis music-packet [release|asset]  Print Music IS handoff packet
   vis record-publication --asset <id> --platform <x> [--url <url>] [--execute]
   vis cloudinary-manifest          Dry-run Cloudinary upload manifest
   vis nft-report                   Dry-run NFT metadata readiness report

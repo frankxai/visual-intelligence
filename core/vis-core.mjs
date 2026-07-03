@@ -1486,6 +1486,295 @@ ORDER BY ci.position`).all(collectionRef, collectionRef)
   }
 }
 
+export function listMusicReleasePackets(dbOrRoot, options = {}) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const limit = Number(options.limit || 50)
+    const query = String(options.query || '').trim().toLowerCase()
+    const packets = buildMusicReleasePackets(db)
+      .filter(packet => {
+        if (!query) return true
+        const hay = `${packet.release_id} ${packet.title} ${packet.release_path} ${packet.tags.join(' ')}`.toLowerCase()
+        return hay.includes(query)
+      })
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at) || a.title.localeCompare(b.title))
+      .slice(0, limit)
+    return packets
+  } finally {
+    if (close) db.close()
+  }
+}
+
+export function createMusicReleasePacket(dbOrRoot, releaseRef = null, options = {}) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const packets = buildMusicReleasePackets(db)
+    let packet = null
+    if (releaseRef) {
+      const assetId = resolveAssetId(db, releaseRef)
+      if (assetId) {
+        const asset = getAsset(db, assetId)
+        const primary = asset?.locations?.find(loc => loc.exists_now) || asset?.locations?.[0]
+        const releasePath = primary ? inferMusicReleasePath(primary.relative_path || primary.absolute_path || '') : null
+        packet = packets.find(item => item.release_path === releasePath)
+      }
+      if (!packet) {
+        const ref = String(releaseRef).toLowerCase()
+        packet = packets.find(item =>
+          item.release_id.toLowerCase() === ref ||
+          item.title.toLowerCase() === ref ||
+          item.release_path.toLowerCase() === ref ||
+          item.release_path.toLowerCase().includes(ref))
+      }
+    } else {
+      packet = packets[0] || null
+    }
+    if (!packet) return null
+    return {
+      ...packet,
+      intended_use: options.intendedUse || options.intended_use || null,
+      codex_prompt: musicReleaseCodexPrompt(packet, options),
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
+function buildMusicReleasePackets(db) {
+  const assets = listAssets(db, { limit: 100000 }).filter(isMusicAssetRow)
+  const groups = new Map()
+  for (const asset of assets) {
+    const releasePath = inferMusicReleasePath(asset.relative_path || asset.absolute_path || asset.primary_path || '')
+    if (!groups.has(releasePath)) groups.set(releasePath, [])
+    groups.get(releasePath).push(asset)
+  }
+
+  return [...groups.entries()].map(([releasePath, group]) => {
+    const title = titleFromReleasePath(releasePath)
+    const releaseId = stableId('music_release', releasePath)
+    const assetsByRole = groupAssetsByMusicRole(group)
+    const docs = collectMusicReleaseDocs(group)
+    const tags = uniq(group.flatMap(asset => asset.tags || parseJson(asset.tags_json, [])))
+    const prompts = group.reduce((sum, asset) => sum + Number(asset.prompt_count || 0), 0)
+    const usageEdges = group.reduce((sum, asset) => sum + Number(asset.usage_count || 0), 0)
+    const publications = group.reduce((sum, asset) => sum + Number(asset.publication_count || 0), 0)
+    if (!isMusicReleasePacketGroup(releasePath, group, assetsByRole, docs, prompts)) return null
+    const gate = musicReleaseGate({ group, assetsByRole, docs, prompts })
+    const updatedAt = group.map(asset => asset.last_seen_at || '').sort().at(-1) || nowIso()
+    return {
+      release_id: releaseId,
+      title,
+      release_path: releasePath,
+      canonical_system: 'Music IS',
+      vis_role: 'media discovery, provenance, cross-usage trace, and agent handoff',
+      gate_status: gate.status,
+      gate_verdict: gate.verdict,
+      missing: gate.missing,
+      warnings: gate.warnings,
+      next_action: gate.nextAction,
+      counts: {
+        assets: group.length,
+        audio: assetsByRole.audio.length,
+        song_masters: assetsByRole.songMasters.length,
+        stems: assetsByRole.stems.length,
+        covers: assetsByRole.covers.length,
+        canvas: assetsByRole.canvas.length,
+        videos: assetsByRole.videos.length,
+        documents: docs.length,
+        prompts,
+        usage_edges: usageEdges,
+        publications,
+      },
+      tags,
+      assets: group.map(musicAssetSummary),
+      documents: docs,
+      updated_at: updatedAt,
+    }
+  }).filter(Boolean)
+}
+
+function isMusicAssetRow(asset) {
+  const tags = asset.tags || parseJson(asset.tags_json, [])
+  return asset.workflow === 'music-release' ||
+    asset.media_role === 'cover-art' ||
+    asset.media_role === 'music-canvas' ||
+    asset.media_type === 'audio' ||
+    asset.category === 'music-releases' ||
+    tags.includes('music')
+}
+
+function inferMusicReleasePath(value) {
+  const rel = slash(value)
+  const dir = slash(path.dirname(rel))
+  const parts = dir.split('/').filter(Boolean)
+  if (!parts.length) return dir || 'music-release'
+  const releaseMarkers = ['proof', 'proof-folders', 'releases', 'release', 'music-is', 'songs', 'catalog']
+  const markerIndex = parts.findLastIndex(part => releaseMarkers.includes(part.toLowerCase()))
+  if (markerIndex >= 0 && parts.length > markerIndex + 1) return parts.slice(0, Math.min(parts.length, markerIndex + 4)).join('/')
+  return dir
+}
+
+function titleFromReleasePath(releasePath) {
+  const parts = slash(releasePath).split('/').filter(Boolean)
+  return parts.at(-1)?.replace(/[-_]+/g, ' ') || 'music release'
+}
+
+function groupAssetsByMusicRole(group) {
+  const by = {
+    audio: [],
+    songMasters: [],
+    stems: [],
+    covers: [],
+    canvas: [],
+    videos: [],
+    social: [],
+  }
+  for (const asset of group) {
+    if (asset.media_type === 'audio') by.audio.push(asset)
+    if (asset.media_role === 'song-master') by.songMasters.push(asset)
+    if (asset.media_role === 'music-stem') by.stems.push(asset)
+    if (asset.media_role === 'cover-art') by.covers.push(asset)
+    if (asset.media_role === 'music-canvas') by.canvas.push(asset)
+    if (asset.media_type === 'video') by.videos.push(asset)
+    if (asset.media_role === 'social-video') by.social.push(asset)
+  }
+  return by
+}
+
+function isMusicReleasePacketGroup(releasePath, group, assetsByRole, docs, prompts) {
+  if (assetsByRole.audio.length || assetsByRole.songMasters.length) return true
+
+  const normalizedPath = slash(releasePath).toLowerCase()
+  const canonicalReleasePath = /(^|\/)(06_music_releases|music|music-is|music_is|catalog|proof|proof-folders|release|releases|songs?|singles?|albums?)(\/|$)/.test(normalizedPath)
+  if (!canonicalReleasePath) return false
+
+  const releaseDocKinds = new Set([
+    'lyrics',
+    'prompt-source',
+    'credits',
+    'rights-disclosure',
+    'release-checklist',
+    'canvas-brief',
+    'launch-copy',
+  ])
+  const hasReleaseDocs = docs.some(doc => releaseDocKinds.has(doc.kind))
+  const hasReleaseMedia = assetsByRole.covers.length || assetsByRole.canvas.length || assetsByRole.videos.length || assetsByRole.stems.length
+  const hasReleaseRole = group.some(asset => ['cover-art', 'music-canvas', 'music-stem', 'social-video'].includes(asset.media_role))
+
+  return Boolean(hasReleaseMedia || hasReleaseDocs || prompts > 0 || hasReleaseRole)
+}
+
+function collectMusicReleaseDocs(group) {
+  const dirs = uniq(group.map(asset => path.dirname(asset.absolute_path || '')).filter(Boolean))
+  const docs = []
+  const wanted = /\.(md|mdx|txt|json|yaml|yml|csv)$/i
+  const useful = /(lyrics?|prompt|suno|source|credits?|split|rights?|disclosure|checklist|release|distrokid|canvas|copy|notes?)/i
+  for (const dir of dirs) {
+    let entries = []
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      if (!entry.isFile()) continue
+      if (!wanted.test(entry.name) || !useful.test(entry.name)) continue
+      const fullPath = path.join(dir, entry.name)
+      docs.push({
+        path: fullPath,
+        name: entry.name,
+        kind: classifyMusicDoc(entry.name),
+      })
+    }
+  }
+  return docs.sort((a, b) => a.path.localeCompare(b.path))
+}
+
+function classifyMusicDoc(name) {
+  const lower = name.toLowerCase()
+  if (lower.includes('lyric')) return 'lyrics'
+  if (lower.includes('prompt') || lower.includes('suno') || lower.includes('source')) return 'prompt-source'
+  if (lower.includes('credit') || lower.includes('split')) return 'credits'
+  if (lower.includes('right') || lower.includes('disclosure')) return 'rights-disclosure'
+  if (lower.includes('checklist') || lower.includes('distrokid') || lower.includes('release')) return 'release-checklist'
+  if (lower.includes('canvas')) return 'canvas-brief'
+  if (lower.includes('copy')) return 'launch-copy'
+  return 'note'
+}
+
+function musicReleaseGate({ group, assetsByRole, docs, prompts }) {
+  const missing = []
+  const warnings = []
+  const docKinds = new Set(docs.map(doc => doc.kind))
+  const blocked = group.filter(asset => asset.rights_status === 'blocked')
+  const rightsUnknown = group.filter(asset => ['unknown', 'needs-review'].includes(asset.rights_status))
+  const approved = group.filter(asset => asset.approval_status === 'approved')
+
+  if (!assetsByRole.audio.length) missing.push('source audio file')
+  if (!assetsByRole.songMasters.length) warnings.push('no explicit song-master role detected; verify master in Music IS')
+  if (!assetsByRole.covers.length) missing.push('cover master')
+  if (!assetsByRole.canvas.length && !assetsByRole.videos.length) missing.push('Spotify Canvas or vertical video candidate')
+  if (!docKinds.has('lyrics')) warnings.push('lyrics or instrumental note not found nearby')
+  if (!docKinds.has('prompt-source') && prompts === 0) missing.push('Suno/prompt/source provenance')
+  if (!docKinds.has('credits')) missing.push('credits/splits note')
+  if (!docKinds.has('rights-disclosure')) missing.push('rights and AI disclosure note')
+  if (!docKinds.has('release-checklist')) missing.push('Music IS release checklist')
+  if (rightsUnknown.length) missing.push('rights status review for media assets')
+  if (!approved.length) missing.push('approved media asset')
+  if (blocked.length) warnings.push('blocked rights asset present')
+
+  const status = blocked.length ? 'refuse' : missing.length ? 'revise' : 'green-light'
+  return {
+    status,
+    verdict: status === 'green-light'
+      ? 'VIS preflight complete. Music IS still owns final release approval and distribution.'
+      : status === 'refuse'
+        ? 'Release unsafe until blocked rights are resolved.'
+        : 'Release packet needs curation before Music IS distribution gate.',
+    missing,
+    warnings,
+    nextAction: status === 'green-light'
+      ? 'Open Music IS release checklist and prepare human-approved distribution packet.'
+      : `Resolve: ${missing[0] || warnings[0] || 'Music IS review'}`,
+  }
+}
+
+function musicAssetSummary(asset) {
+  return {
+    asset_id: asset.asset_id,
+    visual_uri: `visual://asset/${asset.asset_id}`,
+    title: asset.title,
+    media_type: asset.media_type,
+    media_role: asset.media_role,
+    workflow: asset.workflow,
+    local_path: asset.absolute_path,
+    relative_path: asset.relative_path,
+    rights_status: asset.rights_status,
+    approval_status: asset.approval_status,
+    dimensions: asset.width && asset.height ? `${asset.width}x${asset.height}` : null,
+    duration_seconds: asset.duration_seconds || null,
+    size_kb: asset.sizeKB,
+  }
+}
+
+function musicReleaseCodexPrompt(packet, options = {}) {
+  return [
+    `Use this VIS music release packet: ${packet.release_id}`,
+    `Title: ${packet.title}`,
+    `Release path: ${packet.release_path}`,
+    `Canonical release system: ${packet.canonical_system}`,
+    `VIS role: ${packet.vis_role}`,
+    options.intendedUse || options.intended_use ? `Intended use: ${options.intendedUse || options.intended_use}` : null,
+    `Gate status: ${packet.gate_status}`,
+    `Gate verdict: ${packet.gate_verdict}`,
+    packet.missing.length ? `Missing: ${packet.missing.join(', ')}` : null,
+    packet.warnings.length ? `Warnings: ${packet.warnings.join(', ')}` : null,
+    `Assets: ${packet.counts.assets}; audio ${packet.counts.audio}; covers ${packet.counts.covers}; canvas/video ${packet.counts.canvas + packet.counts.videos}; docs ${packet.counts.documents}`,
+    `Next action: ${packet.next_action}`,
+    'Do not publish, distribute, upload, or schedule externally without human approval and Music IS release gate.',
+  ].filter(Boolean).join('\n')
+}
+
 export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
   const { db, close } = resolveDbArgs(dbOrRoot)
   try {

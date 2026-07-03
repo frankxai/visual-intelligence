@@ -24,6 +24,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Detects duplicate content by SHA-256 and samples orphan assets with no detected usage.
 - Scans website/content routes to map where assets appear.
 - Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
+- Builds Music IS handoff packets that group audio, cover art, Canvas/video, proof docs, prompts, rights, approval, and next release-gate action.
 - Generates a static dashboard for fast visual browsing and asset detail drawers.
 - Exposes MCP resources and tools for agents via `visual://asset/{asset_id}`.
 - Produces Codex-ready curation packets with path, `visual://` URI, rights, provenance, and next action.
@@ -135,6 +136,8 @@ node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --co
 node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite
 node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite --execute
 node bin\vis.mjs saved-searches
+node bin\vis.mjs music-releases
+node bin\vis.mjs music-packet <release_id|asset_id|path>
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum --execute
 node bin\vis.mjs cloudinary-manifest --category brand
@@ -169,6 +172,8 @@ Tools:
 - `annotate_asset`
 - `list_saved_searches`
 - `save_search`
+- `list_music_releases`
+- `create_music_release_packet`
 - `import_eagle_library`
 - `record_publication`
 - `export_cloudinary_manifest`

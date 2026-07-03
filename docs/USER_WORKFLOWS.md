@@ -26,6 +26,16 @@
 3. Export a Postiz/manual upload packet.
 4. Record platform, caption, campaign, URL, date, and metrics.
 
+## Music Release Flow
+
+1. Keep Music IS as the canonical release operating system.
+2. Scan Music IS proof folders or the Drive music release vault.
+3. Run `vis music-releases` to find release media bundles.
+4. Run `vis music-packet <release-or-asset>` to create a Codex/Claude handoff packet.
+5. Resolve missing VIS preflight items: source audio, cover, Canvas/video, prompt/source, credits, rights/AI disclosure, Music IS checklist, approval.
+6. Use Music IS for A&R, persona canon, metadata, credits, distribution checklist, ISRC/UPC, and final human approval.
+7. Record website/social/publication usage back into VIS after assets are placed or published.
+
 ## Generation Flow
 
 1. Agent creates media.
@@ -49,4 +59,3 @@
 3. Production derivatives get planned Cloudinary records.
 4. Drive/OneDrive imports preserve provider IDs.
 5. VIS records locations instead of hiding where truth lives.
-

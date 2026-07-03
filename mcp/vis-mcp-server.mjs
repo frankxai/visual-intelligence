@@ -19,7 +19,9 @@ import {
   getAsset,
   getSummary,
   importEagleLibrary,
+  createMusicReleasePacket,
   listSavedSearches,
+  listMusicReleasePackets,
   loadConfig,
   mapUsage,
   openVisDatabase,
@@ -138,6 +140,21 @@ function toolSaveSearch(args = {}) {
   }))
 }
 
+function toolListMusicReleases(args = {}) {
+  return withDb(db => listMusicReleasePackets(db, {
+    query: args.query || '',
+    limit: args.limit || args.max_results || args.maxResults || 50,
+  }))
+}
+
+function toolCreateMusicReleasePacket(args = {}) {
+  return withDb(db => createMusicReleasePacket(
+    db,
+    args.release_id || args.releaseId || args.asset_id || args.assetId || args.uri || args.path || args.query || null,
+    { intendedUse: args.intended_use || args.intendedUse },
+  ))
+}
+
 function toolImportEagleLibrary(args = {}) {
   if (args.execute === true && !WRITE_ENABLED) {
     return withDb(db => ({
@@ -208,6 +225,8 @@ const TOOL_HANDLERS = {
   annotate_asset: toolAnnotateAsset,
   list_saved_searches: toolListSavedSearches,
   save_search: toolSaveSearch,
+  list_music_releases: toolListMusicReleases,
+  create_music_release_packet: toolCreateMusicReleasePacket,
   import_eagle_library: toolImportEagleLibrary,
   record_publication: toolRecordPublication,
   export_cloudinary_manifest: toolCloudinaryManifest,
@@ -285,6 +304,18 @@ const TOOLS = [
     curation_status: stringProp('Curation status filter'),
     min_rating: numberProp('Minimum curation rating'),
     execute: booleanProp('Persist saved search when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('list_music_releases', 'List VIS music release media packets while keeping Music IS canonical for release state.', {
+    query: stringProp('Release title/path/tag query'),
+    limit: numberProp('Maximum release packets'),
+  }),
+  tool('create_music_release_packet', 'Create a Codex-ready Music IS handoff packet for a release path, release id, or contained asset.', {
+    release_id: stringProp('VIS music_release id'),
+    query: stringProp('Release title/path query'),
+    asset_id: stringProp('Contained VIS asset_id'),
+    uri: stringProp('Contained visual://asset/{asset_id}'),
+    path: stringProp('Contained local or relative path'),
+    intended_use: stringProp('Release review, cover, Canvas, social, website, or distribution packet use case'),
   }),
   tool('import_eagle_library', 'Dry-run or import Eagle library metadata into VIS. Execute merges Eagle tags, notes, folders, provider locations, and provenance and requires VIS_ENABLE_WRITES=1.', {
     library: stringProp('Eagle library path'),

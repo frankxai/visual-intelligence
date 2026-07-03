@@ -21,7 +21,7 @@ function getArgValue(name) {
 
 function gh(ghArgs, options = {}) {
   if (!execute && options.write) {
-    console.log(`[dry-run] gh ${ghArgs.join(" ")}`);
+    console.error(`[dry-run] gh ${ghArgs.join(" ")}`);
     return "";
   }
 

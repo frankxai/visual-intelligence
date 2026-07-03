@@ -16,9 +16,11 @@ import {
   importEagleLibrary,
   listScanProfiles,
   listSavedSearches,
+  listMusicReleasePackets,
   loadConfig,
   openVisDatabase,
   recordPublication,
+  createMusicReleasePacket,
   resolveScanProfile,
   saveSearch,
   searchAssets,
@@ -224,6 +226,90 @@ test('imports Eagle metadata as provider locations, annotations, and collections
       assert.equal(trace.asset.locations[0].provider_id, 'abc123')
       assert.equal(trace.asset.collections[0].name, 'Eagle / Music Covers')
       assert.ok(trace.provenance.some(event => event.event_type === 'eagle-metadata-imported'))
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('creates Music IS release packets from linked audio, cover, canvas, and proof docs', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-music-packet-'))
+  try {
+    const releaseRoot = path.join(root, 'verticals', 'music-is', 'catalog', 'proof', 'arcanea', 'moon-gate')
+    fs.mkdirSync(releaseRoot, { recursive: true })
+    fs.writeFileSync(path.join(releaseRoot, 'final-master.wav'), Buffer.from('RIFFfake-wave-master'))
+    fs.writeFileSync(path.join(releaseRoot, 'cover-art.png'), PNG_1X1)
+    fs.writeFileSync(path.join(releaseRoot, 'spotify-canvas.mp4'), Buffer.from('fake-video-canvas'))
+    fs.writeFileSync(path.join(releaseRoot, 'final-master.prompt.md'), 'Prompt: Arcanea moon gate cinematic trance anthem')
+    fs.writeFileSync(path.join(releaseRoot, 'lyrics.md'), '# Lyrics\nInstrumental note.')
+    fs.writeFileSync(path.join(releaseRoot, 'credits.md'), '# Credits\nComposer: Frank.')
+    fs.writeFileSync(path.join(releaseRoot, 'rights-disclosure.md'), '# Rights\nGenerated-owned; AI disclosure prepared.')
+    fs.writeFileSync(path.join(releaseRoot, 'release-checklist.md'), '# Checklist\nMusic IS gate draft.')
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      mediaRoots: ['verticals/music-is/catalog/proof'],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    indexProject({ root })
+    const db = openVisDatabase(root)
+    try {
+      const [audio] = searchAssets(db, { query: 'final master', maxResults: 5 })
+      annotateAsset(db, audio.asset_id, {
+        tags: ['release-candidate'],
+        curationStatus: 'approved',
+        execute: true,
+      })
+      db.prepare("UPDATE asset SET rights_status = 'generated-owned', approval_status = 'approved'").run()
+
+      const packets = listMusicReleasePackets(db)
+      assert.equal(packets.length, 1)
+      assert.equal(packets[0].counts.audio, 1)
+      assert.equal(packets[0].counts.covers, 1)
+      assert.equal(packets[0].counts.canvas, 1)
+      assert.equal(packets[0].counts.documents, 5)
+      assert.equal(packets[0].gate_status, 'green-light')
+      assert.equal(packets[0].canonical_system, 'Music IS')
+
+      const packet = createMusicReleasePacket(db, audio.asset_id, { intendedUse: 'release review' })
+      assert.match(packet.codex_prompt, /Music IS/)
+      assert.match(packet.codex_prompt, /release review/)
+      assert.equal(packet.release_id, packets[0].release_id)
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('ignores support-only music visuals when building Music IS release packets', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-music-support-'))
+  try {
+    const supportRoot = path.join(root, '_visual-qa', 'deep-infographics-v3-20260622')
+    fs.mkdirSync(supportRoot, { recursive: true })
+    fs.writeFileSync(path.join(supportRoot, 'red-blue-release-gate.png'), PNG_1X1)
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      mediaRoots: ['_visual-qa'],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    indexProject({ root })
+    const db = openVisDatabase(root)
+    try {
+      db.prepare('UPDATE asset SET tags_json = ?').run(JSON.stringify(['music', 'infographic']))
+      db.prepare('UPDATE asset_version SET metadata_json = ?').run(JSON.stringify({
+        mediaRole: 'image-asset',
+        workflow: 'music-release',
+      }))
+
+      const packets = listMusicReleasePackets(db)
+      assert.equal(packets.length, 0)
     } finally {
       db.close()
     }

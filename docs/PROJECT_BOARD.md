@@ -32,6 +32,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Sync task registry into GitHub Issues and milestones.
 - [x] Add `frank-estate` scan profile dry-run for repos, brand image-system, Drive/Eagle vault paths, Music IS, website usage roots, and MCP allowlist generation.
 - [x] Add dry-run-first Eagle metadata adapter for local library tags, notes, source URLs, folders, collections, provider locations, and provenance.
+- [x] Add Music IS release packet preflight for audio, cover, Canvas/video, proof docs, prompts, rights, approval, CLI, MCP, and Codex handoff.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.
@@ -46,7 +47,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [ ] Verify Eagle adapter against Frank's real synced Eagle library after install.
 - [ ] Add Google Drive metadata adapter with provider IDs and sync health.
 - [ ] Add Google Photos/manual mobile inbox intake workflow.
-- [ ] Add Music IS integration for audio assets, covers, Canvas, lyrics, credits, and release proof folders.
+- [ ] Verify Music IS release packets against Frank's real proof folders after next estate scan.
 - [ ] Add agent run logging sidecars for generated media.
 - [ ] Add semantic search and visual similarity using a permissive local model or external adapter.
 

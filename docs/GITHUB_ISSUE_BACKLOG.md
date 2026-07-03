@@ -232,9 +232,10 @@ Body:
 Index audio/music assets while preserving Music IS as the canonical release operating system.
 
 Tasks:
-- [ ] Index MP3/WAV/M4A/FLAC metadata.
-- [ ] Link Music IS proof folders.
-- [ ] Link cover, Canvas, lyrics, prompt, credits, and release checklist.
+- [x] Index MP3/WAV/M4A/FLAC metadata.
+- [x] Link Music IS proof folders through scan profiles and music release packet grouping.
+- [x] Link cover, Canvas, lyrics, prompt, credits, and release checklist in VIS preflight packets.
+- [x] Add CLI/MCP release packet handoff.
 - [ ] Add release packet curation view.
 - [ ] Avoid making VIS the release truth; Music IS remains canonical.
 

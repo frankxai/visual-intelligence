@@ -54,6 +54,7 @@ Secondary users later:
 - Website/content references become `asset_usage` edges.
 - Every public asset can carry rights status and approval status.
 - Publication and adapter operations are dry-run by default.
+- Music release media can be grouped into VIS preflight packets while Music IS remains canonical for release state and final approval.
 
 ## Release Shape
 
@@ -65,5 +66,4 @@ V0.2 is an internal OS vertical slice:
 - Static dashboard export.
 - Product docs and schemas.
 
-V0.3 should add deeper sidecar capture, richer prompt extraction, optimized derivative generation, and adapter dry-runs for R2/Cloudinary/Postiz.
-
+V0.3 should add deeper sidecar capture, richer prompt extraction, optimized derivative generation, stronger Music IS proof-folder integration, and adapter dry-runs for R2/Cloudinary/Postiz.
