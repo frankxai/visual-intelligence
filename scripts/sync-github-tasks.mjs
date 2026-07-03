@@ -39,7 +39,7 @@ function ghJson(ghArgs) {
 }
 
 function issueBody(issue) {
-  const taskList = issue.tasks.map((task) => `- [ ] ${task}`).join("\n");
+  const taskList = issue.tasks.map(taskCheckbox).join("\n");
   const acceptanceList = issue.acceptance.map((item) => `- [ ] ${item}`).join("\n");
   const labels = issue.labels.map((label) => `\`${label}\``).join(", ");
 
@@ -68,6 +68,12 @@ ${acceptanceList}
 - Keep Music IS canonical for music release state; VIS indexes and links assets.
 - Keep Eagle, Drive, Cloudinary, R2, Postiz, and Web3 services as adapters unless a later issue explicitly changes that boundary.
 `;
+}
+
+function taskCheckbox(task) {
+  const text = String(task);
+  if (text.startsWith("Done:")) return `- [x] ${text.slice("Done:".length).trim()}`;
+  return `- [ ] ${text}`;
 }
 
 function ensureLabels() {
