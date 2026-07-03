@@ -82,6 +82,21 @@ node bin\vis.mjs record-generation <asset> --prompt "..." --model gpt-image-1 --
 
 The MCP tool is `record_generation_provenance`. MCP writes remain disabled unless the server is started with `VIS_ENABLE_WRITES=1` and the tool call includes `execute: true`.
 
+## Creative Vault Contract
+
+VIS treats Google Drive/OneDrive/Eagle as external storage surfaces, not as the database of truth. The Creative Vault planner defines the cross-device folder contract for:
+
+- mobile exports from Google Photos/phone apps
+- Eagle library storage and browsing
+- approved masters
+- website/social derivatives
+- NFT/Web3 collections
+- Music IS media handoff
+- prompt/provenance evidence
+- agent outputs
+
+`vault-plan` is read-only. `vault-init --execute` creates folders and writes `_MANIFESTS/vis-vault-manifest.json` plus `README_VIS_VAULT.md`. MCP exposes the same flow through `plan_creative_vault` and `init_creative_vault`, with writes gated by `VIS_ENABLE_WRITES=1` and `execute: true`.
+
 ## Asset Action Recipes
 
 VIS has an Eagle-inspired but VIS-native recipe layer. Recipes select assets from the graph, propose curation writes, and persist through existing annotation, collection, rights-review, and provenance paths only after explicit execution.
@@ -122,6 +137,8 @@ MCP tools:
 - `score_asset`
 - `score_collection`
 - `create_curation_packet`
+- `plan_creative_vault`
+- `init_creative_vault`
 - `list_asset_action_recipes`
 - `run_asset_action_recipe`
 - `record_generation_provenance`

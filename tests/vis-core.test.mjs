@@ -17,6 +17,7 @@ import {
   getAsset,
   getSummary,
   findSimilarAssets,
+  initCreativeVault,
   indexProject,
   importEagleLibrary,
   listAssetActionRecipes,
@@ -25,6 +26,7 @@ import {
   listMusicReleasePackets,
   loadConfig,
   openVisDatabase,
+  planCreativeVault,
   recordGenerationProvenance,
   recordPublication,
   createMusicReleasePacket,
@@ -288,6 +290,47 @@ test('resolves scan profiles with environment-expanded roots', () => {
   } finally {
     if (previous === undefined) delete process.env.VIS_TEST_ROOT
     else process.env.VIS_TEST_ROOT = previous
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('plans and initializes the cross-device Creative Vault without accidental writes', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-vault-root-'))
+  try {
+    const vaultRoot = path.join(root, 'Drive', 'Starlight Creative Vault')
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      creativeVaultRoot: vaultRoot,
+      eagleLibraries: [path.join(vaultRoot, '01_Eagle_Library')],
+    }, null, 2))
+
+    const plan = planCreativeVault(root)
+    assert.equal(plan.dryRun, true)
+    assert.equal(plan.vault_root, vaultRoot)
+    assert.equal(plan.vault_exists, false)
+    assert.ok(plan.folders.some(folder => folder.path === '00_INBOX_MOBILE'))
+    assert.ok(plan.folders.some(folder => folder.path === '01_Eagle_Library'))
+    assert.ok(plan.folders.some(folder => folder.path === '06_MUSIC_RELEASES'))
+    assert.match(plan.mcp_allowed_roots, /Starlight Creative Vault/)
+    assert.ok(plan.phone_workflow.some(step => step.includes('Google Photos')))
+    assert.ok(plan.music_is_boundary.some(step => step.includes('Music IS remains canonical')))
+    assert.equal(fs.existsSync(vaultRoot), false)
+
+    const dryRunInit = initCreativeVault(root)
+    assert.equal(dryRunInit.dryRun, true)
+    assert.equal(fs.existsSync(vaultRoot), false)
+
+    const initialized = initCreativeVault(root, { execute: true })
+    assert.equal(initialized.dryRun, false)
+    assert.ok(initialized.created_folders.length >= 10)
+    assert.equal(fs.existsSync(path.join(vaultRoot, '00_INBOX_MOBILE')), true)
+    assert.equal(fs.existsSync(path.join(vaultRoot, '01_Eagle_Library')), true)
+    assert.equal(fs.existsSync(path.join(vaultRoot, '06_MUSIC_RELEASES')), true)
+    assert.equal(fs.existsSync(initialized.manifest_written), true)
+    assert.equal(fs.existsSync(initialized.readme_written), true)
+    const manifest = JSON.parse(fs.readFileSync(initialized.manifest_written, 'utf-8'))
+    assert.equal(manifest.rules.eagle_boundary.includes('Eagle'), true)
+    assert.equal(manifest.rules.music_boundary.includes('Music IS'), true)
+  } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }
 })

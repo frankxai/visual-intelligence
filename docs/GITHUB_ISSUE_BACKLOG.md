@@ -441,3 +441,29 @@ Acceptance:
 - [x] Music release assets can be queued without making VIS the Music IS source of truth.
 - [x] MCP writes stay disabled unless VIS_ENABLE_WRITES=1 and execute:true are both present.
 ```
+
+## Issue 18: Add Creative Vault planner for two-laptop and mobile asset intake
+
+Labels: `setup`, `product`, `mcp`, `music`
+Milestone: `M0 Personal Estate Setup`
+Status: `done`
+
+Body:
+
+```markdown
+Add a dry-run-first Creative Vault planner and initializer so Google Drive, phones, Eagle, VIS, and Music IS share one folder contract without accidental writes.
+
+Tasks:
+- [x] Add Creative Vault folder contract for mobile inbox, Eagle library, approved masters, website assets, social exports, NFT collections, Music IS releases, prompts/provenance, agent outputs, archive, and manifests.
+- [x] Add vault-plan CLI command.
+- [x] Add vault-init CLI command that creates folders and writes a manifest only with --execute.
+- [x] Add MCP tools plan_creative_vault and init_creative_vault with VIS_ENABLE_WRITES gating.
+- [x] Add creative-vault-manifest JSON schema.
+- [x] Update setup runbook and docs.
+
+Acceptance:
+- [x] Dry-run planning reports candidate roots, missing folders, phone workflow, Eagle workflow, Music IS boundary, and MCP allowlist without creating files.
+- [x] Execute mode creates the vault folders, README, and manifest in a chosen local path.
+- [x] The manifest records Google Photos, Eagle, Music IS, and human-gate boundaries.
+- [x] Tests prove dry-run and execute behavior.
+```

@@ -21,6 +21,7 @@ import {
   getAsset,
   getSummary,
   importEagleLibrary,
+  initCreativeVault,
   listAssetActionRecipes,
   createMusicReleasePacket,
   listSavedSearches,
@@ -29,6 +30,7 @@ import {
   mapUsage,
   openVisDatabase,
   parseJson,
+  planCreativeVault,
   recordGenerationProvenance,
   recordPublication,
   reviewAssets,
@@ -294,6 +296,29 @@ function toolImportEagleLibrary(args = {}) {
   }))
 }
 
+function toolPlanCreativeVault(args = {}) {
+  return redactOutsideAllowlist(planCreativeVault(ROOT, {
+    vaultRoot: args.vault_root || args.vaultRoot || args.path,
+  }))
+}
+
+function toolInitCreativeVault(args = {}) {
+  if (args.execute === true && !WRITE_ENABLED) {
+    return {
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: redactOutsideAllowlist(initCreativeVault(ROOT, {
+        vaultRoot: args.vault_root || args.vaultRoot || args.path,
+        execute: false,
+      })),
+    }
+  }
+  return redactOutsideAllowlist(initCreativeVault(ROOT, {
+    vaultRoot: args.vault_root || args.vaultRoot || args.path,
+    execute: args.execute === true && WRITE_ENABLED,
+  }))
+}
+
 function toolRecordPublication(args = {}) {
   if (args.execute === true && !WRITE_ENABLED) {
     return withDb(db => ({
@@ -385,6 +410,8 @@ const TOOL_HANDLERS = {
   list_music_releases: toolListMusicReleases,
   create_music_release_packet: toolCreateMusicReleasePacket,
   import_eagle_library: toolImportEagleLibrary,
+  plan_creative_vault: toolPlanCreativeVault,
+  init_creative_vault: toolInitCreativeVault,
   record_generation_provenance: toolRecordGenerationProvenance,
   record_generation: toolRecordGenerationProvenance,
   record_publication: toolRecordPublication,
@@ -539,6 +566,15 @@ const TOOLS = [
     libraries: { type: 'array', items: { type: 'string' }, description: 'Eagle library paths' },
     limit: numberProp('Maximum Eagle metadata items to inspect'),
     execute: booleanProp('Persist import when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('plan_creative_vault', 'Plan the Google Drive/Starlight Creative Vault folder contract for two laptops, phones, Eagle, VIS, and Music IS. Read-only.', {
+    vault_root: stringProp('Optional explicit Creative Vault root path'),
+    path: stringProp('Optional explicit Creative Vault root path'),
+  }),
+  tool('init_creative_vault', 'Dry-run or create Creative Vault folders and VIS manifest. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
+    vault_root: stringProp('Optional explicit Creative Vault root path'),
+    path: stringProp('Optional explicit Creative Vault root path'),
+    execute: booleanProp('Create folders/manifests when VIS_ENABLE_WRITES=1'),
   }),
   tool('record_publication', 'Dry-run or record where an asset was published. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
     asset_id: stringProp('VIS asset_id'),

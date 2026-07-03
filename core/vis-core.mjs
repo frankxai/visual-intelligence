@@ -538,6 +538,100 @@ export function resolveScanProfile(root, config = loadConfig(root), profileName 
   }
 }
 
+export function planCreativeVault(root = findProjectRoot(), args = {}) {
+  const projectRoot = path.resolve(root || findProjectRoot())
+  const config = normalizeConfig({ ...loadConfig(projectRoot), ...(args.config || {}) })
+  const candidates = creativeVaultCandidates(projectRoot, config, args)
+  const selectedRoot = selectCreativeVaultRoot(projectRoot, config, args, candidates)
+  const folders = CREATIVE_VAULT_FOLDERS.map(folder => {
+    const absolutePath = path.join(selectedRoot, folder.path)
+    return {
+      ...folder,
+      absolute_path: absolutePath,
+      exists: fs.existsSync(absolutePath),
+    }
+  })
+  const manifestPath = path.join(selectedRoot, '_MANIFESTS', 'vis-vault-manifest.json')
+  const readmePath = path.join(selectedRoot, 'README_VIS_VAULT.md')
+  const existingFolders = folders.filter(folder => folder.exists).length
+
+  return {
+    dryRun: true,
+    project_root: projectRoot,
+    vault_root: selectedRoot,
+    vault_exists: fs.existsSync(selectedRoot),
+    candidates,
+    folders,
+    existing_folders: existingFolders,
+    missing_folders: folders.length - existingFolders,
+    manifest_path: manifestPath,
+    readme_path: readmePath,
+    mcp_allowed_roots: uniq([
+      projectRoot,
+      selectedRoot,
+      path.resolve(projectRoot, '..'),
+    ]).join(path.delimiter),
+    scan_profile_patch: {
+      mediaRoots: [selectedRoot],
+      eagleLibraries: [path.join(selectedRoot, '01_Eagle_Library')],
+      usageRoots: [],
+    },
+    commands: {
+      dry_run: `node bin\\vis.mjs vault-plan --vault-root ${shellToken(selectedRoot)}`,
+      execute: `node bin\\vis.mjs vault-init --vault-root ${shellToken(selectedRoot)} --execute`,
+      scan: `node bin\\vis.mjs scan --media-root ${shellToken(selectedRoot)} --json`,
+      eagle_import: `node bin\\vis.mjs eagle --library ${shellToken(path.join(selectedRoot, '01_Eagle_Library'))}`,
+      dashboard: 'node bin\\vis.mjs dashboard --limit 3000',
+    },
+    phone_workflow: [
+      'Keep Google Photos as camera backup and memory search.',
+      'Share product-relevant phone captures into 00_INBOX_MOBILE in Google Drive.',
+      'Curate the mobile inbox weekly from a laptop into Eagle, approved masters, music releases, website assets, or social exports.',
+      'Run VIS scan after each curation pass so visual:// packets resolve on both laptops.',
+    ],
+    eagle_workflow: [
+      'Create or move the Eagle library under 01_Eagle_Library.',
+      'Use one active Eagle writer at a time and wait for Drive sync before switching laptops.',
+      'Import Eagle metadata into VIS only after dry-run item counts and samples look right.',
+    ],
+    music_is_boundary: [
+      'Use 06_MUSIC_RELEASES for audio, cover, Canvas, short videos, and proof exports that need cross-device access.',
+      'Music IS remains canonical for release state, catalog rows, rights, AI disclosure, credits, and distribution gates.',
+      'VIS indexes and links music media so agents can create Music IS handoff packets without flattening the release system.',
+    ],
+  }
+}
+
+export function initCreativeVault(root = findProjectRoot(), args = {}) {
+  const plan = planCreativeVault(root, args)
+  if (args.execute !== true) {
+    return {
+      ...plan,
+      note: 'Dry run only. Pass --execute to create folders and write the VIS vault manifest.',
+    }
+  }
+
+  const created = []
+  fs.mkdirSync(plan.vault_root, { recursive: true })
+  for (const folder of plan.folders) {
+    if (!fs.existsSync(folder.absolute_path)) created.push(folder.absolute_path)
+    fs.mkdirSync(folder.absolute_path, { recursive: true })
+  }
+  fs.mkdirSync(path.dirname(plan.manifest_path), { recursive: true })
+  const manifest = buildCreativeVaultManifest(plan)
+  fs.writeFileSync(plan.manifest_path, JSON.stringify(manifest, null, 2), 'utf-8')
+  fs.writeFileSync(plan.readme_path, renderCreativeVaultReadme(plan), 'utf-8')
+
+  return {
+    ...planCreativeVault(root, args),
+    dryRun: false,
+    created_folders: created,
+    manifest_written: plan.manifest_path,
+    readme_written: plan.readme_path,
+    note: 'Creative Vault initialized. Keep this folder synced locally on both laptops before opening the Eagle library.',
+  }
+}
+
 export function importEagleLibrary(dbOrRoot, args = {}) {
   const { db, root, config, close } = resolveDbArgs(dbOrRoot)
   const libraryInputs = normalizeLibraryInputs(args, config)
@@ -3599,6 +3693,175 @@ export function parseJson(value, fallback) {
   } catch {
     return fallback
   }
+}
+
+const CREATIVE_VAULT_FOLDERS = [
+  {
+    path: '00_INBOX_MOBILE',
+    label: 'Mobile inbox',
+    purpose: 'Phone exports and intentional Google Drive uploads from Google Photos, iOS, Android, and mobile apps.',
+    owner: 'Frank',
+    scan_role: 'inbox',
+  },
+  {
+    path: '01_Eagle_Library',
+    label: 'Eagle library',
+    purpose: 'Eagle.cool visual browsing library. VIS reads this as an adapter, not as provenance truth.',
+    owner: 'Eagle + VIS adapter',
+    scan_role: 'eagle-library',
+  },
+  {
+    path: '02_APPROVED_MASTERS',
+    label: 'Approved masters',
+    purpose: 'Human-approved originals and generated masters ready for R2/Cloudinary/website/social derivatives.',
+    owner: 'VIS rights gate',
+    scan_role: 'approved-master',
+  },
+  {
+    path: '03_WEBSITE_ASSETS',
+    label: 'Website assets',
+    purpose: 'Website-ready exports and route-specific derivatives for owned properties.',
+    owner: 'VIS website workflow',
+    scan_role: 'website',
+  },
+  {
+    path: '04_SOCIAL_EXPORTS',
+    label: 'Social exports',
+    purpose: 'Platform variants, captions, thumbnails, and Postiz/manual publishing handoff packets.',
+    owner: 'VIS social workflow',
+    scan_role: 'social',
+  },
+  {
+    path: '05_NFT_COLLECTIONS',
+    label: 'NFT collections',
+    purpose: 'Collection images, trait maps, metadata JSON, rights notes, and IPFS/R2 readiness reports.',
+    owner: 'VIS Web3 workflow',
+    scan_role: 'nft-web3',
+  },
+  {
+    path: '06_MUSIC_RELEASES',
+    label: 'Music releases',
+    purpose: 'Audio, cover, Canvas, visualizer, lyrics, proof exports, and Music IS handoff material.',
+    owner: 'Music IS canonical, VIS media index',
+    scan_role: 'music-release',
+  },
+  {
+    path: '07_PROMPTS_AND_PROVENANCE',
+    label: 'Prompts and provenance',
+    purpose: 'Prompt logs, .vis.provenance.json sidecars, agent notes, evals, and rights evidence.',
+    owner: 'VIS provenance ledger',
+    scan_role: 'provenance',
+  },
+  {
+    path: '08_AGENT_OUTPUTS',
+    label: 'Agent outputs',
+    purpose: 'Generated candidates from Codex, Claude, Grok, image/video/audio models, and future agent teams before approval.',
+    owner: 'Agentic generation workflows',
+    scan_role: 'agent-output',
+  },
+  {
+    path: '99_ARCHIVE',
+    label: 'Archive',
+    purpose: 'Retired, rejected, superseded, and legacy assets kept for evidence or later review.',
+    owner: 'Frank',
+    scan_role: 'archive',
+  },
+  {
+    path: '_MANIFESTS',
+    label: 'Manifests',
+    purpose: 'VIS setup manifest, scan reports, import dry-runs, and cross-laptop status snapshots.',
+    owner: 'VIS',
+    scan_role: 'manifest',
+  },
+]
+
+function creativeVaultCandidates(root, config = DEFAULT_CONFIG, args = {}) {
+  const explicit = args.vaultRoot || args.vault_root || args.root || config.creativeVaultRoot || config.creative_vault_root
+  const fromEagle = (config.eagleLibraries || []).map(library => {
+    const resolved = resolveProjectPath(root, library)
+    const normalized = slash(resolved)
+    return /\/01_Eagle_Library\/?$/.test(normalized)
+      ? path.dirname(resolved)
+      : resolved
+  })
+  const defaults = [
+    '%USERPROFILE%\\Google Drive\\Starlight Creative Vault',
+    '%USERPROFILE%\\My Drive\\Starlight Creative Vault',
+    '%USERPROFILE%\\OneDrive\\Starlight Creative Vault',
+    '%USERPROFILE%\\Drive\\Starlight Creative Vault',
+    '%USERPROFILE%\\Starlight Creative Vault',
+  ].map(candidate => resolveProjectPath(root, candidate))
+  return uniq([explicit ? resolveProjectPath(root, explicit) : null, ...fromEagle, ...defaults])
+    .map(candidate => ({
+      path: candidate,
+      exists: fs.existsSync(candidate),
+      manifest_exists: fs.existsSync(path.join(candidate, '_MANIFESTS', 'vis-vault-manifest.json')),
+    }))
+}
+
+function selectCreativeVaultRoot(root, config, args, candidates) {
+  const explicit = args.vaultRoot || args.vault_root || args.root || config.creativeVaultRoot || config.creative_vault_root
+  if (explicit) return resolveProjectPath(root, explicit)
+  const withManifest = candidates.find(candidate => candidate.manifest_exists)
+  if (withManifest) return withManifest.path
+  const existing = candidates.find(candidate => candidate.exists)
+  if (existing) return existing.path
+  return candidates[0]?.path || path.join(path.dirname(root), 'Starlight Creative Vault')
+}
+
+function buildCreativeVaultManifest(plan) {
+  return {
+    $schema: 'https://frankx.ai/schemas/creative-vault-manifest.schema.json',
+    schema_version: '1.0.0',
+    product: 'Visual Intelligence OS',
+    generated_at: nowIso(),
+    vault_root: plan.vault_root,
+    folders: plan.folders.map(folder => ({
+      path: folder.path,
+      label: folder.label,
+      purpose: folder.purpose,
+      owner: folder.owner,
+      scan_role: folder.scan_role,
+    })),
+    rules: {
+      local_first: true,
+      google_photos_boundary: 'Camera backup only; export intentional creative assets into 00_INBOX_MOBILE.',
+      eagle_boundary: 'Eagle is the visual browsing inbox; VIS is provenance, usage, rights, and agent source of truth.',
+      music_boundary: 'Music IS remains canonical for release state; VIS indexes and links media assets.',
+      human_gates: ['publishing', 'minting', 'deletion', 'paid uploads', 'rights approval'],
+    },
+    commands: plan.commands,
+    mcp_allowed_roots: plan.mcp_allowed_roots,
+  }
+}
+
+function renderCreativeVaultReadme(plan) {
+  const folderLines = plan.folders.map(folder => `- ${folder.path}: ${folder.purpose}`).join('\n')
+  return `# Starlight Creative Vault
+
+This folder is the cross-device media inbox and approved asset vault for VIS, Eagle, Google Drive, Google Photos exports, Music IS media, website assets, social exports, and NFT/Web3 collection work.
+
+## Folders
+
+${folderLines}
+
+## Operating Rules
+
+- Google Photos stays the phone camera backup. Export product-relevant assets into 00_INBOX_MOBILE.
+- Eagle lives in 01_Eagle_Library and is used for fast visual browsing.
+- VIS remains the provenance, rights, usage, publication, and agent packet source of truth.
+- Music IS remains canonical for release state, credits, AI disclosure, rights, and distribution gates.
+- Use one active Eagle writer at a time and wait for Drive sync before switching laptops.
+- Do not delete, publish, mint, upload paid assets, or approve rights without human review.
+
+## Useful Commands
+
+\`\`\`powershell
+${plan.commands.scan}
+${plan.commands.eagle_import}
+${plan.commands.dashboard}
+\`\`\`
+`
 }
 
 const ACTION_RECIPES = {

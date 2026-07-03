@@ -30,6 +30,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Supports dry-run-first batch curation for Eagle-style multi-select review, tagging, and collection moves.
 - Supports dry-run-first asset action recipes for designer inbox, Music IS release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity groups.
 - Supports dry-run-first rights and approval review with provenance before website, social, NFT, or music release use.
+- Plans and initializes the Google Drive `Starlight Creative Vault` folder contract for two laptops, two phones, Eagle, VIS, and Music IS.
 - Guards public-use packets and export manifests so unknown, blocked, or unapproved assets stay visible but not publish-ready.
 - Builds Music IS handoff packets that group audio, cover art, Canvas/video, proof docs, prompts, rights, approval, and next release-gate action.
 - Generates a static dashboard/PWA shell for fast visual browsing, local media previews, smart collections, and asset detail drawers.
@@ -45,6 +46,7 @@ npm install
 npm run lint
 npm test
 node bin\vis.mjs doctor
+node bin\vis.mjs vault-plan
 node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos"
 node bin\vis.mjs usage --usage-root "C:\Users\frank\starlight\repos\frankx.ai-vercel-website"
 node bin\vis.mjs scan-profile frank-estate
@@ -130,6 +132,8 @@ node bin\vis.mjs scan --media-root <path>
 node bin\vis.mjs profiles
 node bin\vis.mjs scan-profile frank-estate
 node bin\vis.mjs scan-profile frank-estate --execute
+node bin\vis.mjs vault-plan
+node bin\vis.mjs vault-init --vault-root "<Google Drive>\Starlight Creative Vault" --execute
 node bin\vis.mjs eagle --library <eagle-library-path>
 node bin\vis.mjs eagle --library <eagle-library-path> --execute
 node bin\vis.mjs usage --usage-root <path>
@@ -203,6 +207,8 @@ Tools:
 - `list_music_releases`
 - `create_music_release_packet`
 - `import_eagle_library`
+- `plan_creative_vault`
+- `init_creative_vault`
 - `record_generation_provenance`
 - `record_publication`
 - `export_cloudinary_manifest`
@@ -234,6 +240,7 @@ Build in VIS:
 - Agent run and skill run capture
 - Portable `.vis.provenance.json` sidecars for generated images, video, audio, and music release assets
 - Dry-run asset action recipes that turn Eagle-style curation and agentic media operations into safe repeatable workflows
+- Creative Vault setup planner and manifest for Drive/Photos/Eagle/two-laptop/Music IS operations
 
 Use through adapters:
 

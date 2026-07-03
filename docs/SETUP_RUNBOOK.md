@@ -28,6 +28,15 @@ Google Drive / Starlight Creative Vault
   99_ARCHIVE
 ```
 
+VIS can now plan and create this contract:
+
+```powershell
+node bin\vis.mjs vault-plan
+node bin\vis.mjs vault-init --vault-root "<Google Drive>\Starlight Creative Vault" --execute
+```
+
+`vault-init` writes `_MANIFESTS/vis-vault-manifest.json` and `README_VIS_VAULT.md` into the vault. It is dry-run unless `--execute` is present.
+
 ## Laptop 1 Setup
 
 1. Install Google Drive for desktop.
@@ -49,6 +58,7 @@ npm install
 npm run doctor
 npm run lint
 npm test
+node bin\vis.mjs vault-plan
 node bin\vis.mjs profiles
 node bin\vis.mjs scan-profile frank-estate
 node bin\vis.mjs eagle --library "<Google Drive>\Starlight Creative Vault\01_Eagle_Library"

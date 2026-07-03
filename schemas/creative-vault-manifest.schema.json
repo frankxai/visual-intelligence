@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/creative-vault-manifest.schema.json",
+  "title": "VIS Creative Vault Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "product", "generated_at", "vault_root", "folders", "rules", "commands"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "type": "string" },
+    "product": { "type": "string" },
+    "generated_at": { "type": "string" },
+    "vault_root": { "type": "string" },
+    "folders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "label", "purpose", "owner", "scan_role"],
+        "properties": {
+          "path": { "type": "string" },
+          "label": { "type": "string" },
+          "purpose": { "type": "string" },
+          "owner": { "type": "string" },
+          "scan_role": { "type": "string" }
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["local_first", "google_photos_boundary", "eagle_boundary", "music_boundary", "human_gates"],
+      "properties": {
+        "local_first": { "type": "boolean" },
+        "google_photos_boundary": { "type": "string" },
+        "eagle_boundary": { "type": "string" },
+        "music_boundary": { "type": "string" },
+        "human_gates": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "mcp_allowed_roots": { "type": "string" }
+  }
+}

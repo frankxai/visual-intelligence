@@ -14,12 +14,13 @@ npm run tasks:sync -- --execute
 
 - Labels synced: 16
 - Milestones created: 5
-- New VIS issues created: 17
+- New VIS issues created: 18
 - Existing VIS issues updated on 2026-07-03 from the registry
 - Status labels added: `status:blocked`, `status:done`
 - VIS-010 / issue #17 marked `status:done` and closed as completed
 - VIS-015 / issue #22 marked `status:done` and closed as completed
 - VIS-017 / issue #24 marked `status:done` and closed as completed
+- VIS-018 / issue #25 marked `status:done` and closed as completed
 - GitHub Projects v2: pending local `gh` token project scope
 
 ## Milestones
@@ -53,6 +54,7 @@ npm run tasks:sync -- --execute
 | VIS-015 | [#22 Add GitHub issue templates and weekly review ritual](https://github.com/frankxai/visual-intelligence/issues/22) | M0 Personal Estate Setup |
 | VIS-016 | [#23 Build Eagle parity cockpit slice and adapter path](https://github.com/frankxai/visual-intelligence/issues/23) | M1 Daily Cockpit |
 | VIS-017 | [#24 Add VIS asset action recipes for agentic curation queues](https://github.com/frankxai/visual-intelligence/issues/24) | M2 Asset Intelligence |
+| VIS-018 | [#25 Add Creative Vault planner for two-laptop and mobile asset intake](https://github.com/frankxai/visual-intelligence/issues/25) | M0 Personal Estate Setup |
 
 ## Existing Legacy Issues
 

@@ -31,6 +31,8 @@ import {
   listMusicReleasePackets,
   loadConfig,
   openVisDatabase,
+  initCreativeVault,
+  planCreativeVault,
   recordGenerationProvenance,
   recordPublication,
   reviewAssets,
@@ -82,6 +84,7 @@ const VALUE_FLAGS = new Set([
   '--settings-json', '--agent', '--coding-agent', '--repo', '--thread', '--session', '--skill',
   '--sidecar', '--output-path', '--source', '--summary',
   '--recipe', '--filter-tag', '--filter-rights-status', '--filter-approval-status',
+  '--vault-root',
 ])
 
 function positionalArgs() {
@@ -818,6 +821,56 @@ function printScanProfile(profile) {
   console.log(`MCP allowlist from existing roots: ${profile.mcpAllowedRoots || 'none'}`)
 }
 
+function printVaultPlan(plan) {
+  console.log(`\n=== VIS CREATIVE VAULT ${plan.dryRun ? 'PLAN' : 'INITIALIZED'} ===\n`)
+  console.log(`Vault root: ${plan.vault_root}`)
+  console.log(`Exists:     ${plan.vault_exists ? 'yes' : 'no'}`)
+  console.log(`Folders:    ${plan.existing_folders}/${plan.folders.length} existing`)
+  console.log('\nFolders:')
+  for (const folder of plan.folders) {
+    console.log(`  ${folder.exists ? 'OK' : 'NO'} ${folder.path} - ${folder.label}`)
+  }
+  console.log('\nCross-device commands:')
+  console.log(`  ${plan.commands.execute}`)
+  console.log(`  ${plan.commands.scan}`)
+  console.log(`  ${plan.commands.eagle_import}`)
+  console.log('\nMCP allowlist:')
+  console.log(`  ${plan.mcp_allowed_roots}`)
+  console.log('\nPhone workflow:')
+  for (const step of plan.phone_workflow) console.log(`  - ${step}`)
+}
+
+function cmdVaultPlan() {
+  const root = projectRoot()
+  const result = planCreativeVault(root, {
+    vaultRoot: getFlag('--vault-root'),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  printVaultPlan(result)
+}
+
+function cmdVaultInit() {
+  const root = projectRoot()
+  const result = initCreativeVault(root, {
+    vaultRoot: getFlag('--vault-root'),
+    execute: hasFlag('--execute'),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  printVaultPlan(result)
+  if (result.dryRun) console.log('\nDry run only. Add --execute after the vault root is correct.')
+  else {
+    console.log(`\nCreated folders: ${result.created_folders.length}`)
+    console.log(`Manifest: ${result.manifest_written}`)
+    console.log(`Readme:   ${result.readme_written}`)
+  }
+}
+
 const commands = {
   init: cmdInit,
   audit: cmdReport,
@@ -825,6 +878,10 @@ const commands = {
   index: cmdScan,
   profiles: cmdProfiles,
   'scan-profile': cmdScanProfile,
+  'vault-plan': cmdVaultPlan,
+  'creative-vault': cmdVaultPlan,
+  'vault-init': cmdVaultInit,
+  'init-vault': cmdVaultInit,
   eagle: cmdEagleImport,
   'eagle-import': cmdEagleImport,
   report: cmdReport,
@@ -877,6 +934,8 @@ Commands:
   vis profiles                     List configured scan profiles
   vis scan-profile <name>          Dry-run a named multi-root scan profile
   vis scan-profile <name> --execute Index existing roots from a scan profile
+  vis vault-plan                   Show Google Drive creative vault plan and cross-device setup status
+  vis vault-init --execute          Create Creative Vault folders and VIS manifest after review
   vis eagle --library <path>        Dry-run Eagle library metadata import
   vis eagle --library <path> --execute Merge Eagle metadata into VIS
   vis audit                        Alias for report summary
