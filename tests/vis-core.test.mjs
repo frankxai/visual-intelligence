@@ -23,6 +23,7 @@ import {
   openVisDatabase,
   recordPublication,
   createMusicReleasePacket,
+  reviewAssets,
   resolveScanProfile,
   saveSearch,
   searchAssets,
@@ -278,6 +279,52 @@ test('batch annotates assets dry-run first and records collection provenance on 
       assert.equal(getSummary(db).annotations, 2)
       assert.equal(db.prepare('SELECT COUNT(*) AS count FROM collection_item').get().count, 2)
       assert.equal(db.prepare("SELECT COUNT(*) AS count FROM provenance_event WHERE event_type = 'annotated'").get().count, 2)
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('reviews asset rights and approval with dry-run and provenance gates', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-review-assets-'))
+  try {
+    const imageRoot = path.join(root, 'public', 'images')
+    fs.mkdirSync(imageRoot, { recursive: true })
+    fs.writeFileSync(path.join(imageRoot, 'release-cover.svg'), '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="purple"/></svg>')
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      mediaRoots: ['public/images'],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    indexProject({ root })
+    const db = openVisDatabase(root)
+    try {
+      const [asset] = searchAssets(db, { query: 'release cover', maxResults: 1 })
+      const dryRun = reviewAssets(db, [asset.asset_id], {
+        rightsStatus: 'generated-owned',
+        approvalStatus: 'approved',
+        reason: 'Generated internally for release test.',
+      })
+      assert.equal(dryRun.dryRun, true)
+      assert.equal(dryRun.reviewed, 1)
+      assert.equal(db.prepare('SELECT rights_status, approval_status FROM asset WHERE asset_id = ?').get(asset.asset_id).rights_status, 'unknown')
+
+      const executed = reviewAssets(db, [asset.asset_id], {
+        rightsStatus: 'Generated-Owned',
+        approvalStatus: 'Approved',
+        reason: 'Generated internally for release test.',
+        execute: true,
+      })
+      assert.equal(executed.dryRun, false)
+      assert.equal(executed.reviewed, 1)
+      const row = db.prepare('SELECT rights_status, approval_status FROM asset WHERE asset_id = ?').get(asset.asset_id)
+      assert.equal(row.rights_status, 'generated-owned')
+      assert.equal(row.approval_status, 'approved')
+      assert.equal(db.prepare("SELECT COUNT(*) AS count FROM provenance_event WHERE event_type = 'asset-governance-reviewed'").get().count, 1)
     } finally {
       db.close()
     }

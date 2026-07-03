@@ -2220,6 +2220,95 @@ export function annotateAssets(dbOrRoot, assetRefs = [], args = {}) {
   }
 }
 
+export function reviewAssets(dbOrRoot, assetRefs = [], args = {}) {
+  const providedRefs = assetRefs === null || assetRefs === undefined ? [] : assetRefs
+  const refs = normalizeAssetRefs(providedRefs.length ? providedRefs : args.assetRefs || args.asset_refs || args.assets || args.asset_ids || args.assetIds || [])
+  if (!refs.length) throw new Error('Asset review requires at least one asset reference')
+
+  const rightsStatus = normalizeRightsStatus(args.rightsStatus ?? args.rights_status ?? args.rights)
+  const approvalStatus = normalizeApprovalStatus(args.approvalStatus ?? args.approval_status ?? args.approval)
+  if (!rightsStatus && !approvalStatus) throw new Error('Asset review requires rightsStatus and/or approvalStatus')
+
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const execute = args.execute === true
+    const actor = args.actor || 'vis-cli'
+    const reason = normalizeNullable(args.reason || args.note || args.notes || null)
+    const batchId = args.batchId || args.batch_id || stableId('asset_review', `${actor}:${refs.join('|')}:${rightsStatus || ''}:${approvalStatus || ''}:${reason || ''}`)
+    const reviewedAt = nowIso()
+    const items = []
+    const errors = []
+
+    for (const ref of refs) {
+      try {
+        const assetId = resolveAssetId(db, ref)
+        if (!assetId) throw new Error('Asset not found for review')
+        const current = db.prepare('SELECT asset_id, title, media_type, rights_status, approval_status FROM asset WHERE asset_id = ?').get(assetId)
+        if (!current) throw new Error('Asset not found for review')
+        const next = {
+          rights_status: rightsStatus || current.rights_status,
+          approval_status: approvalStatus || current.approval_status,
+        }
+
+        if (execute) {
+          db.prepare('UPDATE asset SET rights_status = ?, approval_status = ?, last_seen_at = ? WHERE asset_id = ?')
+            .run(next.rights_status, next.approval_status, reviewedAt, assetId)
+          recordProvenance(db, {
+            assetId,
+            eventType: 'asset-governance-reviewed',
+            actor,
+            source: 'vis-review',
+            payload: {
+              batch_id: batchId,
+              reason,
+              previous: {
+                rights_status: current.rights_status,
+                approval_status: current.approval_status,
+              },
+              next,
+            },
+            createdAt: reviewedAt,
+          })
+        }
+
+        items.push({
+          ref,
+          asset_id: assetId,
+          title: current.title,
+          media_type: current.media_type,
+          previous: {
+            rights_status: current.rights_status,
+            approval_status: current.approval_status,
+          },
+          next,
+        })
+      } catch (error) {
+        errors.push({ ref, error: error.message })
+      }
+    }
+
+    return {
+      dryRun: !execute,
+      batch_id: batchId,
+      requested: refs.length,
+      reviewed: items.length,
+      failed: errors.length,
+      operation: {
+        rights_status: rightsStatus,
+        approval_status: approvalStatus,
+        reason,
+      },
+      items,
+      errors,
+      note: execute
+        ? 'Asset governance review saved with provenance events.'
+        : 'Dry run only. Pass execute: true or CLI --execute after human review to persist rights/approval changes.',
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
 export function listSavedSearches(dbOrRoot) {
   const { db, close } = resolveDbArgs(dbOrRoot)
   try {
@@ -2986,6 +3075,22 @@ function normalizeAssetRefs(value) {
   return uniq(raw.flatMap(item => Array.isArray(item) ? item : String(item || '').split(/[,\n]+/))
     .map(item => String(item || '').trim())
     .filter(Boolean))
+}
+
+function normalizeRightsStatus(value) {
+  const status = normalizeNullable(value)?.toLowerCase()
+  if (!status) return null
+  const allowed = new Set(['owned', 'generated-owned', 'licensed', 'unknown', 'blocked', 'needs-review'])
+  if (!allowed.has(status)) throw new Error(`Invalid rights status: ${status}`)
+  return status
+}
+
+function normalizeApprovalStatus(value) {
+  const status = normalizeNullable(value)?.toLowerCase()
+  if (!status) return null
+  const allowed = new Set(['candidate', 'approved', 'rejected', 'needs-review'])
+  if (!allowed.has(status)) throw new Error(`Invalid approval status: ${status}`)
+  return status
 }
 
 function normalizeNullable(value) {

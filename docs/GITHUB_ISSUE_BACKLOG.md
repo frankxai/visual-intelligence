@@ -277,8 +277,9 @@ Body:
 Make rights and approval state visible and actionable before assets become public.
 
 Tasks:
-- [ ] Add rights filter and review queue.
-- [ ] Add approval/reject workflow.
+- [x] Add rights filter and review queue.
+- [x] Add dry-run-first rights and approval review workflow across CLI, MCP, and dashboard selected-assets handoff.
+- [ ] Add richer approval/reject workflow in the dashboard.
 - [ ] Add blocked/needs-review state.
 - [ ] Add export guard for unknown rights.
 

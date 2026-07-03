@@ -613,6 +613,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
         <button id="clearSelection">Clear</button>
         <button id="copySelection">Copy packets</button>
         <button id="copyCurationCommand">Copy curate cmd</button>
+        <button id="copyReviewCommand">Copy rights gate</button>
       </div>
     </div>
     <div class="workspace">
@@ -1014,6 +1015,29 @@ function copyBatchCurationCommand(){
     assets: assets.map(asset => ({ asset_id: asset.asset_id, visual_uri: asset.visual_uri, title: asset.title, media_type: asset.media_type, path: asset.absolute_path || asset.relative_path }))
   }, null, 2));
 }
+function copyReviewCommand(){
+  const assets = [...selectedIds].map(id => DATA.assets.find(asset => asset.asset_id === id)).filter(Boolean);
+  if (!assets.length) return toast("Select assets first");
+  const ids = assets.map(asset => asset.asset_id);
+  const command = "node bin\\\\vis.mjs review-assets " + ids.map(shellArg).join(" ") + " --rights-status needs-review --approval-status needs-review --reason " + shellArg("Dashboard selected assets require human rights and approval review");
+  copy(JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    count: ids.length,
+    command,
+    note: "Dry-run by default. Choose owned/generated-owned/licensed and approved only after human rights review.",
+    mcp_tool: {
+      name: "review_assets",
+      arguments: {
+        asset_ids: ids,
+        rights_status: "needs-review",
+        approval_status: "needs-review",
+        reason: "Dashboard selected assets require human rights and approval review",
+        execute: false
+      }
+    },
+    assets: assets.map(asset => ({ asset_id: asset.asset_id, visual_uri: asset.visual_uri, title: asset.title, rights_status: asset.rights_status, approval_status: asset.approval_status, path: asset.absolute_path || asset.relative_path }))
+  }, null, 2));
+}
 function shellArg(value){
   return '"' + String(value || "").replaceAll('"', '\\"') + '"';
 }
@@ -1053,6 +1077,7 @@ $("selectVisible").addEventListener("click", () => { for (const asset of filtere
 $("clearSelection").addEventListener("click", () => { selectedIds.clear(); renderAll(); });
 $("copySelection").addEventListener("click", copySelectedPackets);
 $("copyCurationCommand").addEventListener("click", copyBatchCurationCommand);
+$("copyReviewCommand").addEventListener("click", copyReviewCommand);
 $("closeDrawer").addEventListener("click", () => { $("drawer").classList.remove("open"); $("drawer").setAttribute("aria-hidden","true"); });
 document.addEventListener("keydown", e => {
   const tag = String(e.target?.tagName || "").toLowerCase();

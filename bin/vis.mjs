@@ -31,6 +31,7 @@ import {
   loadConfig,
   openVisDatabase,
   recordPublication,
+  reviewAssets,
   resolveAssetId,
   resolveMediaRoots,
   resolveScanProfile,
@@ -73,6 +74,7 @@ const VALUE_FLAGS = new Set([
   '--status', '--query', '--folder', '--collection', '--use', '--max-kb',
   '--note', '--notes', '--rating', '--color', '--curation-status', '--name', '--min-rating',
   '--profile', '--library', '--eagle-library', '--port', '--host', '--min-score', '--pool-limit',
+  '--rights-status', '--approval-status', '--reason',
 ])
 
 function positionalArgs() {
@@ -484,6 +486,20 @@ function cmdBatchAnnotate() {
   printJson(result)
 }
 
+function cmdReviewAssets() {
+  const root = projectRoot()
+  const refs = assetRefArgs()
+  if (!refs.length) throw new Error('Usage: vis review-assets <asset...> [--rights-status generated-owned] [--approval-status approved] [--execute]')
+  const result = reviewAssets(root, refs, {
+    rightsStatus: getFlag('--rights-status'),
+    approvalStatus: getFlag('--approval-status'),
+    reason: getFlag('--reason') || getFlag('--note') || getFlag('--notes'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
 function cmdSavedSearches() {
   const root = projectRoot()
   printJson(listSavedSearches(root))
@@ -758,6 +774,8 @@ const commands = {
   annotate: cmdAnnotate,
   'batch-annotate': cmdBatchAnnotate,
   'bulk-annotate': cmdBatchAnnotate,
+  'review-assets': cmdReviewAssets,
+  'approve-assets': cmdReviewAssets,
   'saved-searches': cmdSavedSearches,
   'save-search': cmdSaveSearch,
   'music-releases': cmdMusicReleases,
@@ -799,6 +817,7 @@ Commands:
   vis score [asset]                Score asset or collection readiness
   vis annotate <asset>             Dry-run or save tags, notes, rating, color, collection
   vis batch-annotate <asset...>     Dry-run or save curation metadata across assets
+  vis review-assets <asset...>      Dry-run or save rights and approval status
   vis saved-searches               List saved smart-folder searches
   vis save-search --name <name>     Dry-run or save a smart search
   vis music-releases               List Music IS release media packets

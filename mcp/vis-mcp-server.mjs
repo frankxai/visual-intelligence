@@ -29,6 +29,7 @@ import {
   openVisDatabase,
   parseJson,
   recordPublication,
+  reviewAssets,
   saveSearch,
   scoreAsset,
   scoreCollection,
@@ -163,6 +164,35 @@ function toolBulkAnnotateAssets(args = {}) {
   }))
 }
 
+function toolReviewAssets(args = {}) {
+  const assetRefs = [
+    ...(Array.isArray(args.asset_ids) ? args.asset_ids : []),
+    ...(Array.isArray(args.assetIds) ? args.assetIds : []),
+    ...(Array.isArray(args.assets) ? args.assets : []),
+    ...(Array.isArray(args.uris) ? args.uris : []),
+    ...(Array.isArray(args.paths) ? args.paths : []),
+    args.asset_id,
+    args.assetId,
+    args.uri,
+    args.path,
+  ].filter(Boolean)
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: true,
+      preview: reviewAssets(db, assetRefs, { ...args, execute: false }),
+    }))
+  }
+  return withDb(db => reviewAssets(db, assetRefs, {
+    rightsStatus: args.rights_status || args.rightsStatus || args.rights,
+    approvalStatus: args.approval_status || args.approvalStatus || args.approval,
+    reason: args.reason || args.note || args.notes,
+    actor: 'vis-mcp',
+    execute: args.execute === true && WRITE_ENABLED,
+  }))
+}
+
 function toolListSavedSearches() {
   return withDb(db => listSavedSearches(db))
 }
@@ -270,6 +300,7 @@ const TOOL_HANDLERS = {
   create_curation_packet: toolCreateCurationPacket,
   annotate_asset: toolAnnotateAsset,
   bulk_annotate_assets: toolBulkAnnotateAssets,
+  review_assets: toolReviewAssets,
   list_saved_searches: toolListSavedSearches,
   save_search: toolSaveSearch,
   list_music_releases: toolListMusicReleases,
@@ -363,6 +394,16 @@ const TOOLS = [
     collection: stringProp('Collection name to add assets into'),
     replace_tags: booleanProp('Replace existing custom tags instead of merging'),
     execute: booleanProp('Persist annotations when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('review_assets', 'Dry-run or save rights and approval status across assets. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
+    asset_ids: { type: 'array', items: { type: 'string' }, description: 'VIS asset_ids' },
+    assets: { type: 'array', items: { type: 'string' }, description: 'Asset ids, visual URIs, or paths' },
+    uris: { type: 'array', items: { type: 'string' }, description: 'visual://asset/{asset_id} URIs' },
+    paths: { type: 'array', items: { type: 'string' }, description: 'Local or relative paths' },
+    rights_status: stringProp('owned, generated-owned, licensed, unknown, blocked, or needs-review'),
+    approval_status: stringProp('candidate, approved, rejected, or needs-review'),
+    reason: stringProp('Human review reason or evidence note'),
+    execute: booleanProp('Persist review when VIS_ENABLE_WRITES=1'),
   }),
   tool('list_saved_searches', 'List saved VIS smart-folder searches.', {}),
   tool('save_search', 'Dry-run or save a VIS smart-folder search. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
