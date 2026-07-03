@@ -3136,6 +3136,393 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   }
 }
 
+const DERIVATIVE_PRESETS = {
+  website: {
+    aliases: ['web', 'site', 'route'],
+    label: 'Website Derivatives',
+    intendedUse: 'website derivative and owned route use',
+    description: 'Responsive website-ready image/video/audio variants for owned routes and Codex implementation packets.',
+    variants: {
+      image: [
+        { id: 'website-hero-1600w', label: 'Website hero', target_role: 'website-hero', width: 1600, format: 'webp', adapter: 'sharp', quality: 82 },
+        { id: 'website-og-1200x630', label: 'Open Graph image', target_role: 'open-graph', width: 1200, height: 630, aspect_ratio: '1.91:1', format: 'jpg', adapter: 'sharp', quality: 88 },
+        { id: 'website-thumb-800w', label: 'Website thumbnail', target_role: 'website-thumbnail', width: 800, format: 'webp', adapter: 'sharp', quality: 82 },
+      ],
+      video: [
+        { id: 'website-preview-1080p', label: 'Website video preview', target_role: 'website-video-preview', width: 1920, height: 1080, aspect_ratio: '16:9', format: 'mp4', adapter: 'ffmpeg' },
+      ],
+      audio: [
+        { id: 'website-audio-preview-30s', label: 'Website audio preview', target_role: 'website-audio-preview', duration_seconds: 30, format: 'mp3', adapter: 'ffmpeg' },
+        { id: 'website-waveform-png', label: 'Website waveform still', target_role: 'website-waveform', width: 1600, height: 320, aspect_ratio: '5:1', format: 'png', adapter: 'ffmpeg' },
+      ],
+    },
+  },
+  social: {
+    aliases: ['channel', 'post', 'reels', 'shorts'],
+    label: 'Social Variants',
+    intendedUse: 'social post derivative use',
+    description: 'Square, vertical, story, short-video, and audio-preview variants for manual or Postiz-gated publishing.',
+    variants: {
+      image: [
+        { id: 'social-square-1080', label: 'Social square', target_role: 'social-square', width: 1080, height: 1080, aspect_ratio: '1:1', format: 'jpg', adapter: 'sharp', quality: 90 },
+        { id: 'social-story-1080x1920', label: 'Story/Reels still', target_role: 'social-story', width: 1080, height: 1920, aspect_ratio: '9:16', format: 'jpg', adapter: 'sharp', quality: 90 },
+        { id: 'social-wide-1920x1080', label: 'Social wide', target_role: 'social-wide', width: 1920, height: 1080, aspect_ratio: '16:9', format: 'jpg', adapter: 'sharp', quality: 88 },
+      ],
+      video: [
+        { id: 'social-vertical-1080x1920', label: 'Vertical short', target_role: 'social-vertical-video', width: 1080, height: 1920, aspect_ratio: '9:16', max_duration_seconds: 60, format: 'mp4', adapter: 'ffmpeg' },
+        { id: 'social-square-video-1080', label: 'Square video', target_role: 'social-square-video', width: 1080, height: 1080, aspect_ratio: '1:1', max_duration_seconds: 60, format: 'mp4', adapter: 'ffmpeg' },
+      ],
+      audio: [
+        { id: 'social-audio-preview-30s', label: 'Social audio preview', target_role: 'social-audio-preview', duration_seconds: 30, format: 'mp3', adapter: 'ffmpeg' },
+        { id: 'social-waveform-story', label: 'Waveform story visual', target_role: 'social-waveform-story', width: 1080, height: 1920, aspect_ratio: '9:16', format: 'mp4', adapter: 'ffmpeg' },
+      ],
+    },
+  },
+  'music-release': {
+    aliases: ['music', 'release', 'song', 'spotify-canvas', 'canvas'],
+    label: 'Music Release Media',
+    intendedUse: 'music release cover, Canvas, website, and social derivative use',
+    description: 'Music IS handoff variants for cover masters, Canvas, shorts, waveform, and preview packets.',
+    musicBoundary: 'Music IS remains canonical for release state, rights, AI disclosure, credits, and distribution gates. VIS plans media derivatives only.',
+    variants: {
+      image: [
+        { id: 'music-cover-master-3000', label: 'Cover master', target_role: 'cover-master', width: 3000, height: 3000, aspect_ratio: '1:1', format: 'png', adapter: 'sharp' },
+        { id: 'music-cover-square-1400', label: 'Cover square review', target_role: 'cover-square', width: 1400, height: 1400, aspect_ratio: '1:1', format: 'jpg', adapter: 'sharp', quality: 92 },
+        { id: 'music-cover-story-1080x1920', label: 'Cover story crop', target_role: 'cover-story', width: 1080, height: 1920, aspect_ratio: '9:16', format: 'jpg', adapter: 'sharp', quality: 90 },
+      ],
+      video: [
+        { id: 'spotify-canvas-1080x1920', label: 'Spotify Canvas candidate', target_role: 'spotify-canvas', width: 1080, height: 1920, aspect_ratio: '9:16', min_duration_seconds: 3, max_duration_seconds: 8, format: 'mp4', adapter: 'ffmpeg' },
+        { id: 'music-short-1080x1920', label: 'Release short', target_role: 'music-release-short', width: 1080, height: 1920, aspect_ratio: '9:16', max_duration_seconds: 60, format: 'mp4', adapter: 'ffmpeg' },
+      ],
+      audio: [
+        { id: 'music-audio-preview-30s', label: 'Release audio preview', target_role: 'music-audio-preview', duration_seconds: 30, format: 'mp3', adapter: 'ffmpeg' },
+        { id: 'music-waveform-png', label: 'Release waveform still', target_role: 'music-waveform', width: 3000, height: 600, aspect_ratio: '5:1', format: 'png', adapter: 'ffmpeg' },
+      ],
+    },
+  },
+  nft: {
+    aliases: ['web3', 'ipfs', 'mint'],
+    label: 'NFT/Web3 Readiness',
+    intendedUse: 'NFT metadata and mint readiness derivative use',
+    description: 'Image and metadata variants for human-approved NFT/IPFS/R2 collection preparation.',
+    variants: {
+      image: [
+        { id: 'nft-master-image', label: 'NFT master image', target_role: 'nft-master-image', width: 2048, height: 2048, aspect_ratio: '1:1', format: 'png', adapter: 'sharp' },
+        { id: 'nft-thumbnail-512', label: 'NFT thumbnail', target_role: 'nft-thumbnail', width: 512, height: 512, aspect_ratio: '1:1', format: 'webp', adapter: 'sharp', quality: 88 },
+        { id: 'nft-metadata-json', label: 'NFT metadata JSON', target_role: 'nft-metadata-json', target_media_type: 'metadata', format: 'json', adapter: 'vis-manifest' },
+      ],
+    },
+  },
+  cloudinary: {
+    aliases: ['dam', 'cdn', 'delivery'],
+    label: 'Cloudinary Delivery',
+    intendedUse: 'Cloudinary production delivery derivative use',
+    description: 'Production DAM/CDN delivery variants while preserving Cloudinary as an adapter, not the VIS source of truth.',
+    variants: {
+      image: [
+        { id: 'cloudinary-master', label: 'Cloudinary approved master', target_role: 'cloudinary-master', format: 'original', adapter: 'cloudinary' },
+        { id: 'cloudinary-responsive-webp', label: 'Cloudinary responsive webp', target_role: 'cloudinary-responsive', width: 1600, format: 'webp', adapter: 'cloudinary' },
+      ],
+      video: [
+        { id: 'cloudinary-video-preview', label: 'Cloudinary video preview', target_role: 'cloudinary-video-preview', width: 1920, height: 1080, aspect_ratio: '16:9', format: 'mp4', adapter: 'cloudinary' },
+      ],
+      audio: [
+        { id: 'cloudinary-audio-delivery', label: 'Cloudinary audio delivery', target_role: 'cloudinary-audio-delivery', format: 'mp3', adapter: 'cloudinary' },
+      ],
+    },
+  },
+}
+
+export function listDerivativePresets() {
+  return Object.entries(DERIVATIVE_PRESETS).map(([id, preset]) => ({
+    id,
+    aliases: preset.aliases,
+    label: preset.label,
+    description: preset.description,
+    intended_use: preset.intendedUse,
+    media_types: Object.keys(preset.variants),
+    variant_count: Object.values(preset.variants).reduce((sum, variants) => sum + variants.length, 0),
+    music_boundary: preset.musicBoundary || null,
+    write_model: 'dry-run manifest only; actual transformations require later adapters and human approval',
+  }))
+}
+
+export function planAssetDerivatives(dbOrRoot, assetRefs = [], args = {}) {
+  const providedRefs = assetRefs === null || assetRefs === undefined ? [] : assetRefs
+  const refs = normalizeAssetRefs(providedRefs.length ? providedRefs : args.assetRefs || args.asset_refs || args.assets || args.asset_ids || args.assetIds || args.refs || [])
+  const presetId = normalizeDerivativePreset(args.preset || args.target || args.use || args.intent || 'website')
+  const preset = DERIVATIVE_PRESETS[presetId]
+  const { db, root, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const limit = Number(args.limit || 50)
+    const outputRoot = normalizeDerivativeOutputRoot(root, args.outputRoot || args.output_root || args.targetRoot || args.target_root || args.derivativesRoot || args.derivatives_root)
+    const selected = selectAssetsForDerivativePlan(db, refs, { ...args, limit })
+    const plannedAt = nowIso()
+    const planId = args.planId || args.plan_id || stableId('derivative_plan', `${presetId}:${refs.join('|')}:${JSON.stringify(derivativeFilterSummary(args))}`)
+    const intendedUse = args.intendedUse || args.intended_use || preset.intendedUse
+    const items = selected.items.map(asset => buildDerivativePlanItem(asset, {
+      root,
+      preset,
+      presetId,
+      planId,
+      outputRoot,
+      intendedUse,
+    }))
+    const allVariants = items.flatMap(item => item.variants)
+    const plannedVariants = allVariants.filter(variant => variant.status === 'planned')
+    const blockedVariants = allVariants.filter(variant => variant.status === 'blocked')
+    const compatibleItems = items.filter(item => item.variants.length > 0)
+    const blockedItems = items.filter(item => item.status === 'blocked' || item.variants.some(variant => variant.status === 'blocked'))
+
+    return {
+      dryRun: true,
+      execute_supported: false,
+      requested_execute_ignored: args.execute === true,
+      plan_id: planId,
+      preset: presetId,
+      label: preset.label,
+      generated_at: plannedAt,
+      intended_use: intendedUse,
+      write_model: 'manifest-only derivative/export plan; no files are transformed, uploaded, published, minted, or deleted',
+      target_root: outputRoot,
+      requested: selected.requested,
+      selected: items.length,
+      compatible_assets: compatibleItems.length,
+      planned_variants: plannedVariants.length,
+      blocked_variants: blockedVariants.length,
+      blocked_assets: blockedItems.length,
+      filters: derivativeFilterSummary(args),
+      items,
+      errors: selected.errors,
+      music_boundary: preset.musicBoundary || null,
+      gates: [
+        'Review rights and approval before public use.',
+        'Transformation adapters such as Sharp, FFmpeg, Cloudinary, R2, Postiz, IPFS, and thirdweb remain explicit later steps.',
+        'No external upload, social post, mint, wallet action, or distributor action is performed by this plan.',
+        ...(preset.musicBoundary ? ['Music IS release gate remains required before distribution or release publishing.'] : []),
+      ],
+      commands: {
+        cli_dry_run: `node bin\\vis.mjs derivative-plan --preset ${presetId}${args.query ? ` --query "${String(args.query).replace(/"/g, '\\"')}"` : ''} --limit ${limit} --json`,
+        codex_packet: `VIS derivative plan ${planId}: preset ${presetId}, selected ${items.length} assets, planned ${plannedVariants.length} variants, blocked ${blockedVariants.length}. Use visual:// URIs and local paths from this manifest; do not publish externally without the listed gates.`,
+      },
+      note: 'Dry run only. Review the manifest, resolve blockers, then use a future gated adapter to execute transforms or exports.',
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
+function normalizeDerivativePreset(value) {
+  const raw = String(value || 'website').trim().toLowerCase().replace(/[_\s]+/g, '-')
+  if (DERIVATIVE_PRESETS[raw]) return raw
+  for (const [id, preset] of Object.entries(DERIVATIVE_PRESETS)) {
+    if ((preset.aliases || []).includes(raw)) return id
+  }
+  throw new Error(`Unknown derivative preset: ${value}. Known presets: ${Object.keys(DERIVATIVE_PRESETS).join(', ')}`)
+}
+
+function normalizeDerivativeOutputRoot(root, value) {
+  if (!value) return null
+  return path.resolve(root || process.cwd(), String(value))
+}
+
+function selectAssetsForDerivativePlan(db, refs = [], args = {}) {
+  const errors = []
+  if (refs.length) {
+    const items = []
+    for (const ref of refs) {
+      const assetId = resolveAssetId(db, ref)
+      if (!assetId) {
+        errors.push({ ref, error: 'Asset not found' })
+        continue
+      }
+      const asset = getDerivativeAssetRow(db, assetId)
+      if (!asset) {
+        errors.push({ ref, asset_id: assetId, error: 'No local asset location found' })
+        continue
+      }
+      items.push({ ...asset, requested_ref: ref })
+    }
+    return { requested: refs.length, items, errors }
+  }
+
+  const found = searchAssets(db, {
+    query: args.query || '',
+    tag: args.tag || args.filterTag || args.filter_tag,
+    category: args.category,
+    mediaType: args.mediaType || args.media_type,
+    mood: args.mood,
+    color: args.color || args.colorFamily || args.color_family,
+    maxResults: args.limit || 50,
+    poolLimit: args.poolLimit || args.pool_limit || 10000,
+  })
+  const items = []
+  for (const asset of found) {
+    const row = getDerivativeAssetRow(db, asset.asset_id)
+    if (row) items.push(row)
+    else errors.push({ asset_id: asset.asset_id, error: 'No local asset location found' })
+  }
+  return { requested: found.length, items, errors }
+}
+
+function getDerivativeAssetRow(db, assetId) {
+  const row = db.prepare(`
+SELECT
+  a.*,
+  v.version_id,
+  v.sha256,
+  v.byte_size,
+  v.mime_type,
+  v.extension,
+  v.width,
+  v.height,
+  v.duration_seconds,
+  v.metadata_json,
+  l.location_id,
+  l.absolute_path,
+  l.relative_path,
+  l.public_path,
+  l.root,
+  l.repo,
+  l.is_primary,
+  an.rating,
+  an.color_label,
+  an.curation_status,
+  an.notes AS annotation_notes,
+  an.custom_tags_json,
+  (SELECT COUNT(*) FROM prompt p WHERE p.asset_id = a.asset_id) AS prompt_count,
+  (SELECT COUNT(*) FROM eval_record e WHERE e.asset_id = a.asset_id) AS eval_count,
+  (SELECT COUNT(*) FROM asset_usage u WHERE u.asset_id = a.asset_id) AS usage_count,
+  (SELECT COUNT(*) FROM generation_event ge WHERE ge.asset_id = a.asset_id) AS generation_count,
+  (SELECT COUNT(*) FROM agent_run ar WHERE ar.asset_id = a.asset_id) AS agent_run_count
+FROM asset a
+JOIN asset_location l ON l.asset_id = a.asset_id AND l.exists_now = 1
+LEFT JOIN asset_version v ON v.version_id = l.version_id
+LEFT JOIN asset_annotation an ON an.asset_id = a.asset_id
+WHERE a.asset_id = ?
+ORDER BY l.is_primary DESC, l.seen_at DESC
+LIMIT 1
+`).get(assetId)
+  return row ? normalizeAssetRow(row) : null
+}
+
+function buildDerivativePlanItem(asset, context) {
+  const publishGate = assetPublishGate(asset, { intendedUse: context.intendedUse })
+  const variants = derivativeVariantsForAsset(asset, context.preset).map(variant => buildDerivativeVariant(asset, variant, publishGate, context))
+  const itemBlockers = []
+  if (!asset.absolute_path) itemBlockers.push('missing-local-path')
+  else if (!fs.existsSync(path.resolve(asset.absolute_path))) itemBlockers.push('source-missing')
+  if (!variants.length) itemBlockers.push(`preset ${context.presetId} has no variant for ${asset.media_type}`)
+  const variantBlocked = variants.some(variant => variant.status === 'blocked')
+
+  return {
+    ref: asset.requested_ref || asset.asset_id,
+    asset_id: asset.asset_id,
+    visual_uri: `visual://asset/${asset.asset_id}`,
+    version_id: asset.version_id,
+    title: asset.title,
+    media_type: asset.media_type,
+    media_role: asset.media_role,
+    workflow: asset.workflow,
+    category: asset.category,
+    rights_status: asset.rights_status,
+    approval_status: asset.approval_status,
+    source_path: asset.absolute_path,
+    local_path: asset.absolute_path,
+    relative_path: asset.relative_path,
+    dimensions: asset.width && asset.height ? { width: asset.width, height: asset.height } : null,
+    duration_seconds: asset.duration_seconds || null,
+    publish_gate: publishGate,
+    status: itemBlockers.length || !publishGate.allowed || variantBlocked ? 'blocked' : 'planned',
+    blockers: uniq([...itemBlockers, ...(!publishGate.allowed ? publishGate.blockers : [])]),
+    warnings: publishGate.warnings,
+    variants,
+  }
+}
+
+function derivativeVariantsForAsset(asset, preset) {
+  return preset.variants[asset.media_type] || []
+}
+
+function buildDerivativeVariant(asset, variant, publishGate, context) {
+  const blockers = []
+  if (!asset.absolute_path) blockers.push('missing-local-path')
+  else if (!fs.existsSync(path.resolve(asset.absolute_path))) blockers.push('source-missing')
+  if (!publishGate.allowed) blockers.push('public-use-gate-blocked')
+  const targetPath = derivativeTargetPath(asset, variant, context)
+  const adapter = variant.adapter || 'manual'
+  const status = blockers.length ? 'blocked' : 'planned'
+  const extension = derivativeVariantExtension(asset, variant)
+
+  return {
+    variant_id: variant.id,
+    label: variant.label,
+    target_role: variant.target_role,
+    source_media_type: asset.media_type,
+    target_media_type: variant.target_media_type || asset.media_type,
+    format: extension.replace(/^\./, ''),
+    width: variant.width || null,
+    height: variant.height || null,
+    aspect_ratio: variant.aspect_ratio || null,
+    duration_seconds: variant.duration_seconds || null,
+    min_duration_seconds: variant.min_duration_seconds || null,
+    max_duration_seconds: variant.max_duration_seconds || null,
+    quality: variant.quality || null,
+    adapter,
+    adapter_status: 'planned-not-executed',
+    target_path: targetPath,
+    status,
+    publish_ready: publishGate.allowed,
+    blockers,
+    handoff: {
+      recommended_adapter: adapter,
+      action: `Create ${variant.label} from ${asset.visual_uri || `visual://asset/${asset.asset_id}`}`,
+      source_path: asset.absolute_path,
+      target_path: targetPath,
+      notes: [
+        formatDerivativeVariantDimensions(variant),
+        'Record the derivative as an asset_derivative/storage_object/provenance event when an execution adapter exists.',
+      ].filter(Boolean),
+    },
+  }
+}
+
+function derivativeTargetPath(asset, variant, context) {
+  if (!asset.absolute_path) return null
+  const sourcePath = path.resolve(asset.absolute_path)
+  const baseDir = context.outputRoot
+    ? path.join(context.outputRoot, context.presetId, asset.media_type)
+    : path.join(path.dirname(sourcePath), 'derivatives', context.presetId)
+  const stem = sanitizeFileStem(`${asset.title || asset.asset_id}-${variant.id}`)
+  return path.join(baseDir, `${stem}${derivativeVariantExtension(asset, variant)}`)
+}
+
+function derivativeVariantExtension(asset, variant) {
+  if (variant.format === 'original') return path.extname(asset.absolute_path || '') || asset.extension || ''
+  const format = String(variant.format || asset.extension || '').replace(/^\./, '')
+  return format ? `.${format}` : ''
+}
+
+function formatDerivativeVariantDimensions(variant) {
+  if (variant.width && variant.height) return `Target dimensions: ${variant.width}x${variant.height}${variant.aspect_ratio ? ` (${variant.aspect_ratio})` : ''}.`
+  if (variant.width) return `Target width: ${variant.width}px.`
+  if (variant.duration_seconds) return `Target duration: ${variant.duration_seconds}s.`
+  if (variant.max_duration_seconds) return `Target max duration: ${variant.max_duration_seconds}s.`
+  return null
+}
+
+function derivativeFilterSummary(args = {}) {
+  return {
+    query: args.query || null,
+    media_type: args.mediaType || args.media_type || null,
+    category: args.category || null,
+    mood: args.mood || null,
+    tag: args.tag || args.filterTag || args.filter_tag || null,
+    color: args.color || args.colorFamily || args.color_family || null,
+    limit: args.limit || null,
+  }
+}
+
 export function exportCloudinaryManifest(dbOrRoot, options = {}) {
   const { db, close } = resolveDbArgs(dbOrRoot)
   try {

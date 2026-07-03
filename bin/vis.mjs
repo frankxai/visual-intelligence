@@ -27,6 +27,7 @@ import {
   indexProject,
   importEagleLibrary,
   listAssetActionRecipes,
+  listDerivativePresets,
   listScanProfiles,
   listSavedSearches,
   listSmartCollections,
@@ -34,6 +35,7 @@ import {
   loadConfig,
   openVisDatabase,
   initCreativeVault,
+  planAssetDerivatives,
   planCreativeVault,
   recordGenerationProvenance,
   recordPublication,
@@ -89,6 +91,7 @@ const VALUE_FLAGS = new Set([
   '--recipe', '--filter-tag', '--filter-rights-status', '--filter-approval-status',
   '--vault-root', '--sample-limit',
   '--template', '--rename-template', '--name-template', '--start', '--pad',
+  '--preset', '--target', '--intent', '--intended-use', '--output-root', '--target-root', '--derivatives-root',
 ])
 
 function positionalArgs() {
@@ -573,6 +576,62 @@ function cmdActionRecipe() {
   printJson(result)
 }
 
+function cmdDerivativePresets() {
+  const presets = listDerivativePresets()
+  if (hasFlag('--json')) {
+    printJson(presets)
+    return
+  }
+  console.log('\n=== VIS DERIVATIVE PRESETS ===\n')
+  for (const preset of presets) {
+    const aliases = preset.aliases?.length ? ` aliases: ${preset.aliases.join(', ')}` : ''
+    console.log(`${preset.id} | ${preset.label} | ${preset.media_types.join(', ')} | ${preset.variant_count} variants${aliases}`)
+    console.log(`  ${preset.description}`)
+    if (preset.music_boundary) console.log(`  ${preset.music_boundary}`)
+  }
+}
+
+function cmdDerivativePlan() {
+  const root = projectRoot()
+  const refs = assetRefArgs()
+  const preset = getFlag('--preset') || getFlag('--target') || getFlag('--intent') || 'website'
+  const result = planAssetDerivatives(root, refs, {
+    preset,
+    query: getFlag('--query'),
+    tag: getFlag('--tag'),
+    category: getFlag('--category'),
+    mediaType: getFlag('--media-type'),
+    mood: getFlag('--mood'),
+    color: getFlag('--color'),
+    outputRoot: getFlag('--output-root') || getFlag('--target-root') || getFlag('--derivatives-root'),
+    intendedUse: getFlag('--intended-use') || getFlag('--use'),
+    limit: Number(getFlag('--limit', 50)),
+    poolLimit: Number(getFlag('--pool-limit', 10000)),
+    execute: hasFlag('--execute'),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log(`\n=== VIS DERIVATIVE PLAN: ${result.preset} ===\n`)
+  console.log(`Plan: ${result.plan_id}`)
+  console.log(`Selected: ${result.selected} assets | planned variants: ${result.planned_variants} | blocked variants: ${result.blocked_variants}`)
+  if (result.target_root) console.log(`Target root: ${result.target_root}`)
+  if (result.music_boundary) console.log(`Music boundary: ${result.music_boundary}`)
+  const preview = result.items.slice(0, Number(getFlag('--limit', 8)))
+  for (const item of preview) {
+    console.log(`\n${item.asset_id} | ${item.media_type} | ${item.status}`)
+    console.log(`  ${item.local_path}`)
+    for (const variant of item.variants.slice(0, 4)) {
+      console.log(`  - ${variant.variant_id} -> ${variant.target_path || variant.adapter} [${variant.status}]`)
+      for (const blocker of variant.blockers || []) console.log(`    blocked: ${blocker}`)
+    }
+  }
+  if (result.items.length > preview.length) console.log(`\n...${result.items.length - preview.length} more assets. Add --json for the full manifest.`)
+  console.log('\nGates:')
+  for (const gate of result.gates) console.log(`- ${gate}`)
+}
+
 function cmdSmartCollections() {
   const root = projectRoot()
   const result = listSmartCollections(root, {
@@ -985,6 +1044,12 @@ const commands = {
   'action-recipe': cmdActionRecipe,
   'run-recipe': cmdActionRecipe,
   'ai-action': cmdActionRecipe,
+  'derivative-presets': cmdDerivativePresets,
+  'variant-presets': cmdDerivativePresets,
+  'derivative-plan': cmdDerivativePlan,
+  derivatives: cmdDerivativePlan,
+  'variant-plan': cmdDerivativePlan,
+  'export-plan': cmdDerivativePlan,
   'smart-collections': cmdSmartCollections,
   'smart-views': cmdSmartCollections,
   'smart-collection': cmdSmartCollection,
@@ -1038,6 +1103,8 @@ Commands:
   vis review-assets <asset...>      Dry-run or save rights and approval status
   vis action-recipes                List dry-run asset action recipes
   vis action-recipe <recipe>         Dry-run or apply recipe curation across matching assets
+  vis derivative-presets            List website/social/music/NFT/Cloudinary variant presets
+  vis derivative-plan --preset music Dry-run derivative/export manifest for matching assets
   vis smart-collections             List live Eagle-style smart views with counts
   vis smart-collection <id>          Inspect one smart view and copy the attached dry-run recipe
   vis record-generation <asset>     Dry-run or save prompt/model/agent/skill provenance sidecar

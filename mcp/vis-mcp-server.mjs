@@ -23,6 +23,7 @@ import {
   importEagleLibrary,
   initCreativeVault,
   listAssetActionRecipes,
+  listDerivativePresets,
   createMusicReleasePacket,
   evaluateSmartCollection,
   listSavedSearches,
@@ -32,6 +33,7 @@ import {
   mapUsage,
   openVisDatabase,
   parseJson,
+  planAssetDerivatives,
   planCreativeVault,
   recordGenerationProvenance,
   recordPublication,
@@ -281,6 +283,34 @@ function toolRunAssetActionRecipe(args = {}) {
   }))
 }
 
+function toolListDerivativePresets() {
+  return listDerivativePresets()
+}
+
+function toolPlanAssetDerivatives(args = {}) {
+  const assetRefs = [
+    ...(Array.isArray(args.asset_ids) ? args.asset_ids : []),
+    ...(Array.isArray(args.assetIds) ? args.assetIds : []),
+    ...(Array.isArray(args.assets) ? args.assets : []),
+    ...(Array.isArray(args.uris) ? args.uris : []),
+    ...(Array.isArray(args.paths) ? args.paths : []),
+    args.asset_id,
+    args.assetId,
+    args.uri,
+    args.path,
+  ].filter(Boolean)
+  return withDb(db => planAssetDerivatives(db, assetRefs, {
+    ...args,
+    preset: args.preset || args.target || args.intent,
+    mediaType: args.media_type || args.mediaType,
+    color: args.color || args.color_family || args.colorFamily,
+    outputRoot: args.output_root || args.outputRoot || args.target_root || args.targetRoot || args.derivatives_root || args.derivativesRoot,
+    intendedUse: args.intended_use || args.intendedUse,
+    poolLimit: args.pool_limit || args.poolLimit,
+    execute: args.execute === true,
+  }))
+}
+
 function toolListSavedSearches() {
   return withDb(db => listSavedSearches(db))
 }
@@ -469,6 +499,9 @@ const TOOL_HANDLERS = {
   list_asset_action_recipes: toolListAssetActionRecipes,
   run_asset_action_recipe: toolRunAssetActionRecipe,
   run_action_recipe: toolRunAssetActionRecipe,
+  list_derivative_presets: toolListDerivativePresets,
+  plan_asset_derivatives: toolPlanAssetDerivatives,
+  plan_derivatives: toolPlanAssetDerivatives,
   list_smart_collections: toolListSmartCollections,
   evaluate_smart_collection: toolEvaluateSmartCollection,
   get_smart_collection: toolEvaluateSmartCollection,
@@ -621,6 +654,27 @@ const TOOLS = [
     reason: stringProp('Human review reason if setting rights or approval'),
     limit: numberProp('Maximum selected assets'),
     execute: booleanProp('Persist recipe annotations/reviews when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('list_derivative_presets', 'List dry-run derivative/export presets for website, social, music release, NFT/Web3, and Cloudinary delivery.', {}),
+  tool('plan_asset_derivatives', 'Create a read-only derivative/export manifest for selected assets. No files are transformed, uploaded, posted, minted, or deleted.', {
+    preset: stringProp('website, social, music-release, nft, or cloudinary'),
+    target: stringProp('Alias for preset, for example web, music, canvas, ipfs, or dam'),
+    intent: stringProp('Alias for preset when an agent frames the desired use'),
+    asset_ids: { type: 'array', items: { type: 'string' }, description: 'Optional explicit VIS asset_ids' },
+    assets: { type: 'array', items: { type: 'string' }, description: 'Asset ids, visual URIs, or paths' },
+    uris: { type: 'array', items: { type: 'string' }, description: 'visual://asset/{asset_id} URIs' },
+    paths: { type: 'array', items: { type: 'string' }, description: 'Local or relative paths' },
+    query: stringProp('Optional query when asset ids are not provided'),
+    tag: stringProp('Optional tag filter when selecting assets by query'),
+    category: stringProp('Optional category filter'),
+    media_type: stringProp('Optional image, video, or audio filter'),
+    mood: stringProp('Optional mood filter'),
+    color: stringProp('Optional color family or hex filter'),
+    output_root: stringProp('Optional root for suggested derivative targets'),
+    intended_use: stringProp('Override intended public/private use description'),
+    limit: numberProp('Maximum selected assets'),
+    pool_limit: numberProp('Maximum asset pool to inspect'),
+    execute: booleanProp('Ignored by the planner; returned manifest remains dry-run'),
   }),
   tool('list_smart_collections', 'List live VIS smart collections with counts, Eagle-style queue labels, and attached dry-run recipe handoffs.', {
     sample_limit: numberProp('Optional sample assets per smart collection'),

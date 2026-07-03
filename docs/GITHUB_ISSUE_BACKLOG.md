@@ -651,3 +651,29 @@ Acceptance:
 - [ ] Issues, milestones, status labels, and registry remain aligned.
 - [ ] No work is blocked if Projects v2 is unavailable.
 ```
+
+## Issue 26: Add dry-run derivative and export planning manifests
+
+Labels: `dashboard`, `product`, `mcp`, `music`
+Milestone: `M1 Daily Cockpit`
+Status: `done`
+
+Body:
+
+```markdown
+Add read-only derivative/export planning so website, social, music-release, NFT/Web3, and Cloudinary variants can be reviewed before any transformation, upload, post, mint, or delete action.
+
+Tasks:
+- [x] Add shared derivative preset catalog for website, social, music-release, NFT/Web3, and Cloudinary targets.
+- [x] Add core planAssetDerivatives dry-run manifest with rights/approval blockers, output target paths, and Codex handoff text.
+- [x] Add CLI commands derivative-presets and derivative-plan.
+- [x] Add MCP tools list_derivative_presets and plan_asset_derivatives.
+- [x] Add asset-derivative-plan JSON schema.
+- [x] Add tests across image, video, and audio music-release assets.
+
+Acceptance:
+- [x] Unknown or unapproved assets are visible but derivative variants stay blocked.
+- [x] Approved generated-owned assets produce planned website/social/music/NFT/Cloudinary variant targets without writing files.
+- [x] Music release planning keeps Music IS canonical for release state, rights, AI disclosure, credits, and distribution gates.
+- [x] CLI, MCP, docs, schema, and tests expose the same dry-run contract.
+```

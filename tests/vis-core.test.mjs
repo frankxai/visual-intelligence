@@ -23,12 +23,14 @@ import {
   indexProject,
   importEagleLibrary,
   listAssetActionRecipes,
+  listDerivativePresets,
   listScanProfiles,
   listSavedSearches,
   listSmartCollections,
   listMusicReleasePackets,
   loadConfig,
   openVisDatabase,
+  planAssetDerivatives,
   planCreativeVault,
   recordGenerationProvenance,
   recordPublication,
@@ -739,6 +741,78 @@ test('creates Music IS release packets from linked audio, cover, canvas, and pro
       assert.match(packet.codex_prompt, /Music IS/)
       assert.match(packet.codex_prompt, /release review/)
       assert.equal(packet.release_id, packets[0].release_id)
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('plans dry-run derivative exports across music release image, video, and audio assets', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-derivative-plan-'))
+  try {
+    const releaseRoot = path.join(root, 'verticals', 'music-is', 'catalog', 'proof', 'arcanea', 'sun-circuit')
+    fs.mkdirSync(releaseRoot, { recursive: true })
+    fs.writeFileSync(path.join(releaseRoot, 'cover-art.png'), PNG_1X1)
+    fs.writeFileSync(path.join(releaseRoot, 'spotify-canvas.mp4'), Buffer.from('fake-video-canvas'))
+    fs.writeFileSync(path.join(releaseRoot, 'final-master.mp3'), Buffer.from('ID3fake-audio-master'))
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      mediaRoots: ['verticals/music-is/catalog/proof'],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    indexProject({ root })
+    const db = openVisDatabase(root)
+    try {
+      const presets = listDerivativePresets()
+      assert.ok(presets.some(preset => preset.id === 'music-release'))
+      assert.ok(presets.some(preset => preset.id === 'website'))
+
+      const blockedPlan = planAssetDerivatives(db, [], {
+        preset: 'music',
+        limit: 10,
+        outputRoot: 'exports/music',
+        execute: true,
+      })
+      assert.equal(blockedPlan.dryRun, true)
+      assert.equal(blockedPlan.execute_supported, false)
+      assert.equal(blockedPlan.requested_execute_ignored, true)
+      assert.equal(blockedPlan.preset, 'music-release')
+      assert.equal(blockedPlan.selected, 3)
+      assert.match(blockedPlan.music_boundary, /Music IS/)
+      assert.ok(blockedPlan.blocked_variants > 0)
+      assert.equal(blockedPlan.planned_variants, 0)
+      assert.ok(blockedPlan.items.every(item => item.status === 'blocked'))
+
+      const blockedVariantIds = blockedPlan.items.flatMap(item => item.variants.map(variant => variant.variant_id))
+      assert.ok(blockedVariantIds.includes('music-cover-master-3000'))
+      assert.ok(blockedVariantIds.includes('spotify-canvas-1080x1920'))
+      assert.ok(blockedVariantIds.includes('music-audio-preview-30s'))
+      assert.ok(blockedVariantIds.includes('music-waveform-png'))
+
+      const assetIds = searchAssets(db, { query: '', maxResults: 10 }).map(asset => asset.asset_id)
+      const review = reviewAssets(db, assetIds, {
+        rightsStatus: 'generated-owned',
+        approvalStatus: 'approved',
+        reason: 'Mock release assets approved for derivative planning test.',
+        execute: true,
+      })
+      assert.equal(review.reviewed, 3)
+
+      const approvedPlan = planAssetDerivatives(db, [], {
+        preset: 'music-release',
+        limit: 10,
+        outputRoot: 'exports/music',
+      })
+      assert.equal(approvedPlan.selected, 3)
+      assert.equal(approvedPlan.blocked_variants, 0)
+      assert.ok(approvedPlan.planned_variants >= 7)
+      assert.ok(approvedPlan.items.every(item => item.status === 'planned'))
+      assert.ok(approvedPlan.items.flatMap(item => item.variants).every(variant => variant.target_path.includes(path.join('exports', 'music'))))
+      assert.match(approvedPlan.commands.codex_packet, /VIS derivative plan/)
     } finally {
       db.close()
     }

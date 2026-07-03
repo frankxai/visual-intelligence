@@ -84,6 +84,7 @@ Recommended naming:
 - Dry-run-first action recipes for designer inbox, Music IS release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity review.
 - Human-gated rights and approval review so website, social, NFT, and Music IS handoffs cannot quietly treat unknown assets as publishable.
 - Public-use gates in packets and export manifests so Cloudinary, NFT, website, social, and Music IS handoffs surface blockers before any external action.
+- Dry-run-first derivative/export plans for website, social, Music IS release media, NFT/Web3, and Cloudinary variants so agents know which files should exist before any Sharp, FFmpeg, Cloudinary, R2, Postiz, IPFS, or thirdweb adapter executes.
 
 ### E2: Eagle Adapter
 

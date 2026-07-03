@@ -32,6 +32,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Supports dry-run-first batch curation for Eagle-style multi-select review, tagging, and collection moves.
 - Supports dry-run-first batch rename planning/execution for same-folder designer and music-release file cleanup.
 - Supports dry-run-first asset action recipes for designer inbox, Music IS release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity groups.
+- Supports dry-run-first derivative/export planning for website, social, Music IS release media, NFT/Web3, and Cloudinary variants without transforming, uploading, posting, minting, or deleting files.
 - Supports dry-run-first rights and approval review with provenance before website, social, NFT, or music release use.
 - Plans and initializes the Google Drive `Starlight Creative Vault` folder contract for two laptops, two phones, Eagle, VIS, and Music IS.
 - Guards public-use packets and export manifests so unknown, blocked, or unapproved assets stay visible but not publish-ready.
@@ -168,6 +169,10 @@ node bin\vis.mjs action-recipes
 node bin\vis.mjs action-recipe prompt-gap-review --limit 50
 node bin\vis.mjs action-recipe music-release-inbox --query "suno cover" --tag release-candidate
 node bin\vis.mjs action-recipe website-candidates <asset_id> <asset_id> --collection "Homepage candidates" --execute
+node bin\vis.mjs derivative-presets
+node bin\vis.mjs derivative-plan --preset website <asset_id|visual://asset/...|path>
+node bin\vis.mjs derivative-plan --preset music-release --query "cover canvas" --output-root exports --json
+node bin\vis.mjs derivative-plan --preset social --media-type video --limit 20
 node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite
 node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite --execute
 node bin\vis.mjs saved-searches
@@ -217,6 +222,8 @@ Tools:
 - `evaluate_smart_collection`
 - `list_asset_action_recipes`
 - `run_asset_action_recipe`
+- `list_derivative_presets`
+- `plan_asset_derivatives`
 - `list_saved_searches`
 - `save_search`
 - `list_music_releases`
@@ -255,6 +262,7 @@ Build in VIS:
 - Agent run and skill run capture
 - Portable `.vis.provenance.json` sidecars for generated images, video, audio, and music release assets
 - Dry-run asset action recipes that turn Eagle-style curation and agentic media operations into safe repeatable workflows
+- Dry-run derivative/export manifests for website, social, music-release, NFT/Web3, and Cloudinary variants before any adapter execution
 - Creative Vault setup planner and manifest for Drive/Photos/Eagle/two-laptop/Music IS operations
 
 Use through adapters:

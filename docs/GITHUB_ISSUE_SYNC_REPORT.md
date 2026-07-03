@@ -13,9 +13,9 @@ npm run tasks:sync -- --execute
 ## Result
 
 - Labels synced: 16
-- Milestones created: 5
-- Registry-backed VIS issues: 25
-- Latest new VIS issues created: VIS-022 through VIS-025 / issues #29-#32
+- Milestones present: 5
+- Registry-backed VIS issues: 26
+- Latest new VIS issues created: VIS-022 through VIS-026 / issues #29-#33
 - Existing VIS issues updated on 2026-07-03 from the registry
 - Status labels added: `status:blocked`, `status:done`
 - VIS-010 / issue #17 marked `status:done` and closed as completed
@@ -29,6 +29,7 @@ npm run tasks:sync -- --execute
 - VIS-023 / issue #30 opened for two-laptop install, MCP, and evidence reporting
 - VIS-024 / issue #31 opened for weekly product experiment reporting
 - VIS-025 / issue #32 opened as `status:blocked` until `gh` has project scope
+- VIS-026 / issue #33 marked `status:done` and closed as completed
 - GitHub Projects v2: pending local `gh` token project scope
 
 ## Milestones
@@ -70,6 +71,7 @@ npm run tasks:sync -- --execute
 | VIS-023 | [#30 Run two-laptop VIS software install and MCP evidence report](https://github.com/frankxai/visual-intelligence/issues/30) | M0 Personal Estate Setup |
 | VIS-024 | [#31 Run weekly VIS product experiment and reporting loop](https://github.com/frankxai/visual-intelligence/issues/31) | M4 Product Beta |
 | VIS-025 | [#32 Enable GitHub Projects v2 board after gh project scope refresh](https://github.com/frankxai/visual-intelligence/issues/32) | M0 Personal Estate Setup |
+| VIS-026 | [#33 Add dry-run derivative and export planning manifests](https://github.com/frankxai/visual-intelligence/issues/33) | M1 Daily Cockpit |
 
 ## Existing Legacy Issues
 
