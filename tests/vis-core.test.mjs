@@ -13,6 +13,7 @@ import {
   detectSuitability,
   evaluateSmartCollection,
   expandPathTokens,
+  extractColorPalette,
   exportCloudinaryManifest,
   exportNftMetadataReport,
   getAsset,
@@ -149,7 +150,7 @@ test('captures agent generation provenance from VIS sidecars and explicit record
         model: 'gpt-image-1',
         prompt: 'cinematic Arcanea music cover with luminous typography space',
         negative_prompt: 'blurry, illegible text',
-        seed: '42',
+        seed: { value: '42', source: 'sidecar' },
         settings: { size: '1024x1024', quality: 'high' },
         output_paths: [assetPath],
         created_at: '2026-07-03T04:00:00.000Z',
@@ -189,6 +190,7 @@ test('captures agent generation provenance from VIS sidecars and explicit record
       const detail = getAsset(db, asset.asset_id)
       assert.equal(detail.generation_events[0].model, 'gpt-image-1')
       assert.equal(detail.generation_events[0].provider, 'openai')
+      assert.match(detail.generation_events[0].seed, /"42"/)
       assert.equal(detail.agent_runs[0].coding_agent, 'codex')
       assert.equal(detail.agent_runs[0].thread_ref, 'thread-smoke')
       assert.equal(detail.skill_runs[0].skill_name, 'imagegen')
@@ -720,6 +722,50 @@ test('reads SVG dimensions from comma or whitespace separated viewBox values', (
       height: 512,
       durationSeconds: null,
     })
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('extracts SVG color palettes and searches assets by color family', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-color-palette-'))
+  try {
+    const imageRoot = path.join(root, 'public', 'images')
+    fs.mkdirSync(imageRoot, { recursive: true })
+    const bluePath = path.join(imageRoot, 'blue-cover.svg')
+    fs.writeFileSync(bluePath, '<svg viewBox="0 0 100 100"><rect fill="#2255ff" width="100" height="100"/><circle fill="gold" cx="50" cy="50" r="20"/></svg>')
+    fs.writeFileSync(path.join(imageRoot, 'red-poster.svg'), '<svg viewBox="0 0 100 100"><rect fill="rgb(220,20,60)" width="100" height="100"/><path stroke="black" d="M0 0L100 100"/></svg>')
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      mediaRoots: ['public/images'],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    const palette = extractColorPalette(bluePath, '.svg', 'image')
+    assert.equal(palette.dominant, '#2255ff')
+    assert.ok(palette.families.includes('blue'))
+    assert.ok(palette.families.includes('yellow'))
+
+    indexProject({ root })
+    const db = openVisDatabase(root)
+    try {
+      const blue = searchAssets(db, { color: 'blue', maxResults: 10 })
+      assert.equal(blue.length, 1)
+      assert.equal(blue[0].title, 'blue-cover')
+      assert.equal(blue[0].dominant_color, '#2255ff')
+      assert.ok(blue[0].color_families.includes('blue'))
+
+      const red = searchAssets(db, { color: '#ff0000', maxResults: 10 })
+      assert.equal(red.length, 1)
+      assert.equal(red[0].title, 'red-poster')
+
+      const colorSmart = evaluateSmartCollection(db, { collection: 'color-indexed', limit: 10 })
+      assert.equal(colorSmart.count, 2)
+      assert.equal(colorSmart.total_selected, 2)
+    } finally {
+      db.close()
+    }
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }

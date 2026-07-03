@@ -25,6 +25,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Reads and records `.vis.provenance.json` generation sidecars with prompt, model, provider, seed/settings, output paths, coding agent, repo, thread/session, and skill context.
 - Detects duplicate content by SHA-256 and samples orphan assets with no detected usage.
 - Finds local similarity review groups with dependency-free metadata heuristics while semantic embeddings remain adapter-planned.
+- Extracts dependency-free SVG/GIF/PNG-palette color swatches and enables Eagle-style color family or hex search for design, website, music cover, Canvas, and NFT review.
 - Scans website/content routes to map where assets appear.
 - Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
 - Lists and evaluates live Eagle-style smart collections for inbox, rights review, prompt/provenance gaps, usage, orphans, duplicates, music, video, NFT/Web3, website-ready, and social-ready queues.
@@ -141,6 +142,8 @@ node bin\vis.mjs usage --usage-root <path>
 node bin\vis.mjs report
 node bin\vis.mjs dashboard --limit 3000
 node bin\vis.mjs search "arcanea guardian"
+node bin\vis.mjs search --color blue
+node bin\vis.mjs smart-collection color-indexed
 node bin\vis.mjs trace <asset_id|visual://asset/...|path>
 node bin\vis.mjs packet <asset_id|visual://asset/...|path> --use "homepage hero"
 node bin\vis.mjs duplicates

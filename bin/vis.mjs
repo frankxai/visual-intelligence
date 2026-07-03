@@ -333,6 +333,7 @@ function cmdSearch() {
       mood: getFlag('--mood'),
       category: getFlag('--category'),
       mediaType: getFlag('--media-type'),
+      color: getFlag('--color'),
       maxResults: Number(getFlag('--limit', 20)),
     })
     if (hasFlag('--json')) {
@@ -528,6 +529,7 @@ function cmdActionRecipe() {
     mediaType: getFlag('--media-type'),
     category: getFlag('--category'),
     mood: getFlag('--mood'),
+    color: getFlag('--color'),
     filterTag: getFlag('--filter-tag'),
     filterRightsStatus: getFlag('--filter-rights-status'),
     filterApprovalStatus: getFlag('--filter-approval-status'),
@@ -575,6 +577,7 @@ function cmdSmartCollection() {
     mediaType: getFlag('--media-type'),
     category: getFlag('--category'),
     mood: getFlag('--mood'),
+    color: getFlag('--color'),
     filterTag: getFlag('--filter-tag') || getFlag('--tag'),
     filterRightsStatus: getFlag('--filter-rights-status'),
     filterApprovalStatus: getFlag('--filter-approval-status'),
@@ -664,6 +667,7 @@ function cmdSaveSearch() {
     category: getFlag('--category'),
     mediaType: getFlag('--media-type'),
     mood: getFlag('--mood'),
+    color: getFlag('--color'),
     curationStatus: getFlag('--curation-status') || getFlag('--status'),
     minRating: getFlag('--min-rating'),
     actor: 'vis-cli',
@@ -996,7 +1000,7 @@ Commands:
   vis usage --usage-root <path>     Re-scan usage edges without rehashing media
   vis dashboard                    Generate dashboard HTML and PWA shell
   vis serve-dashboard              Serve dashboard locally with media preview proxy
-  vis search <query>               Search assets by path, tag, mood, category
+  vis search <query>               Search assets by path, tag, mood, category, color
   vis trace <asset|path|uri>        Print full provenance and usage trace
   vis packet <asset|path|uri>       Print Codex-ready curation packet
   vis duplicates                   List duplicate content groups

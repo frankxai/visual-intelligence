@@ -45,6 +45,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add VIS asset action recipes for designer inbox, Music IS release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity review.
 - [x] Add dry-run-first Creative Vault planner/init manifest for Drive, phones, Eagle, VIS, and Music IS setup.
 - [x] Add live Eagle-style smart collection evaluation across CLI, MCP, dashboard, schema, docs, and tests.
+- [x] Add Eagle-style color palette extraction, color search, dashboard swatches, and color-indexed smart view.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.

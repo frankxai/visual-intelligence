@@ -28,6 +28,7 @@
         "category": { "type": ["string", "null"] },
         "mediaType": { "type": ["string", "null"], "enum": ["image", "video", "audio", null] },
         "mood": { "type": ["string", "null"] },
+        "color": { "type": ["string", "null"] },
         "curationStatus": { "type": ["string", "null"] },
         "minRating": { "type": ["integer", "number", "null"], "minimum": 1, "maximum": 5 }
       }

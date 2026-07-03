@@ -70,6 +70,7 @@ function toolSearchAssets(args = {}) {
     mood: args.mood,
     category: args.category,
     mediaType: args.media_type || args.mediaType,
+    color: args.color || args.color_family || args.colorFamily,
     maxResults: args.max_results || args.maxResults || 20,
   }))
 }
@@ -228,6 +229,7 @@ function toolRunAssetActionRecipe(args = {}) {
     assetRefs,
     recipe: args.recipe || args.name || args.action,
     mediaType: args.media_type || args.mediaType,
+    color: args.color || args.color_family || args.colorFamily,
     curationStatus: args.curation_status || args.curationStatus || args.status,
     filterTag: args.filter_tag || args.filterTag,
     filterRightsStatus: args.filter_rights_status || args.filterRightsStatus,
@@ -255,6 +257,7 @@ function toolEvaluateSmartCollection(args = {}) {
     ...args,
     collection: args.collection || args.collection_id || args.id || args.smart || args.name,
     mediaType: args.media_type || args.mediaType,
+    color: args.color || args.color_family || args.colorFamily,
     filterTag: args.filter_tag || args.filterTag || args.tag,
     filterRightsStatus: args.filter_rights_status || args.filterRightsStatus,
     filterApprovalStatus: args.filter_approval_status || args.filterApprovalStatus,
@@ -273,6 +276,7 @@ function toolSaveSearch(args = {}) {
   return withDb(db => saveSearch(db, {
     ...args,
     mediaType: args.media_type || args.mediaType,
+    color: args.color || args.color_family || args.colorFamily,
     curationStatus: args.curation_status || args.curationStatus || args.status,
     minRating: args.min_rating || args.minRating,
     actor: 'vis-mcp',
@@ -450,12 +454,13 @@ const TOOL_HANDLERS = {
 }
 
 const TOOLS = [
-  tool('search_assets', 'Search VIS assets by query, tag, mood, category, or media type.', {
+  tool('search_assets', 'Search VIS assets by query, tag, mood, category, media type, or extracted color palette.', {
     query: stringProp('Search query'),
     tag: stringProp('Tag filter'),
     mood: stringProp('Mood filter'),
     category: stringProp('Category filter'),
     media_type: stringProp('image, video, or audio'),
+    color: stringProp('Color family or hex value, for example blue or #3366ff'),
     max_results: numberProp('Maximum results'),
   }),
   tool('get_asset', 'Get one asset with versions, locations, usage, prompts, publications, rights, and evals.', {
@@ -546,6 +551,7 @@ const TOOLS = [
     query: stringProp('Optional query filter when selecting recipe matches'),
     media_type: stringProp('Optional image, video, or audio filter'),
     category: stringProp('Optional category filter'),
+    color: stringProp('Optional color family or hex filter'),
     filter_tag: stringProp('Optional existing tag that assets must already have'),
     tags: { type: 'array', items: { type: 'string' }, description: 'Additional custom tags to add' },
     note: stringProp('Override curation note'),
@@ -563,10 +569,11 @@ const TOOLS = [
     sample_limit: numberProp('Optional sample assets per smart collection'),
   }),
   tool('evaluate_smart_collection', 'Inspect one live VIS smart collection. Read-only; use attached recipe_dry_run before any write-gated action.', {
-    collection: stringProp('inbox, rights-review, prompt-gaps, provenance-gaps, website-used, orphans, duplicates, similar-review, curated, favorites, unannotated, music, video-motion, nft-web3, website-ready, or social-ready'),
+    collection: stringProp('inbox, rights-review, prompt-gaps, provenance-gaps, website-used, orphans, duplicates, similar-review, curated, favorites, color-indexed, unannotated, music, video-motion, nft-web3, website-ready, or social-ready'),
     query: stringProp('Optional query filter'),
     media_type: stringProp('Optional image, video, or audio filter'),
     category: stringProp('Optional category filter'),
+    color: stringProp('Optional color family or hex filter'),
     filter_tag: stringProp('Optional existing tag required on matching assets'),
     filter_rights_status: stringProp('Optional rights status filter'),
     filter_approval_status: stringProp('Optional approval status filter'),
@@ -580,6 +587,7 @@ const TOOLS = [
     category: stringProp('Category filter'),
     media_type: stringProp('image, video, or audio'),
     mood: stringProp('Mood filter'),
+    color: stringProp('Color family or hex filter'),
     curation_status: stringProp('Curation status filter'),
     min_rating: numberProp('Minimum curation rating'),
     execute: booleanProp('Persist saved search when VIS_ENABLE_WRITES=1'),

@@ -476,6 +476,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .pill.good{border-color:rgba(69,214,165,.35);color:#8FE8C0}
 .pill.warn{border-color:rgba(245,196,93,.42);color:#F7D68B}
 .pill.bad{border-color:rgba(255,122,144,.45);color:#FFB1BE}
+.swatches{display:flex;gap:5px;align-items:center;min-height:18px;margin-top:2px;flex-wrap:wrap}
+.swatch{width:18px;height:18px;border-radius:5px;border:1px solid rgba(255,255,255,.18);box-shadow:inset 0 0 0 1px rgba(0,0,0,.22)}
+.swatch-label{font-size:11px;color:var(--muted)}
 .side{display:grid;gap:12px}
 .panel{
   border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);padding:13px;
@@ -691,7 +694,19 @@ function assetScore(asset){
   return DATA.scores[asset.asset_id] || null;
 }
 function assetHay(asset){
-  return [asset.asset_id, asset.title, asset.relative_path, asset.public_path, asset.category, asset.mood, asset.rights_status, asset.approval_status, asset.media_role, asset.workflow, asset.curation_status, asset.annotation_notes, sourceLabel(asset), folderLabel(asset), ...(asset.tags || [])].join(" ").toLowerCase();
+  const paletteText = [
+    asset.dominant_color,
+    ...(asset.color_families || []),
+    ...((asset.color_palette?.colors || []).map(color => color.hex + " " + color.family)),
+  ];
+  return [asset.asset_id, asset.title, asset.relative_path, asset.public_path, asset.category, asset.mood, asset.rights_status, asset.approval_status, asset.media_role, asset.workflow, asset.curation_status, asset.annotation_notes, sourceLabel(asset), folderLabel(asset), ...paletteText, ...(asset.tags || [])].join(" ").toLowerCase();
+}
+function paletteSwatches(asset, limit){
+  const colors = (asset.color_palette?.colors || []).slice(0, limit || 5);
+  if (!colors.length) return "";
+  return '<div class="swatches">' + colors.map(color => (
+    '<span class="swatch" title="'+esc((color.hex || "") + " " + (color.family || ""))+'" style="background:'+esc(color.hex || "#111827")+'"></span>'
+  )).join("") + '<span class="swatch-label">'+esc((asset.color_families || []).slice(0,3).join(", "))+'</span></div>';
 }
 function readiness(asset){
   if (asset.publish_gate && asset.publish_gate.allowed === false) return asset.rights_status === "blocked" || asset.approval_status === "rejected" ? "blocked" : "unknown";
@@ -893,6 +908,7 @@ function renderGrid(){
         '<div class="thumb">'+mediaPreview(asset, "thumb")+'</div>' +
         '<div class="asset-body">' +
           '<div class="asset-title">'+esc(asset.title || asset.asset_id)+'</div>' +
+          paletteSwatches(asset, 5) +
           '<div class="asset-meta"><span class="pill">'+esc(asset.media_type)+'</span>'+readinessPill(asset)+'<span class="pill">'+fmt(asset.sizeKB)+' KB</span></div>' +
           '<div class="asset-meta"><span class="pill">'+esc(asset.media_role || asset.workflow || asset.category || "asset")+'</span>'+(score ? '<span class="pill">'+fmt(score.score)+'</span>' : "")+(asset.rating ? '<span class="pill good">'+fmt(asset.rating)+'/5</span>' : "")+'</div>' +
           (asset.color_label || asset.curation_status ? '<div class="asset-meta"><span class="pill">'+esc(asset.color_label || asset.curation_status)+'</span></div>' : "") +
@@ -1005,6 +1021,8 @@ function openAsset(assetId){
     '<div class="kv"><span>Curation</span><div>'+esc(asset.curation_status || "uncurated")+'</div></div>' +
     '<div class="kv"><span>Rating</span><div>'+esc(asset.rating ? asset.rating + " / 5" : "unrated")+'</div></div>' +
     '<div class="kv"><span>Color label</span><div>'+esc(asset.color_label || "")+'</div></div>' +
+    '<div class="kv"><span>Palette</span><div>'+paletteSwatches(asset, 8)+esc(asset.dominant_color ? "Dominant " + asset.dominant_color : "not indexed")+'</div></div>' +
+    '<div class="kv"><span>Color families</span><div>'+esc((asset.color_families || []).join(", "))+'</div></div>' +
     '<div class="kv"><span>Custom tags</span><div>'+esc((asset.custom_tags || []).join(", "))+'</div></div>' +
     '<div class="kv"><span>Notes</span><div>'+esc(asset.annotation_notes || "")+'</div></div>' +
     '<div class="kv"><span>Rights</span><div>'+esc(asset.rights_status || "unknown")+'</div></div>' +

@@ -105,6 +105,19 @@ VIS has an Eagle-inspired but VIS-native recipe layer. Recipes select assets fro
 
 VIS smart collections are live, read-first queues over the SQLite graph. They give the dashboard, CLI, MCP server, and future desktop/PWA app the same Eagle-style views without duplicating filter logic.
 
+## Color Intelligence
+
+VIS indexes lightweight color palette metadata into `asset_version.metadata_json.palette`. The first implementation is dependency-free and supports SVG colors, GIF global color tables, and indexed PNG palettes. Rich truecolor raster sampling is intentionally left for a later optional worker/adapter so core installs stay small and reliable.
+
+Color metadata includes:
+
+- dominant hex color
+- top swatches
+- color families such as `blue`, `purple`, `yellow`, `black`, and `gray`
+- extraction source such as `svg`, `gif-global-color-table`, or `png-plte`
+
+The color data powers CLI/MCP search filters, dashboard swatches, saved search filters, and the `color-indexed` smart collection. Music cover and Canvas assets use the same palette contract while Music IS remains the canonical release operating system.
+
 Initial smart collections:
 
 - `inbox`
@@ -117,6 +130,7 @@ Initial smart collections:
 - `similar-review`
 - `curated`
 - `favorites`
+- `color-indexed`
 - `unannotated`
 - `music`
 - `video-motion`

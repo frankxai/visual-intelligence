@@ -406,6 +406,7 @@ Tasks:
 - [x] Add source/folder navigation and batch curation packet copy.
 - [x] Add dry-run-first batch curation command copy plus CLI/MCP write gates.
 - [x] Add VIS curation memory: notes, tags, ratings, color labels, collections, and saved searches.
+- [x] Add Eagle-style color palette extraction, color search, and dashboard swatches.
 - [x] Add audio preview and Music IS packet handoff.
 - [x] Add Eagle metadata adapter research for folders, tags, notes, and source URLs.
 - [x] Document what remains Eagle-owned versus VIS-owned.
@@ -492,4 +493,30 @@ Acceptance:
 - [x] Actionable smart collections include a dry-run recipe handoff while writes remain gated.
 - [x] Music smart collection routes to Music IS release inbox without making VIS the music source of truth.
 - [x] Dashboard, CLI, and MCP use the same smart collection catalog.
+```
+
+## Issue 20: Add color palette intelligence for Eagle-style filtering
+
+Labels: `dashboard`, `product`, `music`
+Milestone: `M1 Daily Cockpit`
+Status: `done`
+
+Body:
+
+```markdown
+Add dependency-free color palette extraction and color search so designer assets, music covers, Canvas candidates, NFT traits, and website/social visuals can be filtered by swatch or color family.
+
+Tasks:
+- [x] Extract SVG colors from hex, rgb(), and common named color values.
+- [x] Extract GIF global color tables and indexed PNG PLTE palettes.
+- [x] Store palette metadata on asset versions with dominant color, swatches, and color families.
+- [x] Add search color filters across core, CLI, MCP, saved searches, and smart collection evaluation.
+- [x] Add dashboard swatches in asset cards and detail drawers.
+- [x] Add color-indexed smart collection, schema, docs, and tests.
+
+Acceptance:
+- [x] VIS can search assets by color family such as blue or by nearby hex color.
+- [x] Palette extraction works without heavy image-processing dependencies.
+- [x] Music release visuals use the same palette contract without replacing Music IS.
+- [x] Dashboard exposes visible swatches for indexed palettes.
 ```

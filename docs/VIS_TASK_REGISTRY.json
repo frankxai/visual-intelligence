@@ -350,6 +350,7 @@
         "Done: Add source/folder navigation and batch curation packet copy.",
         "Done: Add dry-run-first batch curation command copy plus CLI/MCP write gates.",
         "Done: Add VIS curation memory: notes, tags, ratings, color labels, collections, and saved searches.",
+        "Done: Add Eagle-style color palette extraction, color search, and dashboard swatches.",
         "Done: Add audio preview and Music IS packet handoff.",
         "Done: Add Eagle metadata adapter research for folders, tags, notes, and source URLs.",
         "Done: Document what remains Eagle-owned versus VIS-owned."
@@ -424,6 +425,28 @@
         "Done: Actionable smart collections include a dry-run recipe handoff while writes remain gated.",
         "Done: Music smart collection routes to Music IS release inbox without making VIS the music source of truth.",
         "Done: Dashboard, CLI, and MCP use the same smart collection catalog."
+      ]
+    },
+    {
+      "key": "VIS-020",
+      "title": "Add color palette intelligence for Eagle-style filtering",
+      "milestone": "M1 Daily Cockpit",
+      "status": "done",
+      "labels": ["dashboard", "product", "music"],
+      "summary": "Add dependency-free color palette extraction and color search so designer assets, music covers, Canvas candidates, NFT traits, and website/social visuals can be filtered by swatch or color family.",
+      "tasks": [
+        "Done: Extract SVG colors from hex, rgb(), and common named color values.",
+        "Done: Extract GIF global color tables and indexed PNG PLTE palettes.",
+        "Done: Store palette metadata on asset versions with dominant color, swatches, and color families.",
+        "Done: Add search color filters across core, CLI, MCP, saved searches, and smart collection evaluation.",
+        "Done: Add dashboard swatches in asset cards and detail drawers.",
+        "Done: Add color-indexed smart collection, schema, docs, and tests."
+      ],
+      "acceptance": [
+        "Done: VIS can search assets by color family such as blue or by nearby hex color.",
+        "Done: Palette extraction works without heavy image-processing dependencies.",
+        "Done: Music release visuals use the same palette contract without replacing Music IS.",
+        "Done: Dashboard exposes visible swatches for indexed palettes."
       ]
     }
   ]

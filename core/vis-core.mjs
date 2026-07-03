@@ -83,6 +83,33 @@ export const TAG_RULES = [
   { pattern: /gencreator|creator/i, tag: 'creator' },
 ]
 
+const CSS_COLOR_NAMES = {
+  black: '#000000',
+  white: '#ffffff',
+  gray: '#808080',
+  grey: '#808080',
+  silver: '#c0c0c0',
+  red: '#ff0000',
+  maroon: '#800000',
+  orange: '#ffa500',
+  gold: '#ffd700',
+  yellow: '#ffff00',
+  olive: '#808000',
+  lime: '#00ff00',
+  green: '#008000',
+  teal: '#008080',
+  cyan: '#00ffff',
+  aqua: '#00ffff',
+  blue: '#0000ff',
+  navy: '#000080',
+  purple: '#800080',
+  violet: '#8a2be2',
+  magenta: '#ff00ff',
+  fuchsia: '#ff00ff',
+  pink: '#ffc0cb',
+  brown: '#a52a2a',
+}
+
 export function findProjectRoot(dir = process.cwd()) {
   if (fs.existsSync(path.join(dir, 'vis.config.json'))) return dir
   if (fs.existsSync(path.join(dir, 'package.json'))) return dir
@@ -970,6 +997,7 @@ export function buildAssetEntry(root, mediaRoot, filePath, config = DEFAULT_CONF
   const mediaRole = detectMediaRole(filePath, mediaType, tags)
   const workflow = detectWorkflow(filePath, category, mediaRole, tags)
   const dims = detectDimensions(filePath, readDimensionHeader(filePath, ext), ext)
+  const colorPalette = extractColorPalette(filePath, ext, mediaType)
   const sidecars = findPromptSidecars(filePath, config)
 
   return {
@@ -997,6 +1025,7 @@ export function buildAssetEntry(root, mediaRoot, filePath, config = DEFAULT_CONF
     mood,
     mediaRole,
     workflow,
+    colorPalette,
     tags,
     sidecars,
     createdAt: stats.birthtime?.toISOString?.() || stats.mtime.toISOString(),
@@ -1053,7 +1082,7 @@ ON CONFLICT(version_id) DO UPDATE SET
     entry.height,
     entry.durationSeconds,
     entry.createdAt || ts,
-    JSON.stringify({ modifiedAt: entry.modifiedAt, title: entry.title, mediaRole: entry.mediaRole, workflow: entry.workflow }),
+    JSON.stringify({ modifiedAt: entry.modifiedAt, title: entry.title, mediaRole: entry.mediaRole, workflow: entry.workflow, palette: entry.colorPalette }),
   )
 
   const locationId = stableId('loc', entry.absolutePath)
@@ -1377,7 +1406,9 @@ export function searchAssets(dbOrRoot, options = {}) {
       if (options.mood && asset.mood !== options.mood) continue
       const tags = parseJson(asset.tags_json, [])
       if (options.tag && !tags.includes(options.tag)) continue
-      const hay = `${asset.asset_id} ${asset.title || ''} ${asset.relative_path || ''} ${asset.public_path || ''} ${asset.category || ''} ${asset.mood || ''} ${tags.join(' ')}`.toLowerCase()
+      const color = options.color || options.colorFamily || options.color_family || options.paletteColor || options.palette_color || options.hex
+      if (color && !assetMatchesColor(asset, color)) continue
+      const hay = `${asset.asset_id} ${asset.title || ''} ${asset.relative_path || ''} ${asset.public_path || ''} ${asset.category || ''} ${asset.mood || ''} ${tags.join(' ')} ${asset.color_families?.join(' ') || ''} ${asset.dominant_color || ''}`.toLowerCase()
       let score = words.length ? 0 : 1
       for (const word of words) {
         if (hay.includes(word)) score += 10
@@ -2713,6 +2744,7 @@ export function saveSearch(dbOrRoot, args = {}) {
       category: args.category || args.filters?.category || null,
       mediaType: args.mediaType || args.media_type || args.filters?.mediaType || null,
       mood: args.mood || args.filters?.mood || null,
+      color: args.color || args.colorFamily || args.color_family || args.filters?.color || null,
       curationStatus: args.curationStatus || args.curation_status || args.filters?.curationStatus || null,
       minRating: normalizeRating(args.minRating || args.min_rating || args.filters?.minRating || null),
     }
@@ -3223,18 +3255,29 @@ function buildGenerationSidecar(input = {}, sidecarPath = null) {
     model: model ? String(model) : null,
     modelHint: model ? String(model) : null,
     provider: provider ? String(provider) : null,
-    seed: firstPresent(input.seed, generation.seed, settings.seed, null),
+    seed: sqliteText(firstPresent(input.seed, generation.seed, settings.seed, null)),
     settings,
     outputPaths: uniq(outputPaths),
-    codingAgent: firstPresent(input.codingAgent, input.coding_agent, agent.codingAgent, agent.coding_agent, agent.name, typeof input.agent === 'string' ? input.agent : null, null),
-    repo: firstPresent(input.repo, input.repository, agent.repo, agent.repository, null),
-    threadRef: firstPresent(input.threadRef, input.thread_ref, input.thread, agent.threadRef, agent.thread_ref, agent.thread, null),
-    sessionRef: firstPresent(input.sessionRef, input.session_ref, input.session, agent.sessionRef, agent.session_ref, agent.session, null),
-    summary: firstPresent(input.summary, agent.summary, null),
+    codingAgent: sqliteText(firstPresent(input.codingAgent, input.coding_agent, agent.codingAgent, agent.coding_agent, agent.name, typeof input.agent === 'string' ? input.agent : null, null)),
+    repo: sqliteText(firstPresent(input.repo, input.repository, agent.repo, agent.repository, null)),
+    threadRef: sqliteText(firstPresent(input.threadRef, input.thread_ref, input.thread, agent.threadRef, agent.thread_ref, agent.thread, null)),
+    sessionRef: sqliteText(firstPresent(input.sessionRef, input.session_ref, input.session, agent.sessionRef, agent.session_ref, agent.session, null)),
+    summary: sqliteText(firstPresent(input.summary, agent.summary, null)),
     agentMetadata: parseSettings(firstPresent(input.agentMetadata, input.agent_metadata, agent.metadata, {})),
-    skillName: firstPresent(input.skillName, input.skill_name, skill.name, skill.skill_name, agent.skillName, agent.skill_name, null),
+    skillName: sqliteText(firstPresent(input.skillName, input.skill_name, skill.name, skill.skill_name, agent.skillName, agent.skill_name, null)),
     skillMetadata: parseSettings(firstPresent(input.skillMetadata, input.skill_metadata, skill.metadata, {})),
-    createdAt: firstPresent(input.createdAt, input.created_at, generation.created_at, agent.created_at, null),
+    createdAt: sqliteText(firstPresent(input.createdAt, input.created_at, generation.created_at, agent.created_at, null)),
+  }
+}
+
+function sqliteText(value) {
+  if (value === undefined || value === null || value === '') return null
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value)
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
   }
 }
 
@@ -3363,6 +3406,7 @@ export function countRows(db, table, where = null) {
 export function normalizeAssetRow(row) {
   if (!row) return row
   const versionMetadata = parseJson(row.metadata_json, {})
+  const palette = normalizePalette(versionMetadata.palette || versionMetadata.colorPalette || {})
   const baseTags = parseJson(row.tags_json, [])
   const customTags = parseJson(row.custom_tags_json, [])
   return {
@@ -3383,9 +3427,35 @@ export function normalizeAssetRow(row) {
     version_metadata: versionMetadata,
     media_role: versionMetadata.mediaRole || null,
     workflow: versionMetadata.workflow || null,
+    color_palette: palette,
+    dominant_color: palette.dominant,
+    color_families: palette.families || [],
     sizeKB: row.byte_size ? Math.round(row.byte_size / 1024) : null,
     visual_uri: row.asset_id ? `visual://asset/${row.asset_id}` : null,
     file_url: row.absolute_path ? pathToFileURL(row.absolute_path).href : null,
+  }
+}
+
+function normalizePalette(palette = {}) {
+  const colors = Array.isArray(palette.colors)
+    ? palette.colors
+        .map(color => {
+          const hex = normalizeHexColor(color.hex || color)
+          if (!hex) return null
+          return {
+            hex,
+            count: Number(color.count || 1),
+            ratio: Number(color.ratio || 0),
+            family: color.family || colorFamilyForHex(hex),
+          }
+        })
+        .filter(Boolean)
+    : []
+  return {
+    source: palette.source || 'unknown',
+    dominant: normalizeHexColor(palette.dominant) || colors[0]?.hex || null,
+    families: uniq([...(palette.families || []), ...colors.map(color => color.family)].filter(Boolean)),
+    colors,
   }
 }
 
@@ -3479,6 +3549,179 @@ export function detectDimensions(filePath, bytes, ext) {
     return { width: null, height: null, durationSeconds: null }
   }
   return { width: null, height: null, durationSeconds: null }
+}
+
+export function extractColorPalette(filePath, ext = path.extname(filePath).toLowerCase(), mediaType = detectMediaType(ext)) {
+  if (mediaType !== 'image') return emptyPalette('unsupported-media-type')
+  try {
+    if (ext === '.svg') return extractSvgColorPalette(filePath)
+    if (ext === '.gif') return extractGifColorPalette(filePath)
+    if (ext === '.png') return extractPngPaletteColors(filePath)
+  } catch {
+    return emptyPalette('read-error')
+  }
+  return emptyPalette('not-yet-sampled')
+}
+
+function extractSvgColorPalette(filePath) {
+  const text = fs.readFileSync(filePath, 'utf-8').slice(0, 512 * 1024)
+  const colors = []
+  for (const match of text.matchAll(/#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b/g)) {
+    colors.push(match[0])
+  }
+  for (const match of text.matchAll(/rgba?\(\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})\s*,\s*([0-9]{1,3})(?:\s*,\s*(?:0?\.\d+|1(?:\.0)?|0))?\s*\)/gi)) {
+    colors.push(rgbToHex(Number(match[1]), Number(match[2]), Number(match[3])))
+  }
+  for (const match of text.matchAll(/\b(?:fill|stroke|stop-color|background|background-color|color)\s*[:=]\s*["']?([A-Za-z]+)\b/gi)) {
+    const hex = CSS_COLOR_NAMES[match[1].toLowerCase()]
+    if (hex) colors.push(hex)
+  }
+  return buildPalette(colors, 'svg')
+}
+
+function extractGifColorPalette(filePath) {
+  const bytes = readFilePrefix(filePath, 1024)
+  if (bytes.length < 13 || bytes.toString('ascii', 0, 3) !== 'GIF') return emptyPalette('gif-no-header')
+  const packed = bytes[10]
+  if ((packed & 0x80) === 0) return emptyPalette('gif-no-global-color-table')
+  const count = 2 ** ((packed & 0x07) + 1)
+  const colors = []
+  let offset = 13
+  for (let i = 0; i < count && offset + 2 < bytes.length; i++, offset += 3) {
+    colors.push(rgbToHex(bytes[offset], bytes[offset + 1], bytes[offset + 2]))
+  }
+  return buildPalette(colors, 'gif-global-color-table')
+}
+
+function extractPngPaletteColors(filePath) {
+  const bytes = readFilePrefix(filePath, 512 * 1024)
+  if (bytes.length < 33 || bytes.toString('ascii', 1, 4) !== 'PNG') return emptyPalette('png-no-header')
+  const colors = []
+  let offset = 8
+  while (offset + 8 <= bytes.length) {
+    const length = bytes.readUInt32BE(offset)
+    const type = bytes.toString('ascii', offset + 4, offset + 8)
+    const dataStart = offset + 8
+    const dataEnd = dataStart + length
+    if (dataEnd > bytes.length) break
+    if (type === 'PLTE') {
+      for (let i = dataStart; i + 2 < dataEnd; i += 3) colors.push(rgbToHex(bytes[i], bytes[i + 1], bytes[i + 2]))
+      return buildPalette(colors, 'png-plte')
+    }
+    offset = dataEnd + 4
+  }
+  return emptyPalette('png-truecolor-not-sampled')
+}
+
+function readFilePrefix(filePath, maxBytes) {
+  const fd = fs.openSync(filePath, 'r')
+  try {
+    const buffer = Buffer.allocUnsafe(maxBytes)
+    const bytesRead = fs.readSync(fd, buffer, 0, maxBytes, 0)
+    return buffer.subarray(0, bytesRead)
+  } finally {
+    fs.closeSync(fd)
+  }
+}
+
+function emptyPalette(source) {
+  return { source, dominant: null, colors: [], families: [] }
+}
+
+function buildPalette(values, source) {
+  const counts = new Map()
+  for (const value of values) {
+    const hex = normalizeHexColor(value)
+    if (!hex) continue
+    if (hex === '#00000000') continue
+    counts.set(hex, (counts.get(hex) || 0) + 1)
+  }
+  const total = [...counts.values()].reduce((sum, count) => sum + count, 0)
+  const colors = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 12)
+    .map(([hex, count]) => ({
+      hex,
+      count,
+      ratio: total ? Number((count / total).toFixed(4)) : 0,
+      family: colorFamilyForHex(hex),
+    }))
+  return {
+    source,
+    dominant: colors[0]?.hex || null,
+    families: uniq(colors.map(color => color.family).filter(Boolean)),
+    colors,
+  }
+}
+
+function normalizeHexColor(value) {
+  if (!value) return null
+  const raw = String(value).trim().toLowerCase()
+  const named = CSS_COLOR_NAMES[raw]
+  if (named) return named
+  const match = raw.match(/^#?([0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i)
+  if (!match) return null
+  const hex = match[1].toLowerCase()
+  if (hex.length === 3 || hex.length === 4) {
+    const expanded = hex.split('').map(char => char + char).join('')
+    return `#${expanded.slice(0, 6)}`
+  }
+  return `#${hex.slice(0, 6)}`
+}
+
+function rgbToHex(r, g, b) {
+  const values = [r, g, b].map(value => Math.max(0, Math.min(255, Number(value) || 0)))
+  return `#${values.map(value => value.toString(16).padStart(2, '0')).join('')}`
+}
+
+function colorFamilyForHex(hex) {
+  const rgb = hexToRgb(hex)
+  if (!rgb) return null
+  const { r, g, b } = rgb
+  const max = Math.max(r, g, b) / 255
+  const min = Math.min(r, g, b) / 255
+  const light = (max + min) / 2
+  const delta = max - min
+  if (delta < 0.08) {
+    if (light < 0.18) return 'black'
+    if (light > 0.86) return 'white'
+    return 'gray'
+  }
+  const hue = rgbToHue(r, g, b)
+  if (hue < 15 || hue >= 345) return 'red'
+  if (hue < 45) return 'orange'
+  if (hue < 70) return 'yellow'
+  if (hue < 165) return 'green'
+  if (hue < 200) return 'cyan'
+  if (hue < 255) return 'blue'
+  if (hue < 290) return 'purple'
+  if (hue < 345) return light > 0.62 ? 'pink' : 'magenta'
+  return 'mixed'
+}
+
+function rgbToHue(r, g, b) {
+  const rr = r / 255
+  const gg = g / 255
+  const bb = b / 255
+  const max = Math.max(rr, gg, bb)
+  const min = Math.min(rr, gg, bb)
+  const delta = max - min
+  if (!delta) return 0
+  let hue
+  if (max === rr) hue = ((gg - bb) / delta) % 6
+  else if (max === gg) hue = (bb - rr) / delta + 2
+  else hue = (rr - gg) / delta + 4
+  return (hue * 60 + 360) % 360
+}
+
+function hexToRgb(hex) {
+  const normalized = normalizeHexColor(hex)
+  if (!normalized) return null
+  return {
+    r: Number.parseInt(normalized.slice(1, 3), 16),
+    g: Number.parseInt(normalized.slice(3, 5), 16),
+    b: Number.parseInt(normalized.slice(5, 7), 16),
+  }
 }
 
 function readJpegDimensions(buffer) {
@@ -4110,6 +4353,13 @@ const SMART_COLLECTIONS = [
     filters: { min_rating: 4, curation_status: ['favorite', 'approved'] },
   },
   {
+    id: 'color-indexed',
+    label: 'Color indexed',
+    description: 'Assets with extracted palette swatches for Eagle-style color filtering.',
+    recipe: null,
+    filters: { palette: true },
+  },
+  {
     id: 'unannotated',
     label: 'Needs notes',
     description: 'Assets that have not been curated locally yet.',
@@ -4199,6 +4449,11 @@ function normalizeSmartCollectionId(value) {
     duplicate: 'duplicates',
     similar: 'similar-review',
     favorite: 'favorites',
+    palette: 'color-indexed',
+    palettes: 'color-indexed',
+    color: 'color-indexed',
+    colors: 'color-indexed',
+    swatches: 'color-indexed',
     notes: 'unannotated',
     music: 'music',
     audio: 'music',
@@ -4267,6 +4522,7 @@ function assetMatchesSmartCollection(asset, id, context = {}) {
   if (smartId === 'similar-review') return context.similarIds?.has(asset.asset_id) === true
   if (smartId === 'curated') return Boolean(asset.annotation)
   if (smartId === 'favorites') return Number(asset.rating || 0) >= 4 || ['favorite', 'approved'].includes(asset.curation_status)
+  if (smartId === 'color-indexed') return Boolean(asset.color_palette?.colors?.length)
   if (smartId === 'unannotated') return !asset.annotation
   if (smartId === 'music') return isMusicActionAsset(asset)
   if (smartId === 'video-motion') return asset.media_type === 'video'
@@ -4312,6 +4568,7 @@ function smartCollectionMatchReason(asset, smartId, context = {}) {
   if (id === 'similar-review') return context.similarIds?.has(asset.asset_id) ? 'Similarity group member' : 'Similarity candidate'
   if (id === 'curated') return 'Has VIS curation metadata'
   if (id === 'favorites') return `Rating ${asset.rating ?? 'none'}; status ${asset.curation_status || 'uncurated'}`
+  if (id === 'color-indexed') return `${asset.color_palette?.colors?.length || 0} palette colors`
   if (id === 'unannotated') return 'No local VIS annotation'
   if (id === 'music') return asset.workflow === 'music-release' ? 'Music IS release workflow asset' : `${asset.media_type} music-related asset`
   if (id === 'video-motion') return 'Video or motion asset'
@@ -4335,6 +4592,7 @@ function assetMatchesActionFilters(asset, args = {}) {
   const mediaType = args.mediaType || args.media_type
   const category = args.category
   const mood = args.mood
+  const color = args.color || args.colorFamily || args.color_family || args.paletteColor || args.palette_color
   const tag = args.filterTag || args.filter_tag || args.requiredTag || args.required_tag
   const curationStatus = args.curationStatus || args.curation_status
   const rightsStatus = args.filterRightsStatus || args.filter_rights_status
@@ -4342,6 +4600,7 @@ function assetMatchesActionFilters(asset, args = {}) {
   if (mediaType && asset.media_type !== mediaType) return false
   if (category && asset.category !== category) return false
   if (mood && asset.mood !== mood) return false
+  if (color && !assetMatchesColor(asset, color)) return false
   if (tag && !(asset.tags || []).includes(String(tag).toLowerCase())) return false
   if (curationStatus && asset.curation_status !== curationStatus) return false
   if (rightsStatus && asset.rights_status !== rightsStatus) return false
@@ -4371,6 +4630,42 @@ function assetMatchesQuery(asset, query) {
   return words.every(word => hay.includes(word))
 }
 
+function assetMatchesColor(asset, query) {
+  const wanted = normalizeColorQuery(query)
+  if (!wanted) return true
+  const palette = asset.color_palette || normalizePalette(asset.version_metadata?.palette || {})
+  const colorLabel = String(asset.color_label || '').toLowerCase()
+  if (wanted.family) {
+    if ((palette.families || []).map(value => String(value).toLowerCase()).includes(wanted.family)) return true
+    if (colorLabel.includes(wanted.family)) return true
+  }
+  if (wanted.hex) {
+    if ((palette.colors || []).some(color => colorDistance(color.hex, wanted.hex) <= 90)) return true
+    if (asset.dominant_color && colorDistance(asset.dominant_color, wanted.hex) <= 90) return true
+  }
+  return false
+}
+
+function normalizeColorQuery(value) {
+  if (!value) return null
+  const text = String(value).trim().toLowerCase()
+  const hex = normalizeHexColor(text)
+  if (hex) return { hex, family: colorFamilyForHex(hex) }
+  const family = CSS_COLOR_NAMES[text] ? colorFamilyForHex(CSS_COLOR_NAMES[text]) : text.replace(/\s+/g, '-')
+  return { family }
+}
+
+function colorDistance(a, b) {
+  const left = hexToRgb(a)
+  const right = hexToRgb(b)
+  if (!left || !right) return Number.POSITIVE_INFINITY
+  return Math.sqrt(
+    ((left.r - right.r) ** 2) +
+    ((left.g - right.g) ** 2) +
+    ((left.b - right.b) ** 2),
+  )
+}
+
 function recipeFilterSummary(args = {}) {
   return {
     query: args.query || null,
@@ -4378,6 +4673,7 @@ function recipeFilterSummary(args = {}) {
     category: args.category || null,
     mood: args.mood || null,
     tag: args.filterTag || args.filter_tag || null,
+    color: args.color || args.colorFamily || args.color_family || null,
     curation_status: args.curationStatus || args.curation_status || null,
     rights_status: args.filterRightsStatus || args.filter_rights_status || null,
     approval_status: args.filterApprovalStatus || args.filter_approval_status || null,
