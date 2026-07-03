@@ -1,4 +1,5 @@
 import fs from 'fs'
+import http from 'http'
 import path from 'path'
 import {
   createCurationPacket,
@@ -50,11 +51,237 @@ export function generateDashboard(root, options = {}) {
     }
     const outputPath = resolveProjectPath(root, options.output || config.dashboardPath)
     fs.mkdirSync(path.dirname(outputPath), { recursive: true })
-    fs.writeFileSync(outputPath, renderDashboardHtml(payload), 'utf-8')
-    return { outputPath, assets: assets.length, summary }
+    const pwa = writeDashboardPwaArtifacts(outputPath, payload)
+    fs.writeFileSync(outputPath, renderDashboardHtml({ ...payload, pwa }), 'utf-8')
+    return { outputPath, assets: assets.length, summary, pwa }
   } finally {
     db.close()
   }
+}
+
+export function serveDashboard(root, options = {}) {
+  const config = loadConfig(root)
+  const outputPath = resolveProjectPath(root, options.output || config.dashboardPath)
+  const generated = options.generate === false && fs.existsSync(outputPath)
+    ? { outputPath, assets: null, summary: null, pwa: null }
+    : generateDashboard(root, options)
+  const directory = path.dirname(generated.outputPath)
+  const dashboardFile = path.basename(generated.outputPath)
+  const host = options.host || '127.0.0.1'
+  const preferredPort = options.port === 0 ? 0 : Number(options.port || 3766)
+
+  const server = http.createServer((request, response) => {
+    try {
+      handleDashboardRequest({ root, config, directory, dashboardFile, request, response })
+    } catch (error) {
+      response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' })
+      response.end(error.stack || error.message || String(error))
+    }
+  })
+
+  return new Promise((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(preferredPort, host, () => {
+      server.off('error', reject)
+      const address = server.address()
+      const port = typeof address === 'object' && address ? address.port : preferredPort
+      resolve({
+        server,
+        url: `http://${host}:${port}/`,
+        outputPath: generated.outputPath,
+        directory,
+        assets: generated.assets,
+      })
+    })
+  })
+}
+
+function handleDashboardRequest({ root, config, directory, dashboardFile, request, response }) {
+  const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`)
+  if (url.pathname.startsWith('/__vis_media/')) {
+    serveMediaAsset(root, config, decodeURIComponent(url.pathname.slice('/__vis_media/'.length)), request, response)
+    return
+  }
+
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    response.writeHead(405, { allow: 'GET, HEAD' })
+    response.end()
+    return
+  }
+
+  const requested = url.pathname === '/' ? dashboardFile : decodeURIComponent(url.pathname).replace(/^\/+/, '')
+  const target = path.resolve(directory, requested)
+  const relativeTarget = path.relative(directory, target)
+  if (relativeTarget.startsWith('..') || path.isAbsolute(relativeTarget)) {
+    response.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' })
+    response.end('Forbidden')
+    return
+  }
+  if (!fs.existsSync(target) || !fs.statSync(target).isFile()) {
+    response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+    response.end('Not found')
+    return
+  }
+  response.writeHead(200, {
+    'content-type': contentType(target),
+    'cache-control': target.endsWith('.html') ? 'no-cache' : 'public, max-age=3600',
+  })
+  if (request.method !== 'HEAD') fs.createReadStream(target).pipe(response)
+  else response.end()
+}
+
+function serveMediaAsset(root, config, assetId, request, response) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    response.writeHead(405, { allow: 'GET, HEAD' })
+    response.end()
+    return
+  }
+  const db = openVisDatabase(root, config)
+  try {
+    const location = db.prepare(`
+SELECT absolute_path FROM asset_location
+WHERE asset_id = ? AND exists_now = 1
+ORDER BY is_primary DESC, seen_at DESC
+LIMIT 1`).get(assetId)
+    if (!location || !fs.existsSync(location.absolute_path)) {
+      response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+      response.end('Asset media not found')
+      return
+    }
+    streamFile(location.absolute_path, request, response)
+  } finally {
+    db.close()
+  }
+}
+
+function streamFile(filePath, request, response) {
+  const stat = fs.statSync(filePath)
+  const range = request.headers.range
+  const headers = {
+    'content-type': contentType(filePath),
+    'accept-ranges': 'bytes',
+    'cache-control': 'private, max-age=300',
+  }
+
+  if (range) {
+    const match = range.match(/bytes=(\d*)-(\d*)/)
+    const start = match?.[1] ? Number(match[1]) : 0
+    const end = match?.[2] ? Math.min(Number(match[2]), stat.size - 1) : stat.size - 1
+    if (start >= stat.size || end >= stat.size || start > end) {
+      response.writeHead(416, { 'content-range': `bytes */${stat.size}` })
+      response.end()
+      return
+    }
+    response.writeHead(206, {
+      ...headers,
+      'content-length': end - start + 1,
+      'content-range': `bytes ${start}-${end}/${stat.size}`,
+    })
+    if (request.method !== 'HEAD') fs.createReadStream(filePath, { start, end }).pipe(response)
+    else response.end()
+    return
+  }
+
+  response.writeHead(200, { ...headers, 'content-length': stat.size })
+  if (request.method !== 'HEAD') fs.createReadStream(filePath).pipe(response)
+  else response.end()
+}
+
+function writeDashboardPwaArtifacts(outputPath, payload) {
+  const directory = path.dirname(outputPath)
+  const dashboardFile = path.basename(outputPath)
+  const manifestPath = path.join(directory, 'vis-dashboard.webmanifest')
+  const serviceWorkerPath = path.join(directory, 'vis-dashboard-sw.js')
+  const iconPath = path.join(directory, 'vis-icon.svg')
+  const cacheKey = Buffer.from(`${payload.generatedAt}:${payload.assets.length}:${dashboardFile}`).toString('base64url').slice(0, 18)
+  const manifest = {
+    name: 'Visual Intelligence OS',
+    short_name: 'VIS',
+    description: 'Local-first media asset cockpit for visual, video, audio, prompt, provenance, and Music IS handoff work.',
+    start_url: `./${dashboardFile}`,
+    scope: './',
+    display: 'standalone',
+    background_color: '#05060A',
+    theme_color: '#05060A',
+    orientation: 'any',
+    categories: ['productivity', 'utilities', 'photo', 'music'],
+    icons: [
+      { src: './vis-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+    ],
+  }
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8')
+  fs.writeFileSync(iconPath, renderIconSvg(), 'utf-8')
+  fs.writeFileSync(serviceWorkerPath, renderServiceWorker({ cacheKey, dashboardFile }), 'utf-8')
+  return {
+    manifest: path.basename(manifestPath),
+    serviceWorker: path.basename(serviceWorkerPath),
+    icon: path.basename(iconPath),
+    cacheKey,
+  }
+}
+
+function renderIconSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="VIS">
+  <rect width="512" height="512" rx="96" fill="#05060A"/>
+  <path d="M118 336 196 132h52l-78 204h-52Zm126 0 36-94 34 94h54l-74-204h-30l-74 204h54Zm148 0V132h-46v204h46Z" fill="#F2F5FA"/>
+  <path d="M96 390h320" stroke="#7CB7FF" stroke-width="18" stroke-linecap="round"/>
+  <path d="M110 390h146" stroke="#45D6A5" stroke-width="18" stroke-linecap="round"/>
+</svg>`
+}
+
+function renderServiceWorker({ cacheKey, dashboardFile }) {
+  return `const CACHE_NAME = "vis-dashboard-${cacheKey}";
+const SHELL_ASSETS = ["./", "./${dashboardFile}", "./vis-dashboard.webmanifest", "./vis-icon.svg"];
+
+self.addEventListener("install", event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_ASSETS)).catch(() => undefined));
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith("vis-dashboard-") && key !== CACHE_NAME).map(key => caches.delete(key)))));
+  self.clients.claim();
+});
+
+self.addEventListener("fetch", event => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== "GET" || url.pathname.startsWith("/__vis_media/")) return;
+  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
+    if (url.origin === self.location.origin && response.ok) {
+      const clone = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+    }
+    return response;
+  }).catch(() => caches.match("./${dashboardFile}"))));
+});`
+}
+
+function contentType(filePath) {
+  const ext = path.extname(filePath).toLowerCase()
+  const types = {
+    '.avif': 'image/avif',
+    '.css': 'text/css; charset=utf-8',
+    '.flac': 'audio/flac',
+    '.gif': 'image/gif',
+    '.html': 'text/html; charset=utf-8',
+    '.jpeg': 'image/jpeg',
+    '.jpg': 'image/jpeg',
+    '.js': 'text/javascript; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+    '.m4a': 'audio/mp4',
+    '.m4v': 'video/mp4',
+    '.mov': 'video/quicktime',
+    '.mp3': 'audio/mpeg',
+    '.mp4': 'video/mp4',
+    '.ogg': 'audio/ogg',
+    '.png': 'image/png',
+    '.svg': 'image/svg+xml; charset=utf-8',
+    '.wav': 'audio/wav',
+    '.webm': 'video/webm',
+    '.webmanifest': 'application/manifest+json; charset=utf-8',
+    '.webp': 'image/webp',
+  }
+  return types[ext] || 'application/octet-stream'
 }
 
 function deriveDashboardFacets(assets, duplicates, orphans) {
@@ -118,6 +345,10 @@ function renderDashboardHtml(data) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05060A">
+<meta name="application-name" content="VIS">
+<link rel="manifest" href="./${data.pwa.manifest}">
+<link rel="icon" href="./${data.pwa.icon}" type="image/svg+xml">
 <title>Visual Intelligence OS</title>
 <style>
 :root{
@@ -322,6 +553,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <div class="metric"><span>Prompts</span><strong id="mPrompts">0</strong></div>
       <div class="metric"><span>Annotations</span><strong id="mAnnotations">0</strong></div>
       <div class="metric"><span>Saved searches</span><strong id="mSavedSearches">0</strong></div>
+      <div class="metric"><span>App shell</span><strong id="mPwa">file</strong></div>
     </section>
     <section class="rail-section">
       <h2>Smart Collections</h2>
@@ -502,13 +734,19 @@ function savedSearchMatches(asset, id){
   return true;
 }
 function mediaPreview(asset, mode){
-  if (asset.media_type === "image" && asset.file_url) return '<img src="'+esc(asset.file_url)+'" alt="">';
-  if (asset.media_type === "video" && asset.file_url) return '<video src="'+esc(asset.file_url)+'" muted controls preload="none"></video>';
+  const src = assetMediaSrc(asset);
+  if (asset.media_type === "image" && src) return '<img src="'+esc(src)+'" alt="">';
+  if (asset.media_type === "video" && src) return '<video src="'+esc(src)+'" muted controls preload="none"></video>';
   if (asset.media_type === "audio" && asset.file_url) {
-    const controls = mode === "detail" ? '<audio src="'+esc(asset.file_url)+'" controls preload="none"></audio>' : "";
+    const controls = mode === "detail" ? '<audio src="'+esc(src)+'" controls preload="none"></audio>' : "";
     return '<div class="audio-tile"><div class="audio-mark">AUDIO</div>'+controls+'</div>';
   }
   return '<div class="fallback">'+esc(asset.media_type || "asset")+'<br>'+esc(asset.extension || "")+'</div>';
+}
+function assetMediaSrc(asset){
+  if (!asset.file_url) return "";
+  if (location.protocol === "http:" || location.protocol === "https:") return "./__vis_media/" + encodeURIComponent(asset.asset_id);
+  return asset.file_url;
 }
 function filteredAssets(){
   const words = state.query.trim().toLowerCase().split(/\\s+/).filter(Boolean);
@@ -562,6 +800,7 @@ function renderMetrics(){
   $("mPrompts").textContent = fmt(s.prompts);
   $("mAnnotations").textContent = fmt(s.annotations);
   $("mSavedSearches").textContent = fmt(s.savedSearches);
+  $("mPwa").textContent = (location.protocol === "http:" || location.protocol === "https:") ? "pwa" : "file";
   $("sAssets").textContent = fmt(DATA.assets.length);
   $("sPrompts").textContent = fmt(s.prompts);
   $("sDuplicates").textContent = fmt(DATA.duplicates.length);
@@ -773,6 +1012,9 @@ document.addEventListener("keydown", e => {
 });
 populateFilters();
 renderAll();
+if ("serviceWorker" in navigator && (location.protocol === "http:" || location.protocol === "https:")) {
+  navigator.serviceWorker.register("./${data.pwa.serviceWorker}").catch(() => {});
+}
 </script>
 </body>
 </html>`

@@ -40,7 +40,7 @@ import {
   traceAsset,
   createMusicReleasePacket,
 } from '../core/vis-core.mjs'
-import { generateDashboard } from '../web/vis-dashboard.mjs'
+import { generateDashboard, serveDashboard } from '../web/vis-dashboard.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const args = process.argv.slice(2)
@@ -70,7 +70,7 @@ const VALUE_FLAGS = new Set([
   '--path', '--uri', '--platform', '--url', '--route', '--caption', '--campaign',
   '--status', '--query', '--folder', '--collection', '--use', '--max-kb',
   '--note', '--notes', '--rating', '--color', '--curation-status', '--name', '--min-rating',
-  '--profile', '--library', '--eagle-library',
+  '--profile', '--library', '--eagle-library', '--port', '--host',
 ])
 
 function positionalArgs() {
@@ -345,6 +345,24 @@ function cmdDashboard() {
   })
   console.log(`Dashboard generated: ${out.outputPath}`)
   console.log(`Assets rendered: ${out.assets}`)
+  if (out.pwa) {
+    console.log(`PWA manifest: ${path.join(path.dirname(out.outputPath), out.pwa.manifest)}`)
+    console.log(`Service worker: ${path.join(path.dirname(out.outputPath), out.pwa.serviceWorker)}`)
+  }
+}
+
+async function cmdServeDashboard() {
+  const root = projectRoot()
+  const served = await serveDashboard(root, {
+    output: getFlag('--output') || getFlag('-o') || undefined,
+    limit: getFlag('--limit') || undefined,
+    port: getFlag('--port') || undefined,
+    host: getFlag('--host') || undefined,
+    generate: !hasFlag('--no-generate'),
+  })
+  console.log(`VIS dashboard server: ${served.url}`)
+  console.log(`Serving: ${served.outputPath}`)
+  console.log('Press Ctrl+C to stop.')
 }
 
 function cmdDuplicates() {
@@ -656,6 +674,8 @@ const commands = {
   trace: cmdTrace,
   packet: cmdPacket,
   dashboard: cmdDashboard,
+  'serve-dashboard': cmdServeDashboard,
+  cockpit: cmdServeDashboard,
   atlas: cmdDashboard,
   duplicates: cmdDuplicates,
   orphans: cmdOrphans,
@@ -691,7 +711,8 @@ Commands:
   vis report                       Print graph summary
   vis report --html                Generate dashboard HTML
   vis usage --usage-root <path>     Re-scan usage edges without rehashing media
-  vis dashboard                    Generate dashboard HTML
+  vis dashboard                    Generate dashboard HTML and PWA shell
+  vis serve-dashboard              Serve dashboard locally with media preview proxy
   vis search <query>               Search assets by path, tag, mood, category
   vis trace <asset|path|uri>        Print full provenance and usage trace
   vis packet <asset|path|uri>       Print Codex-ready curation packet

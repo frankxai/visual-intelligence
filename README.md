@@ -12,6 +12,7 @@ VIS turns scattered images, videos, audio files, prompts, website references, an
 - Execution tracker: GitHub Issues and milestones synced from `docs/VIS_TASK_REGISTRY.json`
 - Local-first source of truth: `data/vis.sqlite`
 - Local visual dashboard export: `data/vis-dashboard.html`
+- PWA cockpit shell: `data/vis-dashboard.webmanifest`, `data/vis-dashboard-sw.js`, and `vis serve-dashboard`
 - Agent layer: read-first MCP server at `mcp/vis-mcp-server.mjs`
 - Runtime: Node.js `>=22.13.0`; Node 24+ recommended
 
@@ -25,7 +26,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Scans website/content routes to map where assets appear.
 - Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
 - Builds Music IS handoff packets that group audio, cover art, Canvas/video, proof docs, prompts, rights, approval, and next release-gate action.
-- Generates a static dashboard for fast visual browsing and asset detail drawers.
+- Generates a static dashboard/PWA shell for fast visual browsing, local media previews, smart collections, and asset detail drawers.
 - Exposes MCP resources and tools for agents via `visual://asset/{asset_id}`.
 - Produces Codex-ready curation packets with path, `visual://` URI, rights, provenance, and next action.
 - Produces dry-run Cloudinary manifests, NFT readiness reports, and publication records.
@@ -89,6 +90,7 @@ node bin\vis.mjs doctor
 node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos" --json
 node bin\vis.mjs scan-profile frank-estate --json
 node bin\vis.mjs dashboard --limit 3000
+node bin\vis.mjs serve-dashboard --limit 3000
 claude mcp get vis-mcp
 ```
 
@@ -138,6 +140,7 @@ node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag 
 node bin\vis.mjs saved-searches
 node bin\vis.mjs music-releases
 node bin\vis.mjs music-packet <release_id|asset_id|path>
+node bin\vis.mjs serve-dashboard --port 3766
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum --execute
 node bin\vis.mjs cloudinary-manifest --category brand

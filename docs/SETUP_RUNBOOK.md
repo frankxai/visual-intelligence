@@ -55,6 +55,7 @@ node bin\vis.mjs eagle --library "<Google Drive>\Starlight Creative Vault\01_Eag
 node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos" --json
 node bin\vis.mjs scan --media-root "<Google Drive>\Starlight Creative Vault" --json
 node bin\vis.mjs dashboard --limit 3000
+node bin\vis.mjs serve-dashboard --limit 3000
 ```
 
 8. Install Claude MCP:
@@ -124,6 +125,7 @@ Use `node bin\vis.mjs eagle --library "<Eagle library path>" --execute` only aft
 - [ ] Phone 1 and phone 2 can upload selected assets to Drive inbox.
 - [ ] VIS `doctor` passes on both laptops.
 - [ ] VIS dashboard opens on both laptops.
+- [ ] VIS dashboard can be served locally as a PWA cockpit on both laptops.
 - [ ] Claude MCP `vis-mcp` connected on both laptops.
 - [ ] Same asset can be searched, traced, and packeted on both laptops.
 - [ ] Generated `data/` files remain ignored by Git.

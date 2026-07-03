@@ -33,6 +33,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add `frank-estate` scan profile dry-run for repos, brand image-system, Drive/Eagle vault paths, Music IS, website usage roots, and MCP allowlist generation.
 - [x] Add dry-run-first Eagle metadata adapter for local library tags, notes, source URLs, folders, collections, provider locations, and provenance.
 - [x] Add Music IS release packet preflight for audio, cover, Canvas/video, proof docs, prompts, rights, approval, CLI, MCP, and Codex handoff.
+- [x] Add PWA-ready static cockpit shell, service worker, manifest, and local media preview server.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.
@@ -42,7 +43,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 
 ## Next
 
-- [ ] Build a Next.js/PWA dashboard to replace the static HTML dashboard for daily use.
+- [ ] Build a richer Next.js/PWA dashboard after the static PWA cockpit proves daily value.
 - [ ] Add GitHub Projects v2 board after `gh` token gets project scope.
 - [ ] Verify Eagle adapter against Frank's real synced Eagle library after install.
 - [ ] Add Google Drive metadata adapter with provider IDs and sync health.

@@ -143,11 +143,12 @@ Body:
 Replace static HTML as the daily operating UI with a local-first dashboard/PWA.
 
 Tasks:
-- [ ] Create web app shell.
-- [ ] Add asset grid with stable thumbnails.
-- [ ] Add search, filters, tags, media type, rights, approval, source.
-- [ ] Add detail drawer with provenance, usage, local path, `visual://` URI.
-- [ ] Add copy actions: local path, visual URI, Codex packet.
+- [x] Create static PWA app shell with manifest, service worker, icon, and local serve command.
+- [x] Add asset grid with stable thumbnails and served local media proxy.
+- [x] Add search, filters, tags, media type, rights, approval, source in the static cockpit.
+- [x] Add detail drawer with provenance, usage, local path, `visual://` URI.
+- [x] Add copy actions: local path, visual URI, Codex packet, website/social packets, and Music IS packet.
+- [ ] Promote cockpit to richer Next.js/PWA only after static app-mode workflow is proven.
 - [ ] Add duplicate/orphan/rights review panels.
 
 Acceptance:

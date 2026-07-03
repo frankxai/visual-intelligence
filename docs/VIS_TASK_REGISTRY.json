@@ -133,11 +133,12 @@
       "labels": ["dashboard", "product"],
       "summary": "Replace static HTML as the daily operating UI with a local-first dashboard/PWA.",
       "tasks": [
-        "Create web app shell.",
-        "Add asset grid with stable thumbnails.",
-        "Add search, filters, tags, media type, rights, approval, and source.",
-        "Add detail drawer with provenance, usage, local path, and visual:// URI.",
-        "Add copy actions: local path, visual URI, and Codex packet.",
+        "[done] Create static PWA app shell with manifest, service worker, icon, and local serve command.",
+        "[done] Add asset grid with stable thumbnails and served local media proxy.",
+        "[done] Add search, filters, tags, media type, rights, approval, and source in the static cockpit.",
+        "[done] Add detail drawer with provenance, usage, local path, and visual:// URI.",
+        "[done] Add copy actions: local path, visual URI, Codex packet, website/social packets, and Music IS packet.",
+        "Promote cockpit to richer Next.js/PWA only after static app-mode workflow is proven.",
         "Add duplicate, orphan, and rights review panels."
       ],
       "acceptance": [
