@@ -37,6 +37,7 @@ import {
   planCreativeVault,
   recordGenerationProvenance,
   recordPublication,
+  renameAssets,
   reviewAssets,
   runAssetActionRecipe,
   resolveAssetId,
@@ -87,6 +88,7 @@ const VALUE_FLAGS = new Set([
   '--sidecar', '--output-path', '--source', '--summary',
   '--recipe', '--filter-tag', '--filter-rights-status', '--filter-approval-status',
   '--vault-root', '--sample-limit',
+  '--template', '--rename-template', '--name-template', '--start', '--pad',
 ])
 
 function positionalArgs() {
@@ -493,6 +495,27 @@ function cmdBatchAnnotate() {
     curationStatus: getFlag('--curation-status') || getFlag('--status'),
     collection: getFlag('--collection'),
     replaceTags: hasFlag('--replace-tags'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdBatchRename() {
+  const root = projectRoot()
+  const refs = assetRefArgs()
+  const result = renameAssets(root, refs, {
+    template: getFlag('--template') || getFlag('--rename-template') || getFlag('--name-template'),
+    query: getFlag('--query'),
+    tag: getFlag('--tag'),
+    category: getFlag('--category'),
+    mediaType: getFlag('--media-type'),
+    mood: getFlag('--mood'),
+    color: getFlag('--color'),
+    start: getFlag('--start'),
+    pad: getFlag('--pad'),
+    limit: Number(getFlag('--limit', 50)),
+    allowPartial: hasFlag('--allow-partial'),
     actor: 'vis-cli',
     execute: hasFlag('--execute'),
   })
@@ -953,6 +976,8 @@ const commands = {
   annotate: cmdAnnotate,
   'batch-annotate': cmdBatchAnnotate,
   'bulk-annotate': cmdBatchAnnotate,
+  'batch-rename': cmdBatchRename,
+  rename: cmdBatchRename,
   'review-assets': cmdReviewAssets,
   'approve-assets': cmdReviewAssets,
   'action-recipes': cmdActionRecipes,
@@ -1009,6 +1034,7 @@ Commands:
   vis score [asset]                Score asset or collection readiness
   vis annotate <asset>             Dry-run or save tags, notes, rating, color, collection
   vis batch-annotate <asset...>     Dry-run or save curation metadata across assets
+  vis batch-rename <asset...>       Dry-run or execute same-folder file renames from a template
   vis review-assets <asset...>      Dry-run or save rights and approval status
   vis action-recipes                List dry-run asset action recipes
   vis action-recipe <recipe>         Dry-run or apply recipe curation across matching assets

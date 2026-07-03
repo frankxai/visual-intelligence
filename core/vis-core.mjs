@@ -2539,6 +2539,295 @@ export function reviewAssets(dbOrRoot, assetRefs = [], args = {}) {
   }
 }
 
+export function renameAssets(dbOrRoot, assetRefs = [], args = {}) {
+  const providedRefs = assetRefs === null || assetRefs === undefined ? [] : assetRefs
+  const refs = normalizeAssetRefs(providedRefs.length ? providedRefs : args.assetRefs || args.asset_refs || args.assets || args.asset_ids || args.assetIds || [])
+  const template = normalizeNullable(args.template || args.renameTemplate || args.rename_template || args.nameTemplate || args.name_template || null)
+  if (!template) throw new Error('Batch rename requires a template, for example --template "{index}-{title}"')
+
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const execute = args.execute === true
+    const actor = args.actor || 'vis-cli'
+    const limit = Number(args.limit || 50)
+    const pad = Math.max(1, Math.min(6, Number(args.pad || args.indexPad || args.index_pad || 2)))
+    const start = Number(args.start || args.startIndex || args.start_index || 1)
+    const allowPartial = args.allowPartial === true || args.allow_partial === true
+    const allowedRoots = normalizeAllowedRoots(args.allowedRoots || args.allowed_roots || [])
+    const selected = selectAssetsForRename(db, refs, { ...args, limit })
+    if (!selected.items.length && !selected.errors.length) {
+      throw new Error('Batch rename requires explicit assets or a query/filter that selects assets')
+    }
+
+    const seenTargets = new Set()
+    const plannedAt = nowIso()
+    const batchId = args.batchId || args.batch_id || stableId('batch_rename', `${actor}:${template}:${selected.items.map(item => item.asset_id).join('|')}`)
+    const items = selected.items.map((asset, idx) => buildRenamePlanItem(asset, {
+      template,
+      index: start + idx,
+      pad,
+      allowedRoots,
+      seenTargets,
+    }))
+    const blocked = items.filter(item => item.status === 'blocked')
+    const executable = items.filter(item => item.status === 'planned')
+
+    if (execute && blocked.length && !allowPartial) {
+      return {
+        dryRun: true,
+        refused: true,
+        batch_id: batchId,
+        requested: selected.requested,
+        planned: executable.length,
+        blocked: blocked.length,
+        unchanged: items.filter(item => item.status === 'unchanged').length,
+        operation: { template, start, pad, allow_partial: allowPartial },
+        items,
+        errors: selected.errors,
+        note: 'Execution refused because one or more rename targets are blocked. Review the dry run or pass allowPartial:true / CLI --allow-partial.',
+      }
+    }
+
+    if (execute) {
+      for (const item of executable) {
+        fs.renameSync(item.old_path, item.new_path)
+        const renamedAt = nowIso()
+        const newLocationId = stableId('loc', item.new_path)
+        db.prepare(`
+UPDATE asset_location
+SET location_id = ?, absolute_path = ?, relative_path = ?, public_path = ?, seen_at = ?, exists_now = 1
+WHERE location_id = ?
+`).run(newLocationId, item.new_path, item.new_relative_path, item.new_public_path, renamedAt, item.location_id)
+        db.prepare('UPDATE asset SET title = ?, primary_path = ?, last_seen_at = ? WHERE asset_id = ?')
+          .run(item.new_title, item.new_relative_path, renamedAt, item.asset_id)
+        recordProvenance(db, {
+          assetId: item.asset_id,
+          versionId: item.version_id,
+          eventType: 'asset-renamed',
+          actor,
+          source: 'vis-batch-rename',
+          payload: {
+            batch_id: batchId,
+            template,
+            previous: {
+              title: item.title,
+              absolute_path: item.old_path,
+              relative_path: item.old_relative_path,
+              public_path: item.old_public_path,
+            },
+            next: {
+              title: item.new_title,
+              absolute_path: item.new_path,
+              relative_path: item.new_relative_path,
+              public_path: item.new_public_path,
+            },
+          },
+          createdAt: renamedAt,
+        })
+        item.location_id = newLocationId
+        item.status = 'renamed'
+        item.renamed_at = renamedAt
+      }
+    }
+
+    return {
+      dryRun: !execute,
+      batch_id: batchId,
+      requested: selected.requested,
+      planned: executable.length,
+      renamed: execute ? executable.length : 0,
+      blocked: blocked.length,
+      unchanged: items.filter(item => item.status === 'unchanged').length,
+      operation: { template, start, pad, allow_partial: allowPartial },
+      items,
+      errors: selected.errors,
+      planned_at: plannedAt,
+      note: execute
+        ? 'Batch rename executed for planned items. Each renamed asset records an asset-renamed provenance event.'
+        : 'Dry run only. Review file targets, then pass execute:true or CLI --execute after human approval.',
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
+function selectAssetsForRename(db, refs = [], args = {}) {
+  const errors = []
+  if (refs.length) {
+    const items = []
+    for (const ref of refs) {
+      const assetId = resolveAssetId(db, ref)
+      if (!assetId) {
+        errors.push({ ref, error: 'Asset not found' })
+        continue
+      }
+      const asset = getRenameAssetRow(db, assetId)
+      if (!asset) {
+        errors.push({ ref, asset_id: assetId, error: 'No local asset location found' })
+        continue
+      }
+      items.push({ ...asset, requested_ref: ref })
+    }
+    return { requested: refs.length, items, errors }
+  }
+
+  const hasSelector = Boolean(args.query || args.tag || args.category || args.mediaType || args.media_type || args.mood || args.color)
+  if (!hasSelector) return { requested: 0, items: [], errors }
+  const found = searchAssets(db, {
+    query: args.query || '',
+    tag: args.tag,
+    category: args.category,
+    mediaType: args.mediaType || args.media_type,
+    mood: args.mood,
+    color: args.color,
+    maxResults: args.limit || 50,
+  })
+  const items = []
+  for (const asset of found) {
+    const row = getRenameAssetRow(db, asset.asset_id)
+    if (row) items.push(row)
+    else errors.push({ asset_id: asset.asset_id, error: 'No local asset location found' })
+  }
+  return { requested: found.length, items, errors }
+}
+
+function getRenameAssetRow(db, assetId) {
+  const row = db.prepare(`
+SELECT
+  a.*,
+  v.version_id,
+  v.sha256,
+  v.byte_size,
+  v.mime_type,
+  v.extension,
+  v.width,
+  v.height,
+  v.duration_seconds,
+  v.metadata_json,
+  l.location_id,
+  l.absolute_path,
+  l.relative_path,
+  l.public_path,
+  l.root,
+  l.repo,
+  l.is_primary,
+  an.rating,
+  an.color_label,
+  an.curation_status,
+  an.notes AS annotation_notes,
+  an.custom_tags_json
+FROM asset a
+JOIN asset_location l ON l.asset_id = a.asset_id AND l.exists_now = 1
+LEFT JOIN asset_version v ON v.version_id = l.version_id
+LEFT JOIN asset_annotation an ON an.asset_id = a.asset_id
+WHERE a.asset_id = ?
+ORDER BY l.is_primary DESC, l.seen_at DESC
+LIMIT 1
+`).get(assetId)
+  return row ? normalizeAssetRow(row) : null
+}
+
+function buildRenamePlanItem(asset, context) {
+  const oldPath = path.resolve(asset.absolute_path)
+  const ext = path.extname(oldPath) || asset.extension || ''
+  const stem = renderRenameTemplate(context.template, asset, { ...context, extension: ext })
+  const safeStem = sanitizeFileStem(stem)
+  const target = reserveRenameTarget(path.join(path.dirname(oldPath), `${safeStem}${ext}`), oldPath, context.seenTargets)
+  const same = sameFilePath(oldPath, target)
+  const blockers = []
+  if (!asset.location_id) blockers.push('missing-location-id')
+  if (!asset.absolute_path) blockers.push('missing-local-path')
+  else if (!fs.existsSync(oldPath)) blockers.push('source-missing')
+  if (context.allowedRoots?.length && (!isPathInAllowedRoots(oldPath, context.allowedRoots) || !isPathInAllowedRoots(target, context.allowedRoots))) {
+    blockers.push('outside-allowed-roots')
+  }
+  if (!same && fs.existsSync(target)) blockers.push('target-exists')
+  if (same) blockers.length = 0
+
+  const newTitle = path.basename(target, path.extname(target))
+  const newRelativePath = slash(path.relative(asset.root || process.cwd(), target))
+  return {
+    ref: asset.requested_ref || asset.asset_id,
+    asset_id: asset.asset_id,
+    version_id: asset.version_id,
+    location_id: asset.location_id,
+    title: asset.title,
+    media_type: asset.media_type,
+    media_role: asset.media_role,
+    workflow: asset.workflow,
+    category: asset.category,
+    old_path: oldPath,
+    new_path: target,
+    old_relative_path: asset.relative_path,
+    new_relative_path: newRelativePath,
+    old_public_path: asset.public_path || null,
+    new_public_path: toPublicPath(asset.root || process.cwd(), target),
+    new_title: newTitle,
+    template: context.template,
+    index: context.index,
+    status: blockers.length ? 'blocked' : same ? 'unchanged' : 'planned',
+    blockers,
+  }
+}
+
+function reserveRenameTarget(targetPath, currentPath, seenTargets) {
+  const parsed = path.parse(targetPath)
+  let candidate = targetPath
+  let suffix = 2
+  while (!sameFilePath(candidate, currentPath) && seenTargets.has(path.resolve(candidate).toLowerCase())) {
+    candidate = path.join(parsed.dir, `${parsed.name}-${String(suffix).padStart(2, '0')}${parsed.ext}`)
+    suffix += 1
+  }
+  seenTargets.add(path.resolve(candidate).toLowerCase())
+  return candidate
+}
+
+function renderRenameTemplate(template, asset, context) {
+  return String(template).replace(/\{([a-zA-Z0-9_-]+)\}/g, (match, rawKey) => {
+    const key = rawKey.toLowerCase().replace(/-/g, '_')
+    if (key === 'index' || key === 'n') return String(context.index).padStart(context.pad, '0')
+    if (key === 'title' || key === 'name' || key === 'original') return asset.title || 'asset'
+    if (key === 'asset_id') return asset.asset_id
+    if (key === 'short_id') return String(asset.asset_id || '').replace(/^asset_/, '').slice(0, 8)
+    if (key === 'category') return asset.category || 'uncategorized'
+    if (key === 'media_type') return asset.media_type || 'media'
+    if (key === 'media_role') return asset.media_role || 'asset'
+    if (key === 'workflow') return asset.workflow || 'asset-library'
+    if (key === 'rating') return asset.rating || 'unrated'
+    if (key === 'color') return asset.color_label || asset.dominant_color || 'uncolored'
+    if (key === 'rights') return asset.rights_status || 'unknown'
+    if (key === 'approval') return asset.approval_status || 'candidate'
+    if (key === 'ext' || key === 'extension') return String(context.extension || '').replace(/^\./, '')
+    return match
+  })
+}
+
+function sanitizeFileStem(value) {
+  const cleaned = String(value || 'asset')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^\.+/, '')
+    .replace(/[. ]+$/g, '')
+    .toLowerCase()
+  return cleaned.slice(0, 140) || 'asset'
+}
+
+function sameFilePath(a, b) {
+  return path.resolve(a || '').toLowerCase() === path.resolve(b || '').toLowerCase()
+}
+
+function normalizeAllowedRoots(roots = []) {
+  const values = Array.isArray(roots) ? roots : [roots]
+  return values.filter(Boolean).map(value => path.resolve(String(value)).replace(/[\\/]+$/, '').toLowerCase())
+}
+
+function isPathInAllowedRoots(filePath, roots = []) {
+  const normalized = path.resolve(filePath || '').toLowerCase()
+  return roots.some(root => normalized === root || normalized.startsWith(root + path.sep))
+}
+
 export function listAssetActionRecipes() {
   return Object.entries(ACTION_RECIPES).map(([id, recipe]) => ({
     id,

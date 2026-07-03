@@ -520,3 +520,29 @@ Acceptance:
 - [x] Music release visuals use the same palette contract without replacing Music IS.
 - [x] Dashboard exposes visible swatches for indexed palettes.
 ```
+
+## Issue 21: Add dry-run batch rename for Eagle-style bulk cleanup
+
+Labels: `dashboard`, `product`, `mcp`, `music`
+Milestone: `M1 Daily Cockpit`
+Status: `done`
+
+Body:
+
+```markdown
+Add a VIS-native batch rename planner/executor so designer assets and music-release media can be cleaned up from selected assets or search results without overwrites, cross-folder moves, or silent mutations.
+
+Tasks:
+- [x] Add core rename planner with template tokens such as {index}, {title}, {category}, {media_role}, and {workflow}.
+- [x] Keep dry-run as the default and refuse execute when planned targets are blocked unless partial execution is explicitly allowed.
+- [x] Execute same-folder file renames, update VIS location/title records, and record asset-renamed provenance.
+- [x] Add CLI command batch-rename with query/filter selection and explicit --execute.
+- [x] Add MCP tool batch_rename_assets with VIS_ENABLE_WRITES gating.
+- [x] Add docs and tests.
+
+Acceptance:
+- [x] Dry-run batch rename reports old and new paths without touching files.
+- [x] Execute mode renames selected files and records provenance.
+- [x] Blocked targets prevent accidental overwrites by default.
+- [x] Music release assets can use workflow/media-role templates without making VIS the Music IS source of truth.
+```

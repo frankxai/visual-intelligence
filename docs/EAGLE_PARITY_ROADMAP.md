@@ -80,6 +80,7 @@ Recommended naming:
 - Local curation memory for notes, tags, ratings, color labels, collections, and saved searches.
 - Local similarity review groups exposed in CLI, MCP, dashboard queue, and smart collection.
 - Dry-run-first batch curation so selected assets can be tagged, rated, colored, moved into collections, or queued for review without accidental writes.
+- Dry-run-first batch rename planning/execution so selected designer and music-release files can be cleaned up with safe templates, no overwrite, and provenance.
 - Dry-run-first action recipes for designer inbox, Music IS release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity review.
 - Human-gated rights and approval review so website, social, NFT, and Music IS handoffs cannot quietly treat unknown assets as publishable.
 - Public-use gates in packets and export manifests so Cloudinary, NFT, website, social, and Music IS handoffs surface blockers before any external action.

@@ -35,6 +35,7 @@ import {
   planCreativeVault,
   recordGenerationProvenance,
   recordPublication,
+  renameAssets,
   reviewAssets,
   runAssetActionRecipe,
   saveSearch,
@@ -167,6 +168,44 @@ function toolBulkAnnotateAssets(args = {}) {
     curationStatus: args.curation_status || args.curationStatus || args.status,
     collection: args.collection,
     replaceTags: args.replace_tags === true || args.replaceTags === true,
+    actor: 'vis-mcp',
+    execute: args.execute === true && WRITE_ENABLED,
+  }))
+}
+
+function toolBatchRenameAssets(args = {}) {
+  const assetRefs = [
+    ...(Array.isArray(args.asset_ids) ? args.asset_ids : []),
+    ...(Array.isArray(args.assetIds) ? args.assetIds : []),
+    ...(Array.isArray(args.assets) ? args.assets : []),
+    ...(Array.isArray(args.uris) ? args.uris : []),
+    ...(Array.isArray(args.paths) ? args.paths : []),
+    args.asset_id,
+    args.assetId,
+    args.uri,
+    args.path,
+  ].filter(Boolean)
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP file renames are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: true,
+      preview: renameAssets(db, assetRefs, { ...args, allowedRoots: ALLOWED_ROOTS, execute: false }),
+    }))
+  }
+  return withDb(db => renameAssets(db, assetRefs, {
+    template: args.template || args.rename_template || args.renameTemplate || args.name_template || args.nameTemplate,
+    query: args.query,
+    tag: args.tag,
+    category: args.category,
+    mediaType: args.media_type || args.mediaType,
+    mood: args.mood,
+    color: args.color || args.color_family || args.colorFamily,
+    start: args.start || args.start_index || args.startIndex,
+    pad: args.pad || args.index_pad || args.indexPad,
+    limit: args.limit,
+    allowPartial: args.allow_partial === true || args.allowPartial === true,
+    allowedRoots: ALLOWED_ROOTS,
     actor: 'vis-mcp',
     execute: args.execute === true && WRITE_ENABLED,
   }))
@@ -425,6 +464,7 @@ const TOOL_HANDLERS = {
   create_curation_packet: toolCreateCurationPacket,
   annotate_asset: toolAnnotateAsset,
   bulk_annotate_assets: toolBulkAnnotateAssets,
+  batch_rename_assets: toolBatchRenameAssets,
   review_assets: toolReviewAssets,
   list_asset_action_recipes: toolListAssetActionRecipes,
   run_asset_action_recipe: toolRunAssetActionRecipe,
@@ -530,6 +570,23 @@ const TOOLS = [
     collection: stringProp('Collection name to add assets into'),
     replace_tags: booleanProp('Replace existing custom tags instead of merging'),
     execute: booleanProp('Persist annotations when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('batch_rename_assets', 'Dry-run or execute same-folder file renames from a template. File writes require VIS_ENABLE_WRITES=1 and execute:true.', {
+    asset_ids: { type: 'array', items: { type: 'string' }, description: 'VIS asset_ids' },
+    assets: { type: 'array', items: { type: 'string' }, description: 'Asset ids, visual URIs, or paths' },
+    uris: { type: 'array', items: { type: 'string' }, description: 'visual://asset/{asset_id} URIs' },
+    paths: { type: 'array', items: { type: 'string' }, description: 'Local or relative paths' },
+    query: stringProp('Optional search query when asset ids are not provided'),
+    tag: stringProp('Optional tag filter when selecting assets by query'),
+    category: stringProp('Optional category filter'),
+    media_type: stringProp('Optional image, video, or audio filter'),
+    color: stringProp('Optional color family or hex filter'),
+    template: stringProp('Rename template, for example {category}-{index}-{title}'),
+    start: numberProp('Starting index, default 1'),
+    pad: numberProp('Index zero-padding width, default 2'),
+    limit: numberProp('Maximum selected assets when using query/filter selection'),
+    allow_partial: booleanProp('Allow execute to skip blocked items instead of refusing the whole batch'),
+    execute: booleanProp('Rename files when VIS_ENABLE_WRITES=1'),
   }),
   tool('review_assets', 'Dry-run or save rights and approval status across assets. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
     asset_ids: { type: 'array', items: { type: 'string' }, description: 'VIS asset_ids' },

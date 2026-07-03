@@ -33,6 +33,7 @@ import {
   recordGenerationProvenance,
   recordPublication,
   createMusicReleasePacket,
+  renameAssets,
   reviewAssets,
   runAssetActionRecipe,
   resolveScanProfile,
@@ -434,6 +435,72 @@ test('batch annotates assets dry-run first and records collection provenance on 
       assert.equal(getSummary(db).annotations, 2)
       assert.equal(db.prepare('SELECT COUNT(*) AS count FROM collection_item').get().count, 2)
       assert.equal(db.prepare("SELECT COUNT(*) AS count FROM provenance_event WHERE event_type = 'annotated'").get().count, 2)
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('batch renames assets dry-run first and records provenance on execute', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-batch-rename-'))
+  try {
+    const imageRoot = path.join(root, 'public', 'images')
+    fs.mkdirSync(imageRoot, { recursive: true })
+    const originalOne = path.join(imageRoot, 'Cover One.svg')
+    const originalTwo = path.join(imageRoot, 'Canvas Clip.svg')
+    fs.writeFileSync(originalOne, '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="red"/></svg>')
+    fs.writeFileSync(originalTwo, '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="blue"/></svg>')
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      mediaRoots: ['public/images'],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    indexProject({ root })
+    const db = openVisDatabase(root)
+    try {
+      const refs = searchAssets(db, { query: 'cover canvas', maxResults: 5 }).map(asset => asset.asset_id)
+      assert.equal(refs.length, 2)
+
+      const dryRun = renameAssets(db, refs, {
+        template: 'release-{index}-{title}',
+        actor: 'test',
+      })
+      assert.equal(dryRun.dryRun, true)
+      assert.equal(dryRun.planned, 2)
+      assert.equal(dryRun.renamed, 0)
+      assert.equal(fs.existsSync(originalOne), true)
+      assert.equal(fs.existsSync(originalTwo), true)
+      assert.ok(dryRun.items.every(item => item.status === 'planned'))
+
+      const refused = renameAssets(db, refs, {
+        template: 'blocked-{index}-{title}',
+        allowedRoots: [path.join(root, 'not-the-media-root')],
+        execute: true,
+      })
+      assert.equal(refused.refused, true)
+      assert.equal(refused.blocked, 2)
+      assert.equal(fs.existsSync(originalOne), true)
+      assert.equal(fs.existsSync(originalTwo), true)
+
+      const executed = renameAssets(db, refs, {
+        template: 'release-{index}-{title}',
+        actor: 'test',
+        execute: true,
+      })
+      assert.equal(executed.dryRun, false)
+      assert.equal(executed.renamed, 2)
+      assert.equal(fs.existsSync(originalOne), false)
+      assert.equal(fs.existsSync(originalTwo), false)
+      assert.ok(executed.items.every(item => fs.existsSync(item.new_path)))
+
+      const renamed = searchAssets(db, { query: 'release', maxResults: 5 })
+      assert.equal(renamed.length, 2)
+      assert.ok(renamed.every(asset => asset.title.startsWith('release-')))
+      assert.equal(db.prepare("SELECT COUNT(*) AS count FROM provenance_event WHERE event_type = 'asset-renamed'").get().count, 2)
     } finally {
       db.close()
     }

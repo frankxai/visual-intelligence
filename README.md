@@ -30,6 +30,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
 - Lists and evaluates live Eagle-style smart collections for inbox, rights review, prompt/provenance gaps, usage, orphans, duplicates, music, video, NFT/Web3, website-ready, and social-ready queues.
 - Supports dry-run-first batch curation for Eagle-style multi-select review, tagging, and collection moves.
+- Supports dry-run-first batch rename planning/execution for same-folder designer and music-release file cleanup.
 - Supports dry-run-first asset action recipes for designer inbox, Music IS release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity groups.
 - Supports dry-run-first rights and approval review with provenance before website, social, NFT, or music release use.
 - Plans and initializes the Google Drive `Starlight Creative Vault` folder contract for two laptops, two phones, Eagle, VIS, and Music IS.
@@ -155,6 +156,8 @@ node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --co
 node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --collection "Homepage candidates" --execute
 node bin\vis.mjs batch-annotate <asset_id> <asset_id> --tag review --curation-status needs-review --collection "VIS Review Queue"
 node bin\vis.mjs batch-annotate <asset_id> <asset_id> --tag review --curation-status needs-review --collection "VIS Review Queue" --execute
+node bin\vis.mjs batch-rename <asset_id> <asset_id> --template "{category}-{index}-{title}"
+node bin\vis.mjs batch-rename --query "music cover" --template "{workflow}-{index}-{title}" --limit 10
 node bin\vis.mjs review-assets <asset_id> <asset_id> --rights-status generated-owned --approval-status approved --reason "Human rights review complete"
 node bin\vis.mjs smart-collections
 node bin\vis.mjs smart-collection prompt-gaps --limit 50
@@ -206,6 +209,7 @@ Tools:
 - `create_curation_packet`
 - `annotate_asset`
 - `bulk_annotate_assets`
+- `batch_rename_assets`
 - `review_assets`
 - `list_smart_collections`
 - `evaluate_smart_collection`
