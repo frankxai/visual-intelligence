@@ -25,6 +25,7 @@ export const DEFAULT_CONFIG = {
   contentDirs: ['app', 'pages', 'components', 'content', 'data', 'docs', 'lib', 'src'],
   usageRoots: null,
   scanProfiles: {},
+  eagleLibraries: [],
   usageIncludeDirs: ['app', 'pages', 'components', 'content', 'docs', 'lib', 'src'],
   maxUsageFileBytes: 512 * 1024,
   privateDirPatterns: [
@@ -114,6 +115,7 @@ export function normalizeConfig(config) {
   merged.contentDirs = uniq(merged.contentDirs || DEFAULT_CONFIG.contentDirs)
   merged.privateDirPatterns = uniq(merged.privateDirPatterns || DEFAULT_CONFIG.privateDirPatterns)
   merged.scanProfiles = merged.scanProfiles || {}
+  merged.eagleLibraries = uniq(merged.eagleLibraries || [])
   return merged
 }
 
@@ -533,6 +535,274 @@ export function resolveScanProfile(root, config = loadConfig(root), profileName 
       execute: `node bin\\vis.mjs scan-profile ${profileName} --execute`,
       dashboard: 'node bin\\vis.mjs dashboard --limit 3000',
     },
+  }
+}
+
+export function importEagleLibrary(dbOrRoot, args = {}) {
+  const { db, root, config, close } = resolveDbArgs(dbOrRoot)
+  const libraryInputs = normalizeLibraryInputs(args, config)
+  if (!libraryInputs.length) {
+    if (close) db.close()
+    throw new Error('No Eagle library path provided. Use --library <path> or configure eagleLibraries in vis.config.json.')
+  }
+
+  const libraries = libraryInputs.map(libraryRoot => {
+    const resolved = resolveProjectPath(root, libraryRoot)
+    return {
+      input: libraryRoot,
+      root: resolved,
+      exists: Boolean(resolved && fs.existsSync(resolved)),
+    }
+  })
+  const existingLibraries = libraries.filter(library => library.exists)
+  const limit = Number(args.limit || 10000)
+  const items = existingLibraries.flatMap(library => discoverEagleItems(library.root, { limit }))
+  const summary = summarizeEagleImport({ libraries, items })
+
+  if (args.execute !== true) {
+    if (close) db.close()
+    return { dryRun: true, ...summary }
+  }
+
+  const imported = []
+  db.exec('BEGIN')
+  try {
+    for (const item of items) {
+      if (!item.assetPath || !fs.existsSync(item.assetPath)) continue
+      const entry = buildAssetEntry(root, item.libraryRoot, item.assetPath, config)
+      if (!entry) continue
+      upsertAssetGraph(db, entry, config)
+      const locationId = stableId('loc', entry.absolutePath)
+      db.prepare(`
+UPDATE asset_location
+SET storage_kind = 'eagle',
+    provider = 'eagle',
+    provider_id = ?,
+    repo = COALESCE(repo, 'eagle')
+WHERE location_id = ?
+`).run(item.id, locationId)
+
+      const tags = uniq(['eagle', ...item.tags])
+      annotateAsset(db, entry.assetId, {
+        tags,
+        note: item.annotation || undefined,
+        actor: 'vis-eagle-adapter',
+        execute: true,
+      })
+
+      const collections = []
+      for (const folder of item.folders) {
+        const collection = upsertCollection(db, {
+          name: `Eagle / ${folder.name}`,
+          type: 'eagle-folder',
+          description: folder.description || null,
+          metadata: {
+            source: 'eagle',
+            eagleFolderId: folder.id || null,
+            libraryRoot: item.libraryRoot,
+          },
+        })
+        const position = nextCollectionPosition(db, collection.collection_id)
+        db.prepare(`
+INSERT INTO collection_item (collection_id, asset_id, position, traits_json, readiness_score, notes)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(collection_id, asset_id) DO UPDATE SET
+  traits_json = excluded.traits_json,
+  notes = COALESCE(excluded.notes, collection_item.notes)
+`).run(
+          collection.collection_id,
+          entry.assetId,
+          position,
+          JSON.stringify({ source: 'eagle', eagleItemId: item.id, folder }),
+          null,
+          item.annotation || null,
+        )
+        collections.push(collection.name)
+      }
+
+      recordProvenance(db, {
+        assetId: entry.assetId,
+        versionId: entry.versionId,
+        eventType: 'eagle-metadata-imported',
+        actor: 'vis-eagle-adapter',
+        source: item.metadataPath,
+        payload: {
+          eagleItemId: item.id,
+          libraryRoot: item.libraryRoot,
+          itemFolder: item.itemFolder,
+          tags: item.tags,
+          folders: item.folders,
+          annotation: item.annotation,
+          sourceUrl: item.sourceUrl,
+          metadataKeys: Object.keys(item.raw || {}).sort(),
+        },
+        eventId: stableId('prov', `${entry.assetId}:${item.id}:eagle-metadata-imported`),
+      })
+
+      imported.push({
+        asset_id: entry.assetId,
+        version_id: entry.versionId,
+        eagle_item_id: item.id,
+        path: entry.absolutePath,
+        tags,
+        collections,
+      })
+    }
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  } finally {
+    if (close) db.close()
+  }
+
+  return {
+    dryRun: false,
+    ...summary,
+    imported: imported.length,
+    importedItems: imported.slice(0, 100),
+  }
+}
+
+function normalizeLibraryInputs(args, config) {
+  const fromArgs = [
+    ...(Array.isArray(args.libraryRoots) ? args.libraryRoots : []),
+    ...(Array.isArray(args.libraries) ? args.libraries : []),
+    args.libraryRoot,
+    args.library,
+  ].filter(Boolean)
+  return uniq(fromArgs.length ? fromArgs : (config.eagleLibraries || []))
+}
+
+function discoverEagleItems(libraryRoot, options = {}) {
+  const metadataFiles = findEagleMetadataFiles(libraryRoot, options.limit || 10000)
+  return metadataFiles
+    .map(metadataPath => readEagleItem(libraryRoot, metadataPath))
+    .filter(Boolean)
+}
+
+function findEagleMetadataFiles(libraryRoot, limit = 10000) {
+  const files = []
+  function walk(dir) {
+    if (files.length >= limit) return
+    let entries = []
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    const hasMetadata = entries.some(entry => entry.isFile() && entry.name.toLowerCase() === 'metadata.json')
+    if (hasMetadata && dir.toLowerCase().endsWith('.info')) {
+      files.push(path.join(dir, 'metadata.json'))
+      return
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      if (['.git', 'node_modules', '.trash'].includes(entry.name.toLowerCase())) continue
+      walk(path.join(dir, entry.name))
+    }
+  }
+  walk(libraryRoot)
+  return files.sort((a, b) => a.localeCompare(b))
+}
+
+function readEagleItem(libraryRoot, metadataPath) {
+  let raw = null
+  try {
+    raw = JSON.parse(fs.readFileSync(metadataPath, 'utf-8'))
+  } catch {
+    return null
+  }
+  const itemFolder = path.dirname(metadataPath)
+  const assetPath = findEagleAssetPath(itemFolder, raw)
+  const id = String(raw.id || raw.itemId || raw.item_id || path.basename(itemFolder, '.info')).trim()
+  const folders = normalizeEagleFolders(raw)
+  return {
+    id,
+    name: normalizeNullable(raw.name || raw.title || raw.filename || raw.fileName || null),
+    assetPath,
+    metadataPath,
+    itemFolder,
+    libraryRoot,
+    tags: normalizeTagInput(raw.tags || raw.keywords || []),
+    folders,
+    annotation: normalizeNullable(raw.annotation || raw.notes || raw.note || raw.description || null),
+    sourceUrl: normalizeNullable(raw.website || raw.url || raw.sourceUrl || raw.sourceURL || raw.originalUrl || raw.originalURL || null),
+    importedAt: raw.importedAt || raw.createdAt || raw.createTime || null,
+    modifiedAt: raw.modifiedAt || raw.mtime || raw.modificationTime || null,
+    raw,
+  }
+}
+
+function findEagleAssetPath(itemFolder, metadata) {
+  const candidates = [
+    metadata.filePath,
+    metadata.path,
+    metadata.name && metadata.ext ? `${metadata.name}.${String(metadata.ext).replace(/^\./, '')}` : null,
+    metadata.filename,
+    metadata.fileName,
+  ].filter(Boolean)
+  for (const candidate of candidates) {
+    const resolved = path.isAbsolute(candidate) ? candidate : path.join(itemFolder, candidate)
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) return resolved
+  }
+
+  let entries = []
+  try {
+    entries = fs.readdirSync(itemFolder, { withFileTypes: true })
+  } catch {
+    return null
+  }
+  const ignored = new Set(['metadata.json', 'metadata.backup.json', 'thumbnail.png', 'thumbnail.jpg'])
+  const mediaExts = mediaExtensions(DEFAULT_CONFIG)
+  const found = entries
+    .filter(entry => entry.isFile())
+    .map(entry => entry.name)
+    .filter(name => !ignored.has(name.toLowerCase()))
+    .filter(name => mediaExts.has(path.extname(name).toLowerCase()))
+    .sort((a, b) => a.localeCompare(b))
+  return found[0] ? path.join(itemFolder, found[0]) : null
+}
+
+function normalizeEagleFolders(raw) {
+  const folderValues = raw.folders || raw.folderIds || raw.folder_ids || raw.folder || []
+  const values = Array.isArray(folderValues) ? folderValues : [folderValues]
+  return values
+    .map(value => {
+      if (!value) return null
+      if (typeof value === 'object') {
+        const id = normalizeNullable(value.id || value.folderId || value.folder_id || value.uuid || null)
+        const name = normalizeNullable(value.name || value.title || id || null)
+        if (!name) return null
+        return { id, name, description: normalizeNullable(value.description || null) }
+      }
+      const name = normalizeNullable(value)
+      return name ? { id: name, name, description: null } : null
+    })
+    .filter(Boolean)
+}
+
+function summarizeEagleImport({ libraries, items }) {
+  const withAssets = items.filter(item => item.assetPath && fs.existsSync(item.assetPath))
+  const folders = uniq(items.flatMap(item => item.folders.map(folder => folder.name))).sort((a, b) => a.localeCompare(b))
+  const tags = uniq(items.flatMap(item => item.tags)).sort((a, b) => a.localeCompare(b))
+  return {
+    libraries,
+    items: items.length,
+    importableItems: withAssets.length,
+    missingAssetFiles: items.length - withAssets.length,
+    folders,
+    tags,
+    sample: items.slice(0, 25).map(item => ({
+      id: item.id,
+      name: item.name,
+      assetPath: item.assetPath,
+      metadataPath: item.metadataPath,
+      tags: item.tags,
+      folders: item.folders.map(folder => folder.name),
+      annotation: item.annotation,
+      sourceUrl: item.sourceUrl,
+    })),
   }
 }
 

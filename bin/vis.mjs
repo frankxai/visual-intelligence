@@ -22,6 +22,7 @@ import {
   getAsset,
   getSummary,
   indexProject,
+  importEagleLibrary,
   listScanProfiles,
   listSavedSearches,
   loadConfig,
@@ -67,7 +68,7 @@ const VALUE_FLAGS = new Set([
   '--path', '--uri', '--platform', '--url', '--route', '--caption', '--campaign',
   '--status', '--query', '--folder', '--collection', '--use', '--max-kb',
   '--note', '--notes', '--rating', '--color', '--curation-status', '--name', '--min-rating',
-  '--profile',
+  '--profile', '--library', '--eagle-library',
 ])
 
 function positionalArgs() {
@@ -253,6 +254,38 @@ function cmdScanProfile() {
     console.log('\nMissing profile roots:')
     for (const missing of [...profile.missingMediaRoots, ...profile.missingUsageRoots]) console.log(`  - ${missing}`)
   }
+}
+
+function cmdEagleImport() {
+  const root = projectRoot()
+  ensureConfig(root)
+  const libraries = [...getAllFlags('--library'), ...getAllFlags('--eagle-library')]
+  const result = importEagleLibrary(root, {
+    libraryRoots: libraries,
+    limit: Number(getFlag('--limit', 10000)),
+    execute: hasFlag('--execute'),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log(`\n=== VIS EAGLE IMPORT ${result.dryRun ? 'DRY RUN' : 'COMPLETE'} ===\n`)
+  for (const library of result.libraries) console.log(`${library.exists ? 'OK' : 'NO'} ${library.root}`)
+  console.log(`\nItems:          ${result.items}`)
+  console.log(`Importable:     ${result.importableItems}`)
+  console.log(`Missing assets: ${result.missingAssetFiles}`)
+  console.log(`Folders:        ${result.folders.length}`)
+  console.log(`Tags:           ${result.tags.length}`)
+  if (!result.dryRun) console.log(`Imported:       ${result.imported}`)
+  if (result.sample?.length) {
+    console.log('\nSample:')
+    for (const item of result.sample.slice(0, 10)) {
+      console.log(`  ${item.id}: ${item.name || path.basename(item.assetPath || item.metadataPath)}`)
+      if (item.folders.length) console.log(`    folders: ${item.folders.join(', ')}`)
+      if (item.tags.length) console.log(`    tags: ${item.tags.join(', ')}`)
+    }
+  }
+  if (result.dryRun) console.log('\nDry run only. Add --execute to merge Eagle metadata into VIS.')
 }
 
 function cmdSearch() {
@@ -585,6 +618,8 @@ const commands = {
   index: cmdScan,
   profiles: cmdProfiles,
   'scan-profile': cmdScanProfile,
+  eagle: cmdEagleImport,
+  'eagle-import': cmdEagleImport,
   report: cmdReport,
   usage: cmdUsage,
   search: cmdSearch,
@@ -618,6 +653,8 @@ Commands:
   vis profiles                     List configured scan profiles
   vis scan-profile <name>          Dry-run a named multi-root scan profile
   vis scan-profile <name> --execute Index existing roots from a scan profile
+  vis eagle --library <path>        Dry-run Eagle library metadata import
+  vis eagle --library <path> --execute Merge Eagle metadata into VIS
   vis audit                        Alias for report summary
   vis report                       Print graph summary
   vis report --html                Generate dashboard HTML

@@ -40,6 +40,7 @@ node bin\vis.mjs doctor
 node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos"
 node bin\vis.mjs usage --usage-root "C:\Users\frank\starlight\repos\frankx.ai-vercel-website"
 node bin\vis.mjs scan-profile frank-estate
+node bin\vis.mjs eagle --library "<Google Drive>\Starlight Creative Vault\01_Eagle_Library"
 node bin\vis.mjs dashboard --limit 3000
 ```
 
@@ -118,6 +119,8 @@ node bin\vis.mjs scan --media-root <path>
 node bin\vis.mjs profiles
 node bin\vis.mjs scan-profile frank-estate
 node bin\vis.mjs scan-profile frank-estate --execute
+node bin\vis.mjs eagle --library <eagle-library-path>
+node bin\vis.mjs eagle --library <eagle-library-path> --execute
 node bin\vis.mjs usage --usage-root <path>
 node bin\vis.mjs report
 node bin\vis.mjs dashboard --limit 3000
@@ -166,6 +169,7 @@ Tools:
 - `annotate_asset`
 - `list_saved_searches`
 - `save_search`
+- `import_eagle_library`
 - `record_publication`
 - `export_cloudinary_manifest`
 - `export_nft_metadata_report`

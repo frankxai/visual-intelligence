@@ -13,6 +13,7 @@ import {
   expandPathTokens,
   getSummary,
   indexProject,
+  importEagleLibrary,
   listScanProfiles,
   listSavedSearches,
   loadConfig,
@@ -174,6 +175,59 @@ test('resolves scan profiles with environment-expanded roots', () => {
   } finally {
     if (previous === undefined) delete process.env.VIS_TEST_ROOT
     else process.env.VIS_TEST_ROOT = previous
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('imports Eagle metadata as provider locations, annotations, and collections', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-eagle-'))
+  try {
+    const libraryRoot = path.join(root, 'Creative.library')
+    const itemRoot = path.join(libraryRoot, 'images', 'abc123.info')
+    fs.mkdirSync(itemRoot, { recursive: true })
+    fs.writeFileSync(path.join(itemRoot, 'cover.png'), PNG_1X1)
+    fs.writeFileSync(path.join(itemRoot, 'metadata.json'), JSON.stringify({
+      id: 'abc123',
+      name: 'Arcanea cover',
+      ext: 'png',
+      tags: ['Arcanea', 'Cover'],
+      folders: [{ id: 'folder-1', name: 'Music Covers' }],
+      annotation: 'Use for release art review.',
+      website: 'https://example.com/source',
+    }, null, 2))
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      eagleLibraries: [libraryRoot],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    const dryRun = importEagleLibrary(root)
+    assert.equal(dryRun.dryRun, true)
+    assert.equal(dryRun.items, 1)
+    assert.equal(dryRun.importableItems, 1)
+    assert.deepEqual(dryRun.folders, ['Music Covers'])
+
+    const imported = importEagleLibrary(root, { execute: true })
+    assert.equal(imported.dryRun, false)
+    assert.equal(imported.imported, 1)
+
+    const db = openVisDatabase(root)
+    try {
+      const [asset] = searchAssets(db, { query: 'arcanea cover', maxResults: 5 })
+      assert.ok(asset)
+      assert.ok(asset.tags.includes('eagle'))
+      assert.ok(asset.tags.includes('arcanea'))
+      assert.equal(asset.annotation.notes, 'Use for release art review.')
+      const trace = traceAsset(db, asset.asset_id)
+      assert.equal(trace.asset.locations[0].provider, 'eagle')
+      assert.equal(trace.asset.locations[0].provider_id, 'abc123')
+      assert.equal(trace.asset.collections[0].name, 'Eagle / Music Covers')
+      assert.ok(trace.provenance.some(event => event.event_type === 'eagle-metadata-imported'))
+    } finally {
+      db.close()
+    }
+  } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }
 })

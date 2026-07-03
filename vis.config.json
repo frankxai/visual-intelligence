@@ -16,6 +16,11 @@
   "placeholderImages": ["blog-hero-aurora.svg", "placeholder.png", "default-hero.png"],
   "contentDirs": ["content", "app", "pages", "components", "data", "docs", "lib", "src"],
   "usageRoots": null,
+  "eagleLibraries": [
+    "%USERPROFILE%\\Google Drive\\Starlight Creative Vault\\01_Eagle_Library",
+    "%USERPROFILE%\\My Drive\\Starlight Creative Vault\\01_Eagle_Library",
+    "%USERPROFILE%\\OneDrive\\Starlight Creative Vault\\01_Eagle_Library"
+  ],
   "scanProfiles": {
     "frank-estate": {
       "description": "Frank's local-first VIS estate: Starlight repos, Drive creative vault, Eagle library, mobile inbox, and Music IS proof folders.",

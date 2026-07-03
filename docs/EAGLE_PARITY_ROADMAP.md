@@ -23,6 +23,8 @@ Do not build a full Eagle replacement first. Build the things Eagle, Google Phot
 - Eagle sync docs: https://en.eagle.cool/support/desktop/sync
 - Eagle Google Drive sync support: https://en.eagle.cool/support/article/how-to-sync-eagle-library-using-google-drive
 - Eagle MCP / Skill announcement: https://en.eagle.cool/blog/post/eagle-plugin-mcp-skill
+- Eagle Plugin API item/folder/tag docs: https://developer.eagle.cool/plugin-api/api/item, https://developer.eagle.cool/plugin-api/api/folder, https://developer.eagle.cool/plugin-api/api/tag
+- Eagle Web API V2 docs: https://developer.eagle.cool/web-api
 - Eagle 5 teaser: https://en.eagle.cool/blog/post/eagle5-teaser
 - Immich home: https://immich.app/
 - Immich GitHub feature matrix and AGPL license: https://github.com/immich-app/immich
@@ -79,10 +81,11 @@ Recommended naming:
 
 ### E2: Eagle Adapter
 
-- Read Eagle library metadata safely.
-- Map Eagle folders, tags, notes, source URLs, and local assets into VIS locations and metadata.
+- Read Eagle library metadata safely through `vis eagle --library <path>` or the `import_eagle_library` MCP tool; execute with `--execute` only after dry-run review.
+- Map Eagle folders, tags, notes, source URLs, and local assets into VIS locations, annotations, collections, and provenance.
 - Keep Eagle optional.
 - Avoid copying Eagle proprietary code or mimicking trade dress.
+- Future write/edit operations should use Eagle's official Plugin/Web API rather than direct `metadata.json` edits.
 
 ### E3: Agentic Advantage
 

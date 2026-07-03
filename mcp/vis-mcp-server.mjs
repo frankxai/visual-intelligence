@@ -18,6 +18,7 @@ import {
   findProjectRoot,
   getAsset,
   getSummary,
+  importEagleLibrary,
   listSavedSearches,
   loadConfig,
   mapUsage,
@@ -137,6 +138,27 @@ function toolSaveSearch(args = {}) {
   }))
 }
 
+function toolImportEagleLibrary(args = {}) {
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: importEagleLibrary(db, {
+        libraryRoot: args.library || args.library_root || args.libraryRoot,
+        libraryRoots: args.libraries || args.library_roots || args.libraryRoots || [],
+        limit: args.limit,
+        execute: false,
+      }),
+    }))
+  }
+  return withDb(db => importEagleLibrary(db, {
+    libraryRoot: args.library || args.library_root || args.libraryRoot,
+    libraryRoots: args.libraries || args.library_roots || args.libraryRoots || [],
+    limit: args.limit,
+    execute: args.execute === true && WRITE_ENABLED,
+  }))
+}
+
 function toolRecordPublication(args = {}) {
   if (args.execute === true && !WRITE_ENABLED) {
     return withDb(db => ({
@@ -186,6 +208,7 @@ const TOOL_HANDLERS = {
   annotate_asset: toolAnnotateAsset,
   list_saved_searches: toolListSavedSearches,
   save_search: toolSaveSearch,
+  import_eagle_library: toolImportEagleLibrary,
   record_publication: toolRecordPublication,
   export_cloudinary_manifest: toolCloudinaryManifest,
   export_nft_metadata_report: toolNftMetadataReport,
@@ -262,6 +285,13 @@ const TOOLS = [
     curation_status: stringProp('Curation status filter'),
     min_rating: numberProp('Minimum curation rating'),
     execute: booleanProp('Persist saved search when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('import_eagle_library', 'Dry-run or import Eagle library metadata into VIS. Execute merges Eagle tags, notes, folders, provider locations, and provenance and requires VIS_ENABLE_WRITES=1.', {
+    library: stringProp('Eagle library path'),
+    library_root: stringProp('Eagle library path'),
+    libraries: { type: 'array', items: { type: 'string' }, description: 'Eagle library paths' },
+    limit: numberProp('Maximum Eagle metadata items to inspect'),
+    execute: booleanProp('Persist import when VIS_ENABLE_WRITES=1'),
   }),
   tool('record_publication', 'Dry-run or record where an asset was published. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
     asset_id: stringProp('VIS asset_id'),

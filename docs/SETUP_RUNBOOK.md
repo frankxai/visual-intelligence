@@ -51,6 +51,7 @@ npm run lint
 npm test
 node bin\vis.mjs profiles
 node bin\vis.mjs scan-profile frank-estate
+node bin\vis.mjs eagle --library "<Google Drive>\Starlight Creative Vault\01_Eagle_Library"
 node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos" --json
 node bin\vis.mjs scan --media-root "<Google Drive>\Starlight Creative Vault" --json
 node bin\vis.mjs dashboard --limit 3000
@@ -74,6 +75,8 @@ node bin\vis.mjs doctor --json
 ```
 
 Use the `MCP allowlist from existing roots` line from `node bin\vis.mjs scan-profile frank-estate` when installing VIS MCP on each laptop. Add `--execute` only after the dry-run roots look correct.
+
+Use `node bin\vis.mjs eagle --library "<Eagle library path>" --execute` only after the Eagle dry-run shows the expected item count, folders, tags, and sample paths.
 
 ## Laptop 2 Setup
 
