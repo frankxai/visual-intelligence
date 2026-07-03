@@ -5,6 +5,7 @@ import {
   createCurationPacket,
   findDuplicates,
   findOrphans,
+  findSimilarAssets,
   getSummary,
   listAssets,
   listSavedSearches,
@@ -24,6 +25,7 @@ export function generateDashboard(root, options = {}) {
     const summary = getSummary(db)
     const duplicates = findDuplicates(db, { limit: 20 })
     const orphans = findOrphans(db, { limit: 60 })
+    const similar = findSimilarAssets(db, { limit: 20, minScore: 58 })
     const savedSearches = listSavedSearches(db)
     const packetSamples = Object.fromEntries(
       assets.slice(0, 300).map(asset => [asset.asset_id, createCurationPacket(db, asset.asset_id)]),
@@ -35,7 +37,7 @@ export function generateDashboard(root, options = {}) {
       ...asset,
       tags: parseJson(asset.tags_json, []),
     }))
-    const facets = deriveDashboardFacets(normalizedAssets, duplicates, orphans)
+    const facets = deriveDashboardFacets(normalizedAssets, duplicates, orphans, similar)
     const payload = {
       generatedAt: new Date().toISOString(),
       root,
@@ -44,6 +46,7 @@ export function generateDashboard(root, options = {}) {
       assets: normalizedAssets,
       duplicates,
       orphans,
+      similar,
       savedSearches,
       packetSamples,
       scores,
@@ -284,9 +287,10 @@ function contentType(filePath) {
   return types[ext] || 'application/octet-stream'
 }
 
-function deriveDashboardFacets(assets, duplicates, orphans) {
+function deriveDashboardFacets(assets, duplicates, orphans, similar) {
   const duplicateAssetIds = new Set(duplicates.flatMap(group => (group.assets || []).map(asset => asset.asset_id)))
   const orphanIds = new Set(orphans.map(asset => asset.asset_id))
+  const similarAssetIds = new Set((similar.groups || []).flatMap(group => (group.assets || []).map(asset => asset.asset_id)))
   const smartCollections = [
     ['inbox', 'Inbox / uncurated', asset => asset.approval_status !== 'approved' && asset.approval_status !== 'rejected'],
     ['rights-review', 'Rights review', asset => ['unknown', 'needs-review'].includes(asset.rights_status)],
@@ -294,6 +298,7 @@ function deriveDashboardFacets(assets, duplicates, orphans) {
     ['website-used', 'Used on sites', asset => Number(asset.usage_count || 0) > 0],
     ['orphans', 'Orphans', asset => orphanIds.has(asset.asset_id) || Number(asset.usage_count || 0) === 0],
     ['duplicates', 'Duplicate sample', asset => duplicateAssetIds.has(asset.asset_id)],
+    ['similar-review', 'Similarity review', asset => similarAssetIds.has(asset.asset_id)],
     ['curated', 'Curated', asset => Boolean(asset.annotation)],
     ['favorites', 'Favorites', asset => Number(asset.rating || 0) >= 4 || ['favorite', 'approved'].includes(asset.curation_status)],
     ['unannotated', 'Needs notes', asset => !asset.annotation],
@@ -310,6 +315,7 @@ function deriveDashboardFacets(assets, duplicates, orphans) {
 
   return {
     duplicateAssetIds: [...duplicateAssetIds],
+    similarAssetIds: [...similarAssetIds],
     sources: topCounts(assets.map(sourceLabel), 20),
     folders: topCounts(assets.map(folderLabel), 30),
     tags: topCounts(assets.flatMap(asset => asset.tags || []), 40),
@@ -637,6 +643,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
             <div class="mini-list" id="readyQueue"></div>
           </div>
           <div class="panel">
+            <h3>Similarity review</h3>
+            <div class="mini-list" id="similarQueue"></div>
+          </div>
+          <div class="panel">
             <h3>Duplicate groups</h3>
             <div class="mini-list" id="duplicates"></div>
           </div>
@@ -660,6 +670,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <script>
 const DATA = ${json};
 const DUPLICATE_IDS = new Set(DATA.duplicateAssetIds || []);
+const SIMILAR_IDS = new Set(DATA.similarAssetIds || []);
 let activeCategory = "";
 const selectedIds = new Set();
 const state = { query:"", media:"", readiness:"", source:"", folder:"", smart:"", saved:"", sort:"newest" };
@@ -708,6 +719,7 @@ function smartMatches(asset, id){
   if (id === "website-used") return Number(asset.usage_count || 0) > 0;
   if (id === "orphans") return Number(asset.usage_count || 0) === 0;
   if (id === "duplicates") return DUPLICATE_IDS.has(asset.asset_id);
+  if (id === "similar-review") return SIMILAR_IDS.has(asset.asset_id);
   if (id === "curated") return Boolean(asset.annotation);
   if (id === "favorites") return Number(asset.rating || 0) >= 4 || ["favorite","approved"].includes(asset.curation_status);
   if (id === "unannotated") return !asset.annotation;
@@ -902,6 +914,16 @@ function renderSide(){
   $("readyQueue").innerHTML = ready.length
     ? ready.map(asset => miniAssetItem(asset, "Use")).join("")
     : '<div class="mini-item">No ready website/social sample in this export.</div>';
+  const similarGroups = (DATA.similar && DATA.similar.groups ? DATA.similar.groups : []).slice(0,10);
+  $("similarQueue").innerHTML = similarGroups.length
+    ? similarGroups.map(group => {
+        const assets = group.assets || [];
+        const first = assets[0] || {};
+        const titles = assets.slice(0,3).map(asset => esc(asset.title || asset.asset_id)).join("<br>");
+        const reasons = (group.reason || []).slice(0,4).join(", ");
+        return '<div class="mini-item"><strong>'+esc(group.score + " score, " + assets.length + " assets")+'</strong>'+esc(reasons)+'<br>'+titles+'<br><button data-open-mini="'+esc(first.asset_id || "")+'">Review set</button></div>';
+      }).join("")
+    : '<div class="mini-item">No similarity review groups in this export yet.</div>';
   $("duplicates").innerHTML = DATA.duplicates.length ? DATA.duplicates.map(group => (
     '<div class="mini-item"><strong>'+esc(group.sha256.slice(0,12))+'</strong>'+fmt(group.asset_count)+' assets, '+fmt(group.version_count)+' versions</div>'
   )).join("") : '<div class="mini-item">No duplicate groups in this sample.</div>';

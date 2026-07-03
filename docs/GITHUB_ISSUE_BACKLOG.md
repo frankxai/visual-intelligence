@@ -298,10 +298,13 @@ Body:
 Add natural-language and similarity search without locking VIS to a single provider.
 
 Tasks:
+- [x] Add local dependency-free visual similarity review groups using metadata heuristics.
+- [x] Add CLI and MCP similarity review commands.
+- [x] Add dashboard similarity review queue and smart collection.
 - [ ] Research permissive local embedding options and external adapter options.
 - [ ] Add embedding table/schema.
 - [ ] Add CLI dry-run for embedding selected assets.
-- [ ] Add search UI mode.
+- [ ] Add semantic search UI mode.
 
 Acceptance:
 - [ ] Search can find assets by meaning, not only filename/tag.

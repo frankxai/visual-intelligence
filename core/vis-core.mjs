@@ -1402,6 +1402,80 @@ LIMIT ?`).all(limit).map(normalizeAssetRow)
   }
 }
 
+export function findSimilarAssets(dbOrRoot, options = {}) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const limit = Number(options.limit || 20)
+    const poolLimit = Number(options.poolLimit || options.pool_limit || 10000)
+    const minScore = Number(options.minScore || options.min_score || 58)
+    const ref = options.assetRef || options.asset_ref || options.asset_id || options.assetId || options.uri || options.path || null
+    const query = String(options.query || '').trim()
+    const mediaType = options.mediaType || options.media_type || null
+    const allAssets = listAssets(db, { limit: poolLimit }).filter(asset => !mediaType || asset.media_type === mediaType)
+
+    if (ref || query) {
+      const targetId = ref ? resolveAssetId(db, ref) : searchAssets(db, { query, mediaType, maxResults: 1, poolLimit })[0]?.asset_id
+      const target = allAssets.find(asset => asset.asset_id === targetId)
+      if (!target) return { mode: 'asset', target: null, matches: [] }
+
+      const matches = allAssets
+        .filter(asset => asset.asset_id !== target.asset_id)
+        .map(asset => similarityMatch(target, asset))
+        .filter(match => match.score >= minScore)
+        .sort((a, b) => b.score - a.score || a.asset.title.localeCompare(b.asset.title))
+        .slice(0, limit)
+
+      return {
+        mode: 'asset',
+        min_score: minScore,
+        target: similarAssetSummary(target),
+        matches,
+      }
+    }
+
+    const buckets = new Map()
+    for (const asset of allAssets) {
+      for (const key of similarityBucketKeys(asset)) {
+        if (!buckets.has(key)) buckets.set(key, [])
+        buckets.get(key).push(asset)
+      }
+    }
+
+    const seen = new Set()
+    const groups = []
+    for (const [key, members] of buckets) {
+      if (members.length < 2) continue
+      const seed = members[0]
+      const matches = members
+        .slice(1)
+        .map(asset => similarityMatch(seed, asset))
+        .filter(match => match.score >= minScore)
+        .sort((a, b) => b.score - a.score || a.asset.title.localeCompare(b.asset.title))
+      if (!matches.length) continue
+      const ids = [seed.asset_id, ...matches.map(match => match.asset.asset_id)].sort()
+      const signature = stableId('similar', ids.join('|'))
+      if (seen.has(signature)) continue
+      seen.add(signature)
+      groups.push({
+        group_id: signature,
+        key,
+        score: Math.round(matches.reduce((sum, match) => sum + match.score, 0) / matches.length),
+        reason: uniq(matches.flatMap(match => match.reasons)).slice(0, 8),
+        assets: [similarAssetSummary(seed), ...matches.map(match => match.asset)],
+      })
+    }
+
+    groups.sort((a, b) => b.score - a.score || b.assets.length - a.assets.length)
+    return {
+      mode: 'groups',
+      min_score: minScore,
+      groups: groups.slice(0, limit),
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
 export function scoreAsset(dbOrRoot, assetRef) {
   const { db, close } = resolveDbArgs(dbOrRoot)
   try {
@@ -1773,6 +1847,157 @@ function musicReleaseCodexPrompt(packet, options = {}) {
     `Next action: ${packet.next_action}`,
     'Do not publish, distribute, upload, or schedule externally without human approval and Music IS release gate.',
   ].filter(Boolean).join('\n')
+}
+
+function similarityMatch(a, b) {
+  const reasons = []
+  let score = 0
+  if (a.sha256 && b.sha256 && a.sha256 === b.sha256) {
+    score += 100
+    reasons.push('same SHA-256 content')
+  }
+  if (a.media_type && a.media_type === b.media_type) {
+    score += 18
+    reasons.push(`same media type: ${a.media_type}`)
+  }
+  if (a.category && a.category === b.category) {
+    score += 12
+    reasons.push(`same category: ${a.category}`)
+  }
+  if (a.media_role && a.media_role === b.media_role) {
+    score += 12
+    reasons.push(`same role: ${a.media_role}`)
+  }
+  if (a.workflow && a.workflow === b.workflow) score += 5
+  if (a.mood && a.mood === b.mood) score += 5
+
+  const aspect = aspectDistance(a, b)
+  if (aspect !== null && aspect <= 0.02) {
+    score += 12
+    reasons.push('matching aspect ratio')
+  } else if (aspect !== null && aspect <= 0.08) {
+    score += 6
+    reasons.push('near aspect ratio')
+  }
+
+  if (a.width && a.height && b.width && b.height) {
+    if (a.width === b.width && a.height === b.height) {
+      score += 10
+      reasons.push(`same dimensions: ${a.width}x${a.height}`)
+    } else if (Math.abs(a.width - b.width) <= 64 && Math.abs(a.height - b.height) <= 64) {
+      score += 5
+      reasons.push('near dimensions')
+    }
+  }
+
+  const tagScore = jaccard(assetTags(a), assetTags(b))
+  if (tagScore >= 0.5) {
+    score += Math.round(tagScore * 12)
+    reasons.push('overlapping tags')
+  }
+
+  const titleScore = jaccard(titleTokens(a), titleTokens(b))
+  if (titleScore >= 0.34) {
+    score += Math.round(titleScore * 12)
+    reasons.push('similar title tokens')
+  }
+
+  if (folderLabelForSimilarity(a) && folderLabelForSimilarity(a) === folderLabelForSimilarity(b)) {
+    score += 7
+    reasons.push('same folder lane')
+  }
+
+  if (sizeBucket(a.byte_size) && sizeBucket(a.byte_size) === sizeBucket(b.byte_size)) score += 3
+
+  return {
+    score: Math.min(100, Math.round(score)),
+    reasons: uniq(reasons),
+    asset: similarAssetSummary(b),
+  }
+}
+
+function similarAssetSummary(asset) {
+  return {
+    asset_id: asset.asset_id,
+    visual_uri: asset.visual_uri || `visual://asset/${asset.asset_id}`,
+    title: asset.title || asset.asset_id,
+    media_type: asset.media_type,
+    media_role: asset.media_role || null,
+    workflow: asset.workflow || null,
+    category: asset.category || null,
+    mood: asset.mood || null,
+    tags: assetTags(asset),
+    dimensions: asset.width && asset.height ? `${asset.width}x${asset.height}` : null,
+    size_kb: asset.sizeKB || (asset.byte_size ? Math.round(asset.byte_size / 1024) : null),
+    relative_path: asset.relative_path || asset.primary_path || null,
+    local_path: asset.absolute_path || null,
+    rights_status: asset.rights_status,
+    approval_status: asset.approval_status,
+  }
+}
+
+function similarityBucketKeys(asset) {
+  const tags = assetTags(asset).slice(0, 4)
+  const keys = [
+    ['media', asset.media_type, asset.category, asset.media_role || asset.workflow, aspectBucket(asset)].filter(Boolean).join('|'),
+    ['folder', folderLabelForSimilarity(asset), asset.media_type, aspectBucket(asset)].filter(Boolean).join('|'),
+  ]
+  for (const tag of tags) keys.push(['tag', tag, asset.media_type, asset.category, aspectBucket(asset)].filter(Boolean).join('|'))
+  return uniq(keys.filter(key => key.split('|').length >= 3))
+}
+
+function assetTags(asset) {
+  return asset.tags || parseJson(asset.tags_json, [])
+}
+
+function aspectDistance(a, b) {
+  if (!a.width || !a.height || !b.width || !b.height) return null
+  const arA = a.width / a.height
+  const arB = b.width / b.height
+  return Math.abs(arA - arB) / Math.max(arA, arB)
+}
+
+function aspectBucket(asset) {
+  if (!asset.width || !asset.height) return null
+  const ratio = asset.width / asset.height
+  if (ratio > 1.68) return 'wide'
+  if (ratio < 0.72) return 'vertical'
+  if (ratio >= 0.92 && ratio <= 1.08) return 'square'
+  return ratio > 1 ? 'landscape' : 'portrait'
+}
+
+function sizeBucket(bytes) {
+  const kb = Number(bytes || 0) / 1024
+  if (!kb) return null
+  if (kb < 100) return 'tiny'
+  if (kb < 500) return 'small'
+  if (kb < 2000) return 'medium'
+  if (kb < 8000) return 'large'
+  return 'huge'
+}
+
+function folderLabelForSimilarity(asset) {
+  const rel = slash(asset.relative_path || asset.primary_path || '')
+  const parts = rel.split('/').filter(Boolean)
+  if (parts.length > 2) return parts.slice(0, 2).join('/')
+  if (parts.length > 1) return parts[0]
+  return asset.category || null
+}
+
+function titleTokens(asset) {
+  return uniq(String(asset.title || asset.relative_path || '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(token => token.length > 2 && !['png', 'jpg', 'jpeg', 'webp', 'svg', 'mp4', 'final', 'copy'].includes(token)))
+}
+
+function jaccard(a, b) {
+  const left = new Set(a.filter(Boolean))
+  const right = new Set(b.filter(Boolean))
+  if (!left.size || !right.size) return 0
+  let intersection = 0
+  for (const value of left) if (right.has(value)) intersection++
+  return intersection / new Set([...left, ...right]).size
 }
 
 export function createCurationPacket(dbOrRoot, assetRef, options = {}) {

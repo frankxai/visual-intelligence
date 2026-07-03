@@ -12,6 +12,7 @@ import {
   detectSuitability,
   expandPathTokens,
   getSummary,
+  findSimilarAssets,
   indexProject,
   importEagleLibrary,
   listScanProfiles,
@@ -226,6 +227,45 @@ test('imports Eagle metadata as provider locations, annotations, and collections
       assert.equal(trace.asset.locations[0].provider_id, 'abc123')
       assert.equal(trace.asset.collections[0].name, 'Eagle / Music Covers')
       assert.ok(trace.provenance.some(event => event.event_type === 'eagle-metadata-imported'))
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('finds local visual similarity review groups without an embedding provider', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-similar-'))
+  try {
+    const galleryRoot = path.join(root, 'public', 'images', 'gallery')
+    fs.mkdirSync(galleryRoot, { recursive: true })
+    fs.writeFileSync(path.join(galleryRoot, 'arcanea-blue-portrait.svg'), '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="blue"/></svg>')
+    fs.writeFileSync(path.join(galleryRoot, 'arcanea-green-portrait.svg'), '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="green"/></svg>')
+    fs.writeFileSync(path.join(galleryRoot, 'wide-banner.svg'), '<svg viewBox="0 0 420 120"><rect width="420" height="120" fill="black"/></svg>')
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      mediaRoots: ['public/images'],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    indexProject({ root })
+    const db = openVisDatabase(root)
+    try {
+      const groups = findSimilarAssets(db, { minScore: 50, limit: 10 })
+      assert.equal(groups.mode, 'groups')
+      assert.ok(groups.groups.some(group =>
+        group.assets.some(asset => asset.title === 'arcanea-blue-portrait') &&
+        group.assets.some(asset => asset.title === 'arcanea-green-portrait')),
+      )
+
+      const [target] = searchAssets(db, { query: 'blue portrait', maxResults: 1 })
+      const matches = findSimilarAssets(db, { assetRef: target.asset_id, minScore: 50, limit: 5 })
+      assert.equal(matches.mode, 'asset')
+      assert.equal(matches.target.asset_id, target.asset_id)
+      assert.ok(matches.matches.some(match => match.asset.title === 'arcanea-green-portrait'))
+      assert.ok(matches.matches[0].reasons.length > 0)
     } finally {
       db.close()
     }

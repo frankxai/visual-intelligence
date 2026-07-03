@@ -78,6 +78,7 @@ Recommended naming:
 - Audio preview and Music IS packet.
 - Website/social action packets.
 - Local curation memory for notes, tags, ratings, color labels, collections, and saved searches.
+- Local similarity review groups exposed in CLI, MCP, dashboard queue, and smart collection.
 
 ### E2: Eagle Adapter
 

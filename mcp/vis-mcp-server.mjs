@@ -15,6 +15,7 @@ import {
   exportNftMetadataReport,
   findDuplicates,
   findOrphans,
+  findSimilarAssets,
   findProjectRoot,
   getAsset,
   getSummary,
@@ -82,6 +83,17 @@ function toolFindDuplicates(args = {}) {
 
 function toolFindOrphans(args = {}) {
   return withDb(db => findOrphans(db, { limit: args.limit || 100 }))
+}
+
+function toolFindSimilarAssets(args = {}) {
+  return withDb(db => findSimilarAssets(db, {
+    assetRef: args.asset_id || args.assetId || args.uri || args.path || null,
+    query: args.query,
+    mediaType: args.media_type || args.mediaType,
+    minScore: args.min_score || args.minScore,
+    poolLimit: args.pool_limit || args.poolLimit,
+    limit: args.limit || 20,
+  }))
 }
 
 function toolScoreAsset(args = {}) {
@@ -219,6 +231,7 @@ const TOOL_HANDLERS = {
   map_usage: toolMapUsage,
   find_duplicates: toolFindDuplicates,
   find_orphans: toolFindOrphans,
+  find_similar_assets: toolFindSimilarAssets,
   score_asset: toolScoreAsset,
   score_collection: toolScoreCollection,
   create_curation_packet: toolCreateCurationPacket,
@@ -266,6 +279,16 @@ const TOOLS = [
   }),
   tool('find_duplicates', 'Find duplicate content groups by SHA-256.', { limit: numberProp('Result limit') }),
   tool('find_orphans', 'Find indexed assets with no detected route/content usage.', { limit: numberProp('Result limit') }),
+  tool('find_similar_assets', 'Find visually adjacent assets or review groups using local metadata heuristics until embedding providers are configured.', {
+    asset_id: stringProp('Optional VIS asset_id to use as the similarity target'),
+    uri: stringProp('Optional visual://asset/{asset_id} target'),
+    path: stringProp('Optional local or relative path target'),
+    query: stringProp('Optional search query; first result becomes the similarity target'),
+    media_type: stringProp('Optional image, video, or audio filter'),
+    min_score: numberProp('Minimum similarity score, default 58'),
+    pool_limit: numberProp('Maximum asset pool to inspect'),
+    limit: numberProp('Result limit'),
+  }),
   tool('score_asset', 'Score one asset for rights, approval, provenance, usage, and eval readiness.', {
     asset_id: stringProp('VIS asset_id'),
     uri: stringProp('visual://asset/{asset_id}'),

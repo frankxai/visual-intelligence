@@ -34,6 +34,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add dry-run-first Eagle metadata adapter for local library tags, notes, source URLs, folders, collections, provider locations, and provenance.
 - [x] Add Music IS release packet preflight for audio, cover, Canvas/video, proof docs, prompts, rights, approval, CLI, MCP, and Codex handoff.
 - [x] Add PWA-ready static cockpit shell, service worker, manifest, and local media preview server.
+- [x] Add first local similarity review groups with CLI, MCP, dashboard queue, and smart collection.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.
@@ -50,7 +51,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [ ] Add Google Photos/manual mobile inbox intake workflow.
 - [ ] Verify Music IS release packets against Frank's real proof folders after next estate scan.
 - [ ] Add agent run logging sidecars for generated media.
-- [ ] Add semantic search and visual similarity using a permissive local model or external adapter.
+- [ ] Add semantic embeddings and stronger visual similarity using a permissive local model or external adapter.
 
 ## Later
 

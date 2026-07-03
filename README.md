@@ -23,6 +23,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Indexes image, video, and audio files into stable `asset_id`s and immutable `version_id`s.
 - Stores assets, versions, locations, prompt sidecars, usage edges, publications, evaluations, rights, and approval state in SQLite.
 - Detects duplicate content by SHA-256 and samples orphan assets with no detected usage.
+- Finds local similarity review groups with dependency-free metadata heuristics while semantic embeddings remain adapter-planned.
 - Scans website/content routes to map where assets appear.
 - Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
 - Builds Music IS handoff packets that group audio, cover art, Canvas/video, proof docs, prompts, rights, approval, and next release-gate action.
@@ -132,6 +133,8 @@ node bin\vis.mjs trace <asset_id|visual://asset/...|path>
 node bin\vis.mjs packet <asset_id|visual://asset/...|path> --use "homepage hero"
 node bin\vis.mjs duplicates
 node bin\vis.mjs orphans
+node bin\vis.mjs similar
+node bin\vis.mjs similar <asset_id|visual://asset/...|path|query>
 node bin\vis.mjs score <asset_id>
 node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --collection "Homepage candidates"
 node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --collection "Homepage candidates" --execute
@@ -169,6 +172,7 @@ Tools:
 - `map_usage`
 - `find_duplicates`
 - `find_orphans`
+- `find_similar_assets`
 - `score_asset`
 - `score_collection`
 - `create_curation_packet`

@@ -18,6 +18,7 @@ import {
   exportNftMetadataReport,
   findDuplicates,
   findOrphans,
+  findSimilarAssets,
   findProjectRoot,
   getAsset,
   getSummary,
@@ -70,7 +71,7 @@ const VALUE_FLAGS = new Set([
   '--path', '--uri', '--platform', '--url', '--route', '--caption', '--campaign',
   '--status', '--query', '--folder', '--collection', '--use', '--max-kb',
   '--note', '--notes', '--rating', '--color', '--curation-status', '--name', '--min-rating',
-  '--profile', '--library', '--eagle-library', '--port', '--host',
+  '--profile', '--library', '--eagle-library', '--port', '--host', '--min-score', '--pool-limit',
 ])
 
 function positionalArgs() {
@@ -387,6 +388,43 @@ function cmdOrphans() {
   }
 }
 
+function cmdSimilar() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri')
+  const results = findSimilarAssets(root, {
+    assetRef: ref,
+    query: getFlag('--query') || (!ref ? positionalArgs().join(' ') : ''),
+    mediaType: getFlag('--media-type'),
+    minScore: Number(getFlag('--min-score', 58)),
+    poolLimit: Number(getFlag('--pool-limit', 10000)),
+    limit: Number(getFlag('--limit', 20)),
+  })
+  if (hasFlag('--json')) {
+    printJson(results)
+    return
+  }
+  if (results.mode === 'asset') {
+    console.log(`\n=== VIS SIMILAR ASSETS: ${results.matches.length} ===\n`)
+    if (!results.target) {
+      console.log('No target asset found.')
+      return
+    }
+    console.log(`Target: ${results.target.visual_uri} | ${results.target.title}`)
+    for (const match of results.matches) {
+      console.log(`${match.score} | ${match.asset.visual_uri} | ${match.asset.title}`)
+      console.log(`  ${match.reasons.join(', ')}`)
+      console.log(`  ${match.asset.relative_path || match.asset.local_path || ''}`)
+    }
+    return
+  }
+  console.log(`\n=== VIS SIMILARITY REVIEW GROUPS: ${results.groups.length} ===\n`)
+  for (const group of results.groups) {
+    console.log(`${group.group_id} | score ${group.score} | ${group.assets.length} assets`)
+    console.log(`  ${group.reason.join(', ')}`)
+    for (const asset of group.assets.slice(0, 5)) console.log(`  - ${asset.visual_uri} | ${asset.title}`)
+  }
+}
+
 function cmdScore() {
   const root = projectRoot()
   const ref = positionalArgs()[0]
@@ -679,6 +717,8 @@ const commands = {
   atlas: cmdDashboard,
   duplicates: cmdDuplicates,
   orphans: cmdOrphans,
+  similar: cmdSimilar,
+  'find-similar': cmdSimilar,
   score: cmdScore,
   annotate: cmdAnnotate,
   'saved-searches': cmdSavedSearches,
@@ -718,6 +758,7 @@ Commands:
   vis packet <asset|path|uri>       Print Codex-ready curation packet
   vis duplicates                   List duplicate content groups
   vis orphans                      List assets with no detected usage
+  vis similar [asset|query]         Find visually adjacent assets and review groups
   vis score [asset]                Score asset or collection readiness
   vis annotate <asset>             Dry-run or save tags, notes, rating, color, collection
   vis saved-searches               List saved smart-folder searches
