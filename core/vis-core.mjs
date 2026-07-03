@@ -1476,6 +1476,58 @@ export function findSimilarAssets(dbOrRoot, options = {}) {
   }
 }
 
+export function assetPublishGate(asset = {}, options = {}) {
+  const intendedUse = options.intendedUse || options.intended_use || 'public use'
+  const use = String(intendedUse || '').toLowerCase()
+  const rightsStatus = asset.rights_status || 'unknown'
+  const approvalStatus = asset.approval_status || 'candidate'
+  const mediaType = asset.media_type || 'unknown'
+  const byteSize = Number(asset.byte_size || (asset.sizeKB ? asset.sizeKB * 1024 : 0) || asset.versions?.[0]?.byte_size || 0)
+  const promptCount = Array.isArray(asset.prompts) ? asset.prompts.length : Number(asset.prompt_count || 0)
+  const evalCount = Array.isArray(asset.evals) ? asset.evals.length : Number(asset.eval_count || 0)
+  const blockers = []
+  const warnings = []
+  const allowedRights = new Set(['owned', 'generated-owned', 'licensed'])
+
+  if (rightsStatus === 'blocked') blockers.push('rights status is blocked')
+  else if (rightsStatus === 'unknown' || rightsStatus === 'needs-review') blockers.push('rights status requires human review')
+  else if (!allowedRights.has(rightsStatus)) blockers.push(`rights status is not public-ready: ${rightsStatus}`)
+
+  if (approvalStatus === 'rejected') blockers.push('approval status is rejected')
+  else if (approvalStatus !== 'approved') blockers.push(`approval status must be approved before public use: ${approvalStatus}`)
+
+  if (use.includes('website') && mediaType === 'image') {
+    if (byteSize > 4 * 1024 * 1024) warnings.push('large master file; create an optimized derivative before website use')
+    if (!asset.width && !asset.versions?.[0]?.width) warnings.push('image dimensions missing; verify crop and responsive fit')
+  }
+  if (use.includes('social') && !['image', 'video', 'audio'].includes(mediaType)) warnings.push(`social use needs image, video, or audio media, not ${mediaType}`)
+  if ((use.includes('nft') || use.includes('mint')) && mediaType !== 'image') blockers.push(`NFT metadata export expects image assets, not ${mediaType}`)
+  if (promptCount === 0) warnings.push('prompt/provenance sidecar missing')
+  if (evalCount === 0) warnings.push('quality evaluation missing')
+
+  const allowed = blockers.length === 0
+  const status = allowed ? (warnings.length ? 'review' : 'ready') : 'blocked'
+  const nextAction = allowed
+    ? warnings[0] || 'Ready for human-approved derivative, publication, or handoff.'
+    : blockers[0] === 'rights status requires human review'
+      ? 'Run VIS rights review and set rights to owned, generated-owned, or licensed before public use.'
+      : blockers[0] === 'approval status is rejected'
+        ? 'Replace the asset or reopen a human approval review before public use.'
+        : blockers[0] || 'Resolve public-use blockers before exporting.'
+
+  return {
+    status,
+    allowed,
+    intended_use: intendedUse,
+    rights_status: rightsStatus,
+    approval_status: approvalStatus,
+    blockers,
+    warnings,
+    next_action: nextAction,
+    human_gate: true,
+  }
+}
+
 export function scoreAsset(dbOrRoot, assetRef) {
   const { db, close } = resolveDbArgs(dbOrRoot)
   try {
@@ -1643,6 +1695,7 @@ function buildMusicReleasePackets(db) {
       vis_role: 'media discovery, provenance, cross-usage trace, and agent handoff',
       gate_status: gate.status,
       gate_verdict: gate.verdict,
+      publish_gate: gate.publishGate,
       missing: gate.missing,
       warnings: gate.warnings,
       next_action: gate.nextAction,
@@ -1780,9 +1833,11 @@ function musicReleaseGate({ group, assetsByRole, docs, prompts }) {
   const missing = []
   const warnings = []
   const docKinds = new Set(docs.map(doc => doc.kind))
+  const publishGates = group.map(asset => assetPublishGate(asset, { intendedUse: 'Music IS release packet' }))
   const blocked = group.filter(asset => asset.rights_status === 'blocked')
   const rightsUnknown = group.filter(asset => ['unknown', 'needs-review'].includes(asset.rights_status))
   const approved = group.filter(asset => asset.approval_status === 'approved')
+  const publicUseBlocked = publishGates.filter(gate => !gate.allowed)
 
   if (!assetsByRole.audio.length) missing.push('source audio file')
   if (!assetsByRole.songMasters.length) warnings.push('no explicit song-master role detected; verify master in Music IS')
@@ -1795,6 +1850,7 @@ function musicReleaseGate({ group, assetsByRole, docs, prompts }) {
   if (!docKinds.has('release-checklist')) missing.push('Music IS release checklist')
   if (rightsUnknown.length) missing.push('rights status review for media assets')
   if (!approved.length) missing.push('approved media asset')
+  if (publicUseBlocked.length) missing.push('public-use gate for release media assets')
   if (blocked.length) warnings.push('blocked rights asset present')
 
   const status = blocked.length ? 'refuse' : missing.length ? 'revise' : 'green-light'
@@ -1807,6 +1863,11 @@ function musicReleaseGate({ group, assetsByRole, docs, prompts }) {
         : 'Release packet needs curation before Music IS distribution gate.',
     missing,
     warnings,
+    publishGate: {
+      status: publicUseBlocked.length ? 'blocked' : 'ready',
+      blocked_assets: publicUseBlocked.length,
+      warnings: uniq(publishGates.flatMap(gate => gate.warnings)),
+    },
     nextAction: status === 'green-light'
       ? 'Open Music IS release checklist and prepare human-approved distribution packet.'
       : `Resolve: ${missing[0] || warnings[0] || 'Music IS review'}`,
@@ -1825,6 +1886,7 @@ function musicAssetSummary(asset) {
     relative_path: asset.relative_path,
     rights_status: asset.rights_status,
     approval_status: asset.approval_status,
+    publish_gate: assetPublishGate(asset, { intendedUse: 'Music IS release packet' }),
     dimensions: asset.width && asset.height ? `${asset.width}x${asset.height}` : null,
     duration_seconds: asset.duration_seconds || null,
     size_kb: asset.sizeKB,
@@ -1841,6 +1903,7 @@ function musicReleaseCodexPrompt(packet, options = {}) {
     options.intendedUse || options.intended_use ? `Intended use: ${options.intendedUse || options.intended_use}` : null,
     `Gate status: ${packet.gate_status}`,
     `Gate verdict: ${packet.gate_verdict}`,
+    packet.publish_gate ? `Public-use gate: ${packet.publish_gate.status}; blocked assets ${packet.publish_gate.blocked_assets || 0}` : null,
     packet.missing.length ? `Missing: ${packet.missing.join(', ')}` : null,
     packet.warnings.length ? `Warnings: ${packet.warnings.join(', ')}` : null,
     `Assets: ${packet.counts.assets}; audio ${packet.counts.audio}; covers ${packet.counts.covers}; canvas/video ${packet.counts.canvas + packet.counts.videos}; docs ${packet.counts.documents}`,
@@ -2014,6 +2077,7 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
     const customTags = parseJson(asset.annotation?.custom_tags_json, [])
     const uri = `visual://asset/${asset.asset_id}`
     const isMusic = workflow === 'music-release' || asset.media_type === 'audio' || mediaRole === 'cover-art' || mediaRole === 'music-canvas'
+    const publishGate = assetPublishGate(asset, { intendedUse: options.intendedUse || 'agent handoff' })
     return {
       asset_id: asset.asset_id,
       visual_uri: uri,
@@ -2038,6 +2102,7 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
       duration_seconds: latestVersion.duration_seconds || null,
       rights_status: asset.rights_status,
       approval_status: asset.approval_status,
+      publish_gate: publishGate,
       tags: uniq([...parseJson(asset.tags_json, []), ...customTags]),
       prompt: asset.prompts[0]?.prompt_text || null,
       provenance_summary: {
@@ -2064,6 +2129,9 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
         options.intendedUse ? `Intended use: ${options.intendedUse}` : null,
         isMusic ? 'Music handoff: keep Music IS as the release source of truth; use VIS for provenance, discovery, and linked asset packets.' : null,
         `Rights: ${asset.rights_status}; Approval: ${asset.approval_status}`,
+        `Public-use gate: ${publishGate.status}; ${publishGate.allowed ? 'allowed after human approval' : 'blocked until review'}`,
+        publishGate.blockers.length ? `Gate blockers: ${publishGate.blockers.join('; ')}` : null,
+        publishGate.warnings.length ? `Gate warnings: ${publishGate.warnings.join('; ')}` : null,
         score?.nextAction ? `Next action: ${score.nextAction}` : null,
       ].filter(Boolean).join('\n'),
     }
@@ -2374,6 +2442,8 @@ export function recordPublication(dbOrRoot, args = {}) {
   try {
     const assetId = resolveAssetId(db, args.assetId || args.asset_id || args.asset || args.path || args.uri)
     if (!assetId) throw new Error('Asset not found for publication record')
+    const asset = getAsset(db, assetId, { compact: true })
+    const publishGate = assetPublishGate(asset, { intendedUse: `${args.platform || 'unknown'} publication record` })
     const payload = {
       publicationId: args.publicationId || stableId('pub', `${assetId}:${args.platform}:${args.url || args.route}:${Date.now()}`),
       assetId,
@@ -2387,10 +2457,18 @@ export function recordPublication(dbOrRoot, args = {}) {
       metrics: args.metrics || {},
       publishedAt: args.publishedAt || args.published_at || null,
       createdAt: nowIso(),
+      publishGate,
     }
     const dryRun = args.execute !== true && args.dryRun !== false
     if (dryRun) {
-      return { dryRun: true, wouldRecord: payload, note: 'Pass execute: true to persist this publication record.' }
+      return {
+        dryRun: true,
+        wouldRecord: payload,
+        publish_gate: publishGate,
+        note: publishGate.allowed
+          ? 'Pass execute: true to persist this publication record.'
+          : 'Publication can be recorded for traceability, but public use remains blocked until the gate is resolved.',
+      }
     }
     db.prepare(`
 INSERT INTO publication (publication_id, asset_id, version_id, platform, url, route, caption, campaign, status, metrics_json, published_at, created_at)
@@ -2432,22 +2510,38 @@ export function exportCloudinaryManifest(dbOrRoot, options = {}) {
       mediaType: options.mediaType,
       maxResults: options.limit || 500,
     })
+    const manifestAssets = assets.map(asset => {
+      const publishGate = assetPublishGate(asset, { intendedUse: 'Cloudinary production delivery' })
+      return {
+        asset_id: asset.asset_id,
+        local_path: asset.absolute_path,
+        public_id: `${options.folder || 'visual-intelligence'}/${slugify(asset.category || 'asset')}/${slugify(asset.title || asset.asset_id)}`,
+        tags: parseJson(asset.tags_json, []),
+        publish_gate: publishGate,
+        upload_ready: publishGate.allowed,
+        context: {
+          rights_status: asset.rights_status,
+          approval_status: asset.approval_status,
+          publish_gate_status: publishGate.status,
+          visual_uri: `visual://asset/${asset.asset_id}`,
+        },
+      }
+    })
+    const guarded = manifestAssets.filter(asset => !asset.upload_ready)
+    const exportable = manifestAssets.filter(asset => asset.upload_ready || options.includeUnsafe === true || options.include_unsafe === true)
     return {
       dryRun: true,
       provider: 'cloudinary',
       folder: options.folder || 'visual-intelligence',
       generatedAt: nowIso(),
-      assets: assets.map(asset => ({
-        asset_id: asset.asset_id,
-        local_path: asset.absolute_path,
-        public_id: `${options.folder || 'visual-intelligence'}/${slugify(asset.category || 'asset')}/${slugify(asset.title || asset.asset_id)}`,
-        tags: parseJson(asset.tags_json, []),
-        context: {
-          rights_status: asset.rights_status,
-          approval_status: asset.approval_status,
-          visual_uri: `visual://asset/${asset.asset_id}`,
-        },
-      })),
+      guard: {
+        candidates: manifestAssets.length,
+        exportable: exportable.length,
+        guarded: guarded.length,
+        note: 'Unsafe assets are excluded from the Cloudinary upload manifest by default. Review rights and approval before upload.',
+      },
+      assets: exportable,
+      guarded,
     }
   } finally {
     if (close) db.close()
@@ -2463,16 +2557,14 @@ export function exportNftMetadataReport(dbOrRoot, options = {}) {
       mediaType: 'image',
       maxResults: options.limit || 200,
     })
-    return {
-      dryRun: true,
-      collection: options.collection || options.category || 'draft-collection',
-      generatedAt: nowIso(),
-      readiness: scoreCollection(db, options.collection || null),
-      items: assets.map((asset, index) => ({
+    const items = assets.map((asset, index) => {
+      const publishGate = assetPublishGate(asset, { intendedUse: 'NFT metadata and mint readiness' })
+      return {
         name: asset.title || `Asset ${index + 1}`,
         description: `VIS-curated asset ${asset.asset_id}`,
         image: asset.public_path || asset.relative_path,
         external_url: null,
+        mint_ready: publishGate.allowed,
         attributes: [
           { trait_type: 'Category', value: asset.category || 'unknown' },
           { trait_type: 'Mood', value: asset.mood || 'unknown' },
@@ -2485,7 +2577,28 @@ export function exportNftMetadataReport(dbOrRoot, options = {}) {
           local_path: asset.absolute_path,
           version_id: asset.version_id,
           sha256: asset.sha256,
+          publish_gate: publishGate,
         },
+      }
+    })
+    const guarded = items.filter(item => !item.mint_ready)
+    return {
+      dryRun: true,
+      collection: options.collection || options.category || 'draft-collection',
+      generatedAt: nowIso(),
+      readiness: scoreCollection(db, options.collection || null),
+      guard: {
+        candidates: items.length,
+        mint_ready: items.length - guarded.length,
+        guarded: guarded.length,
+        note: 'Minting remains human-gated. Unknown, blocked, or unapproved assets are marked not mint-ready.',
+      },
+      items,
+      guarded_items: guarded.map(item => ({
+        name: item.name,
+        asset_id: item.vis.asset_id,
+        visual_uri: item.vis.visual_uri,
+        publish_gate: item.vis.publish_gate,
       })),
       gates: [
         'Human approval required before minting.',

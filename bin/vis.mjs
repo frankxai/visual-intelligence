@@ -576,6 +576,7 @@ function cmdCloudinaryManifest() {
     mediaType: getFlag('--media-type'),
     folder: getFlag('--folder') || 'visual-intelligence',
     limit: Number(getFlag('--limit', 500)),
+    includeUnsafe: hasFlag('--include-unsafe'),
   }))
 }
 
@@ -823,7 +824,7 @@ Commands:
   vis music-releases               List Music IS release media packets
   vis music-packet [release|asset]  Print Music IS handoff packet
   vis record-publication --asset <id> --platform <x> [--url <url>] [--execute]
-  vis cloudinary-manifest          Dry-run Cloudinary upload manifest
+  vis cloudinary-manifest          Dry-run Cloudinary upload manifest; guarded assets excluded by default
   vis nft-report                   Dry-run NFT metadata readiness report
   vis optimize                     Dry-run oversized asset report
   vis doctor                       Check local install, graph, dashboard, MCP info

@@ -40,7 +40,7 @@ function ghJson(ghArgs) {
 
 function issueBody(issue) {
   const taskList = issue.tasks.map(taskCheckbox).join("\n");
-  const acceptanceList = issue.acceptance.map((item) => `- [ ] ${item}`).join("\n");
+  const acceptanceList = issue.acceptance.map(taskCheckbox).join("\n");
   const labels = issue.labels.map((label) => `\`${label}\``).join(", ");
 
   return `Synced from \`docs/VIS_TASK_REGISTRY.json\`. Update the registry first, then run \`npm run tasks:sync -- --execute\`.

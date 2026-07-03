@@ -12,6 +12,8 @@ import {
   detectMediaRole,
   detectSuitability,
   expandPathTokens,
+  exportCloudinaryManifest,
+  exportNftMetadataReport,
   getSummary,
   findSimilarAssets,
   indexProject,
@@ -304,6 +306,23 @@ test('reviews asset rights and approval with dry-run and provenance gates', () =
     const db = openVisDatabase(root)
     try {
       const [asset] = searchAssets(db, { query: 'release cover', maxResults: 1 })
+      const unsafePacket = createCurationPacket(db, asset.asset_id, { intendedUse: 'website hero' })
+      assert.equal(unsafePacket.publish_gate.allowed, false)
+      assert.match(unsafePacket.codex_prompt, /Public-use gate: blocked/)
+
+      const unsafePublication = recordPublication(db, {
+        assetId: asset.asset_id,
+        platform: 'website',
+        route: '/release',
+      })
+      assert.equal(unsafePublication.publish_gate.allowed, false)
+      assert.match(unsafePublication.note, /public use remains blocked/)
+
+      const guardedManifest = exportCloudinaryManifest(db, { query: 'release cover' })
+      assert.equal(guardedManifest.assets.length, 0)
+      assert.equal(guardedManifest.guarded.length, 1)
+      assert.equal(guardedManifest.guard.exportable, 0)
+
       const dryRun = reviewAssets(db, [asset.asset_id], {
         rightsStatus: 'generated-owned',
         approvalStatus: 'approved',
@@ -325,6 +344,17 @@ test('reviews asset rights and approval with dry-run and provenance gates', () =
       assert.equal(row.rights_status, 'generated-owned')
       assert.equal(row.approval_status, 'approved')
       assert.equal(db.prepare("SELECT COUNT(*) AS count FROM provenance_event WHERE event_type = 'asset-governance-reviewed'").get().count, 1)
+
+      const safePacket = createCurationPacket(db, asset.asset_id, { intendedUse: 'website hero' })
+      assert.equal(safePacket.publish_gate.allowed, true)
+      const safeManifest = exportCloudinaryManifest(db, { query: 'release cover' })
+      assert.equal(safeManifest.assets.length, 1)
+      assert.equal(safeManifest.guarded.length, 0)
+      assert.equal(safeManifest.assets[0].upload_ready, true)
+      const nftReport = exportNftMetadataReport(db, { query: 'release cover', collection: 'test-drop' })
+      assert.equal(nftReport.items.length, 1)
+      assert.equal(nftReport.items[0].mint_ready, true)
+      assert.equal(nftReport.guard.guarded, 0)
     } finally {
       db.close()
     }

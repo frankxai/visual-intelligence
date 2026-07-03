@@ -37,6 +37,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add first local similarity review groups with CLI, MCP, dashboard queue, and smart collection.
 - [x] Add dry-run-first batch curation for selected assets across dashboard, CLI, and MCP.
 - [x] Add dry-run-first rights and approval review for selected assets across dashboard, CLI, and MCP.
+- [x] Add public-use gates so unsafe assets stay visible but are excluded from Cloudinary/NFT/export-ready handoffs by default.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.

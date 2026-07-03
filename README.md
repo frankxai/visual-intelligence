@@ -28,6 +28,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
 - Supports dry-run-first batch curation for Eagle-style multi-select review, tagging, and collection moves.
 - Supports dry-run-first rights and approval review with provenance before website, social, NFT, or music release use.
+- Guards public-use packets and export manifests so unknown, blocked, or unapproved assets stay visible but not publish-ready.
 - Builds Music IS handoff packets that group audio, cover art, Canvas/video, proof docs, prompts, rights, approval, and next release-gate action.
 - Generates a static dashboard/PWA shell for fast visual browsing, local media previews, smart collections, and asset detail drawers.
 - Exposes MCP resources and tools for agents via `visual://asset/{asset_id}`.
@@ -152,6 +153,7 @@ node bin\vis.mjs serve-dashboard --port 3766
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum --execute
 node bin\vis.mjs cloudinary-manifest --category brand
+node bin\vis.mjs cloudinary-manifest --category brand --include-unsafe
 node bin\vis.mjs nft-report --query "anime character"
 node bin\vis.mjs optimize --max-kb 2000
 node bin\vis.mjs mcp-info

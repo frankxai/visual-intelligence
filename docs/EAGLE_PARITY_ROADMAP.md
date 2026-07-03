@@ -81,6 +81,7 @@ Recommended naming:
 - Local similarity review groups exposed in CLI, MCP, dashboard queue, and smart collection.
 - Dry-run-first batch curation so selected assets can be tagged, rated, colored, moved into collections, or queued for review without accidental writes.
 - Human-gated rights and approval review so website, social, NFT, and Music IS handoffs cannot quietly treat unknown assets as publishable.
+- Public-use gates in packets and export manifests so Cloudinary, NFT, website, social, and Music IS handoffs surface blockers before any external action.
 
 ### E2: Eagle Adapter
 

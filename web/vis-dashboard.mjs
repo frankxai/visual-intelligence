@@ -2,6 +2,7 @@ import fs from 'fs'
 import http from 'http'
 import path from 'path'
 import {
+  assetPublishGate,
   createCurationPacket,
   findDuplicates,
   findOrphans,
@@ -36,6 +37,7 @@ export function generateDashboard(root, options = {}) {
     const normalizedAssets = assets.map(asset => ({
       ...asset,
       tags: parseJson(asset.tags_json, []),
+      publish_gate: assetPublishGate(asset, { intendedUse: 'dashboard public handoff' }),
     }))
     const facets = deriveDashboardFacets(normalizedAssets, duplicates, orphans, similar)
     const payload = {
@@ -305,8 +307,8 @@ function deriveDashboardFacets(assets, duplicates, orphans, similar) {
     ['music', 'Music / audio', asset => asset.workflow === 'music-release' || asset.media_type === 'audio' || (asset.tags || []).includes('music')],
     ['video-motion', 'Video / motion', asset => asset.media_type === 'video'],
     ['nft-web3', 'NFT / Web3', asset => asset.category === 'nft-web3' || (asset.tags || []).includes('web3')],
-    ['website-ready', 'Website ready', asset => asset.media_type === 'image' && asset.rights_status !== 'blocked' && Number(asset.sizeKB || 0) <= 2000],
-    ['social-ready', 'Social ready', asset => ['image', 'video'].includes(asset.media_type) && asset.rights_status !== 'blocked'],
+    ['website-ready', 'Website ready', asset => asset.media_type === 'image' && asset.publish_gate?.allowed === true && Number(asset.sizeKB || 0) <= 2000],
+    ['social-ready', 'Social ready', asset => ['image', 'video'].includes(asset.media_type) && asset.publish_gate?.allowed === true],
   ].map(([id, label, matcher]) => ({
     id,
     label,
@@ -701,6 +703,7 @@ function assetHay(asset){
   return [asset.asset_id, asset.title, asset.relative_path, asset.public_path, asset.category, asset.mood, asset.rights_status, asset.approval_status, asset.media_role, asset.workflow, asset.curation_status, asset.annotation_notes, sourceLabel(asset), folderLabel(asset), ...(asset.tags || [])].join(" ").toLowerCase();
 }
 function readiness(asset){
+  if (asset.publish_gate && asset.publish_gate.allowed === false) return asset.rights_status === "blocked" || asset.approval_status === "rejected" ? "blocked" : "unknown";
   if (asset.approval_status === "approved") return "approved";
   if (asset.rights_status === "unknown" || asset.rights_status === "needs-review") return "unknown";
   if ((asset.usage_count || 0) > 0) return "used";
@@ -709,6 +712,7 @@ function readiness(asset){
 function readinessPill(asset){
   const r = readiness(asset);
   if (r === "approved") return '<span class="pill good">approved</span>';
+  if (r === "blocked") return '<span class="pill bad">blocked</span>';
   if (r === "unknown") return '<span class="pill warn">rights</span>';
   if (r === "used") return '<span class="pill good">used</span>';
   return '<span class="pill">orphan</span>';
@@ -728,8 +732,8 @@ function smartMatches(asset, id){
   if (id === "music") return asset.workflow === "music-release" || asset.media_type === "audio" || (asset.tags || []).includes("music");
   if (id === "video-motion") return asset.media_type === "video";
   if (id === "nft-web3") return asset.category === "nft-web3" || (asset.tags || []).includes("web3");
-  if (id === "website-ready") return asset.media_type === "image" && asset.rights_status !== "blocked" && Number(asset.sizeKB || 0) <= 2000;
-  if (id === "social-ready") return ["image","video"].includes(asset.media_type) && asset.rights_status !== "blocked";
+  if (id === "website-ready") return asset.media_type === "image" && asset.publish_gate?.allowed === true && Number(asset.sizeKB || 0) <= 2000;
+  if (id === "social-ready") return ["image","video"].includes(asset.media_type) && asset.publish_gate?.allowed === true;
   return true;
 }
 function savedSearchMatches(asset, id){
@@ -791,7 +795,21 @@ function packetFor(asset){
     media_type: asset.media_type,
     media_role: asset.media_role,
     workflow: asset.workflow,
-    codex_prompt: "Use this VIS asset: " + asset.visual_uri + "\\nLocal path: " + (asset.absolute_path || "")
+    publish_gate: asset.publish_gate,
+    codex_prompt: "Use this VIS asset: " + asset.visual_uri + "\\nLocal path: " + (asset.absolute_path || "") + "\\nPublic-use gate: " + (asset.publish_gate?.status || "unknown")
+  };
+}
+function publicHandoff(kind, asset, packet){
+  const gate = packet.publish_gate || asset.publish_gate || {};
+  const allowed = gate.allowed === true;
+  return {
+    intended_use: kind,
+    asset: packet,
+    publish_gate: gate,
+    requires_human_review: !allowed,
+    next: allowed
+      ? (kind === "website" ? "Generate optimized derivative, place on route, then record VIS usage/publication." : "Create channel variant, schedule/post through approved tooling, then record platform URL and metrics.")
+      : (gate.next_action || "Run VIS rights and approval review before public use.")
   };
 }
 function musicPacketFor(asset){
@@ -966,6 +984,9 @@ function openAsset(assetId){
     '<div class="kv"><span>Notes</span><div>'+esc(asset.annotation_notes || "")+'</div></div>' +
     '<div class="kv"><span>Rights</span><div>'+esc(asset.rights_status || "unknown")+'</div></div>' +
     '<div class="kv"><span>Approval</span><div>'+esc(asset.approval_status || "candidate")+'</div></div>' +
+    '<div class="kv"><span>Public-use gate</span><div>'+esc((asset.publish_gate?.status || "unknown") + " / " + (asset.publish_gate?.allowed ? "ready" : "review required"))+'</div></div>' +
+    (asset.publish_gate?.blockers?.length ? '<div class="kv"><span>Gate blockers</span><div>'+esc(asset.publish_gate.blockers.join("; "))+'</div></div>' : '') +
+    (asset.publish_gate?.warnings?.length ? '<div class="kv"><span>Gate warnings</span><div>'+esc(asset.publish_gate.warnings.join("; "))+'</div></div>' : '') +
     '<div class="kv"><span>Dimensions</span><div>'+esc(asset.width && asset.height ? asset.width + "x" + asset.height : "unknown")+'</div></div>' +
     '<div class="kv"><span>Duration</span><div>'+esc(asset.duration_seconds ? asset.duration_seconds + " sec" : "unknown")+'</div></div>' +
     '<div class="kv"><span>Usage</span><div>'+fmt(asset.usage_count)+' edges</div></div>' +
@@ -979,8 +1000,8 @@ function openAsset(assetId){
       if (kind === "path") copy(asset.absolute_path || "");
       if (kind === "uri") copy(asset.visual_uri || "");
       if (kind === "packet") copy(packet.codex_prompt || JSON.stringify(packet, null, 2));
-      if (kind === "website") copy(JSON.stringify({ intended_use:"website", asset: packet, next:"Generate optimized derivative, place on route, then record VIS usage/publication." }, null, 2));
-      if (kind === "social") copy(JSON.stringify({ intended_use:"social", asset: packet, next:"Create channel variant, schedule/post through approved tooling, then record platform URL and metrics." }, null, 2));
+      if (kind === "website") copy(JSON.stringify(publicHandoff("website", asset, packet), null, 2));
+      if (kind === "social") copy(JSON.stringify(publicHandoff("social", asset, packet), null, 2));
       if (kind === "music") copy(JSON.stringify(musicPacketFor(asset), null, 2));
     });
   }

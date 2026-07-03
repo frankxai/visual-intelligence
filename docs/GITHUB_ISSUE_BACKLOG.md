@@ -279,13 +279,16 @@ Make rights and approval state visible and actionable before assets become publi
 Tasks:
 - [x] Add rights filter and review queue.
 - [x] Add dry-run-first rights and approval review workflow across CLI, MCP, and dashboard selected-assets handoff.
+- [x] Add public-use gate warnings and export guards across curation packets, dashboard website/social handoffs, Cloudinary manifests, NFT reports, publication records, and Music IS packets.
 - [ ] Add richer approval/reject workflow in the dashboard.
 - [ ] Add blocked/needs-review state.
-- [ ] Add export guard for unknown rights.
+- [ ] Add direct dashboard approve/reject controls.
 
 Acceptance:
-- [ ] Public/publishing packets warn on unknown/blocked rights.
-- [ ] Approval changes are recorded as provenance events.
+- [x] Public/publishing packets warn on unknown/blocked rights.
+- [x] Approval changes are recorded as provenance events.
+- [x] Cloudinary and NFT dry-run manifests keep unsafe assets out of executable or upload-ready outputs by default.
+- [ ] Future publishing adapters inherit the same public-use gate.
 ```
 
 ## Issue 12: Add semantic and visual similarity search

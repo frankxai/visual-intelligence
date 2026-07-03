@@ -276,7 +276,11 @@ function toolRecordPublication(args = {}) {
 }
 
 function toolCloudinaryManifest(args = {}) {
-  return withDb(db => exportCloudinaryManifest(db, args))
+  return withDb(db => exportCloudinaryManifest(db, {
+    ...args,
+    mediaType: args.media_type || args.mediaType,
+    includeUnsafe: args.include_unsafe === true || args.includeUnsafe === true,
+  }))
 }
 
 function toolNftMetadataReport(args = {}) {
@@ -448,12 +452,13 @@ const TOOLS = [
     status: stringProp('planned, published, archived, failed'),
     execute: booleanProp('Persist record when VIS_ENABLE_WRITES=1'),
   }),
-  tool('export_cloudinary_manifest', 'Create a dry-run Cloudinary upload/DAM manifest.', {
+  tool('export_cloudinary_manifest', 'Create a dry-run Cloudinary upload/DAM manifest. Assets with unsafe rights/approval are guarded by default.', {
     query: stringProp('Optional query'),
     category: stringProp('Optional category'),
     media_type: stringProp('Optional media type'),
     folder: stringProp('Cloudinary folder'),
     limit: numberProp('Maximum assets'),
+    include_unsafe: booleanProp('Include guarded assets in the dry-run manifest while keeping upload_ready false'),
   }),
   tool('export_nft_metadata_report', 'Create a dry-run NFT metadata/readiness report.', {
     query: stringProp('Optional query'),

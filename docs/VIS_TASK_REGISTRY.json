@@ -245,13 +245,16 @@
       "tasks": [
         "Done: Add rights filter and review queue.",
         "Done: Add dry-run-first rights and approval review workflow across CLI, MCP, and dashboard selected-assets handoff.",
+        "Done: Add public-use gate warnings and export guards across curation packets, dashboard website/social handoffs, Cloudinary manifests, NFT reports, publication records, and Music IS packets.",
         "Add richer approval/reject workflow in the dashboard.",
         "Add blocked/needs-review state.",
-        "Add export guard for unknown rights."
+        "Add direct dashboard approve/reject controls."
       ],
       "acceptance": [
-        "Public and publishing packets warn on unknown or blocked rights.",
-        "Approval changes are recorded as provenance events."
+        "Done: Public and publishing packets warn on unknown or blocked rights.",
+        "Done: Approval changes are recorded as provenance events.",
+        "Done: Cloudinary and NFT dry-run manifests keep unsafe assets out of executable or upload-ready outputs by default.",
+        "Future publishing adapters inherit the same public-use gate."
       ]
     },
     {
