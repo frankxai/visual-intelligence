@@ -18,6 +18,8 @@
     { "name": "human-gated", "color": "b60205", "description": "Requires explicit human purchase, publishing, upload, wallet, or account action." },
     { "name": "status:todo", "color": "ededed", "description": "Unclaimed or not yet started." },
     { "name": "status:in-progress", "color": "fbca04", "description": "Being actively worked." },
+    { "name": "status:blocked", "color": "d73a4a", "description": "Blocked by a credential, purchase, external install, or human decision." },
+    { "name": "status:done", "color": "0e8a16", "description": "Completed and verified." },
     { "name": "agent:codex", "color": "8957e5", "description": "Claimed or primarily advanced by Codex." },
     { "name": "agent:claude", "color": "1f6feb", "description": "Claimed or ready for cross-check by Claude." }
   ],
@@ -318,18 +320,21 @@
       "key": "VIS-015",
       "title": "Add GitHub issue templates and weekly review ritual",
       "milestone": "M0 Personal Estate Setup",
+      "status": "done",
       "labels": ["product", "setup"],
       "summary": "Make VIS work manageable by future agents.",
       "tasks": [
-        "Add setup task issue template.",
-        "Add product feature issue template.",
-        "Add adapter issue template.",
-        "Add weekly review checklist.",
-        "Link docs from README."
+        "Done: Add setup task issue template.",
+        "Done: Add product feature issue template.",
+        "Done: Add adapter issue template.",
+        "Done: Add weekly review checklist.",
+        "Done: Link docs from README.",
+        "Done: Document Google Tasks as a personal reminder layer, not the canonical backlog."
       ],
       "acceptance": [
-        "New tasks can be opened consistently.",
-        "Weekly review can move issues across Now, Next, and Later."
+        "Done: New tasks can be opened consistently.",
+        "Done: Weekly review can move issues across Now, Next, and Later.",
+        "Done: Future agents can identify the source of truth and sync workflow."
       ]
     },
     {

@@ -8,6 +8,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 
 - Canonical execution tracker: GitHub Issues in `frankxai/visual-intelligence`, synced from `docs/VIS_TASK_REGISTRY.json`.
 - Repo-visible fallback: this Markdown board plus `docs/GITHUB_ISSUE_BACKLOG.md`.
+- Operating rulebook: `docs/PROJECT_OPERATING_SYSTEM.md`.
 - GitHub Projects v2: pending `gh auth refresh -s read:project,project`; use milestones until that scope is available.
 - Personal reminder layer: Google Tasks/Calendar only for time-bound human actions such as buying Eagle, installing on laptop 2, or weekly review.
 - Product truth: VIS repo docs, SQLite graph, MCP server, and release reports.
@@ -38,6 +39,8 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add dry-run-first batch curation for selected assets across dashboard, CLI, and MCP.
 - [x] Add dry-run-first rights and approval review for selected assets across dashboard, CLI, and MCP.
 - [x] Add public-use gates so unsafe assets stay visible but are excluded from Cloudinary/NFT/export-ready handoffs by default.
+- [x] Add project operating system, issue templates, weekly review checklist, and Google Tasks reminder boundary.
+- [x] Teach GitHub task sync to use explicit registry statuses, including done and blocked.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.

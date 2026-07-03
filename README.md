@@ -117,6 +117,8 @@ npm run tasks:sync -- --execute
 
 The source registry is `docs/VIS_TASK_REGISTRY.json`. It creates or updates labels, milestones, and the issue backlog. GitHub Projects v2 is intentionally not automated until the local `gh` token has project scope; Issues plus milestones are the current canonical tracker.
 
+Use [docs/PROJECT_OPERATING_SYSTEM.md](docs/PROJECT_OPERATING_SYSTEM.md) for the full project-management rule: GitHub Issues plus `docs/VIS_TASK_REGISTRY.json` are canonical, Markdown files are the offline control plane, and Google Tasks/Calendar are only personal reminder layers for human actions like buying Eagle, installing laptop 2, and weekly review.
+
 ## CLI
 
 ```powershell
@@ -247,10 +249,12 @@ See [docs/OPEN_SOURCE_TECH_RADAR.md](docs/OPEN_SOURCE_TECH_RADAR.md) before abso
 - [Research](docs/RESEARCH.md)
 - [Open Source Tech Radar](docs/OPEN_SOURCE_TECH_RADAR.md)
 - [Eagle Parity Roadmap](docs/EAGLE_PARITY_ROADMAP.md)
+- [Project Operating System](docs/PROJECT_OPERATING_SYSTEM.md)
 - [Project Board](docs/PROJECT_BOARD.md)
 - [VIS Task Registry](docs/VIS_TASK_REGISTRY.json)
 - [GitHub Issue Sync Report](docs/GITHUB_ISSUE_SYNC_REPORT.md)
 - [Setup Runbook](docs/SETUP_RUNBOOK.md)
+- [Weekly Review Checklist](docs/WEEKLY_REVIEW_CHECKLIST.md)
 - [GitHub Issue Backlog](docs/GITHUB_ISSUE_BACKLOG.md)
 - [User Workflows](docs/USER_WORKFLOWS.md)
 - [Security](docs/SECURITY.md)

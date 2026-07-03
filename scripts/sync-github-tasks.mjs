@@ -12,6 +12,7 @@ const execute = args.has("--execute");
 const registryPath = path.join(root, "docs", "VIS_TASK_REGISTRY.json");
 const registry = JSON.parse(readFileSync(registryPath, "utf8"));
 const repo = getArgValue("--repo") ?? registry.repo;
+const STATUS_LABELS = ["status:todo", "status:in-progress", "status:blocked", "status:done"];
 
 function getArgValue(name) {
   const index = process.argv.indexOf(name);
@@ -42,6 +43,7 @@ function issueBody(issue) {
   const taskList = issue.tasks.map(taskCheckbox).join("\n");
   const acceptanceList = issue.acceptance.map(taskCheckbox).join("\n");
   const labels = issue.labels.map((label) => `\`${label}\``).join(", ");
+  const status = issueStatus(issue);
 
   return `Synced from \`docs/VIS_TASK_REGISTRY.json\`. Update the registry first, then run \`npm run tasks:sync -- --execute\`.
 
@@ -50,6 +52,9 @@ ${issue.summary}
 
 ## Task Key
 \`${issue.key}\`
+
+## Status
+\`${status}\`
 
 ## Milestone
 ${issue.milestone}
@@ -73,7 +78,17 @@ ${acceptanceList}
 function taskCheckbox(task) {
   const text = String(task);
   if (text.startsWith("Done:")) return `- [x] ${text.slice("Done:".length).trim()}`;
+  if (text.startsWith("[done]")) return `- [x] ${text.slice("[done]".length).trim()}`;
   return `- [ ] ${text}`;
+}
+
+function issueStatus(issue) {
+  const status = issue.status ?? "todo";
+  const label = `status:${status}`;
+  if (!STATUS_LABELS.includes(label)) {
+    throw new Error(`Invalid status for ${issue.key}: ${status}`);
+  }
+  return status;
 }
 
 function ensureLabels() {
@@ -121,20 +136,25 @@ function ensureMilestones() {
 
 function ensureIssues() {
   const existingIssues = new Map(
-    ghJson(["issue", "list", "--repo", repo, "--state", "all", "--limit", "300", "--json", "number,title,url"]).map((item) => [item.title, item])
+    ghJson(["issue", "list", "--repo", repo, "--state", "all", "--limit", "300", "--json", "number,title,url,labels"]).map((item) => [item.title, item])
   );
   const tempDir = mkdtempSync(path.join(tmpdir(), "vis-github-tasks-"));
   const actions = [];
 
   try {
     for (const issue of registry.issues) {
-      const labels = ["status:todo", ...issue.labels].join(",");
+      const status = issueStatus(issue);
+      const statusLabel = `status:${status}`;
+      const labels = [statusLabel, ...issue.labels].join(",");
       const bodyFile = path.join(tempDir, `${issue.key}.md`);
       writeFileSync(bodyFile, issueBody(issue));
       const existing = existingIssues.get(issue.title);
 
       if (existing) {
-        gh([
+        const existingStatusLabels = (existing.labels ?? [])
+          .map((label) => label.name)
+          .filter((name) => STATUS_LABELS.includes(name) && name !== statusLabel);
+        const editArgs = [
           "issue",
           "edit",
           String(existing.number),
@@ -146,8 +166,12 @@ function ensureIssues() {
           labels,
           "--milestone",
           issue.milestone
-        ], { write: true });
-        actions.push({ type: "issue", action: execute ? "updated" : "would-update", key: issue.key, number: existing.number, title: issue.title, url: existing.url });
+        ];
+        if (existingStatusLabels.length > 0) {
+          editArgs.push("--remove-label", existingStatusLabels.join(","));
+        }
+        gh(editArgs, { write: true });
+        actions.push({ type: "issue", action: execute ? "updated" : "would-update", key: issue.key, status, number: existing.number, title: issue.title, url: existing.url });
       } else {
         const output = gh([
           "issue",
@@ -163,7 +187,7 @@ function ensureIssues() {
           "--milestone",
           issue.milestone
         ], { write: true });
-        actions.push({ type: "issue", action: execute ? "created" : "would-create", key: issue.key, title: issue.title, url: output.trim() });
+        actions.push({ type: "issue", action: execute ? "created" : "would-create", key: issue.key, status, title: issue.title, url: output.trim() });
       }
     }
   } finally {

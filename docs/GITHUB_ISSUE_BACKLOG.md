@@ -25,6 +25,10 @@ Synced on 2026-07-03 as GitHub issues #8-#23. See `docs/GITHUB_ISSUE_SYNC_REPORT
 - `research`
 - `good-first-internal`
 - `human-gated`
+- `status:todo`
+- `status:in-progress`
+- `status:blocked`
+- `status:done`
 
 ## Milestones
 
@@ -364,6 +368,7 @@ Acceptance:
 
 Labels: `product`, `setup`
 Milestone: `M0 Personal Estate Setup`
+Status: `done`
 
 Body:
 
@@ -371,15 +376,17 @@ Body:
 Make VIS work manageable by future agents.
 
 Tasks:
-- [ ] Add setup task issue template.
-- [ ] Add product feature issue template.
-- [ ] Add adapter issue template.
-- [ ] Add weekly review checklist.
-- [ ] Link docs from README.
+- [x] Add setup task issue template.
+- [x] Add product feature issue template.
+- [x] Add adapter issue template.
+- [x] Add weekly review checklist.
+- [x] Link docs from README.
+- [x] Document Google Tasks as a personal reminder layer, not the canonical backlog.
 
 Acceptance:
-- [ ] New tasks can be opened consistently.
-- [ ] Weekly review can move issues across Now/Next/Later.
+- [x] New tasks can be opened consistently.
+- [x] Weekly review can move issues across Now/Next/Later.
+- [x] Future agents can identify the source of truth and sync workflow.
 ```
 
 ## Issue 16: Build Eagle parity cockpit slice and adapter path
