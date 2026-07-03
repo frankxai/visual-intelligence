@@ -16,6 +16,36 @@
   "placeholderImages": ["blog-hero-aurora.svg", "placeholder.png", "default-hero.png"],
   "contentDirs": ["content", "app", "pages", "components", "data", "docs", "lib", "src"],
   "usageRoots": null,
+  "scanProfiles": {
+    "frank-estate": {
+      "description": "Frank's local-first VIS estate: Starlight repos, Drive creative vault, Eagle library, mobile inbox, and Music IS proof folders.",
+      "mediaRoots": [
+        "%USERPROFILE%\\starlight\\repos",
+        "%USERPROFILE%\\brands\\image-system",
+        "%USERPROFILE%\\Google Drive\\Starlight Creative Vault",
+        "%USERPROFILE%\\My Drive\\Starlight Creative Vault",
+        "%USERPROFILE%\\OneDrive\\Starlight Creative Vault",
+        "%USERPROFILE%\\starlight\\repos\\Starlight-Intelligence-System\\verticals\\music-is"
+      ],
+      "usageRoots": [
+        "%USERPROFILE%\\starlight\\repos\\frankx.ai-vercel-website",
+        "%USERPROFILE%\\starlight\\repos\\arcanea-ai-app",
+        "%USERPROFILE%\\starlight\\repos\\Starlight-Intelligence-System"
+      ],
+      "allowedRoots": [
+        "%USERPROFILE%\\starlight\\repos",
+        "%USERPROFILE%\\brands\\image-system",
+        "%USERPROFILE%\\Google Drive\\Starlight Creative Vault",
+        "%USERPROFILE%\\My Drive\\Starlight Creative Vault",
+        "%USERPROFILE%\\OneDrive\\Starlight Creative Vault"
+      ],
+      "notes": [
+        "Run without --execute first; missing Drive/Eagle roots are expected until that software is installed.",
+        "Music IS remains canonical for release state. VIS indexes and links music media assets.",
+        "Use the MCP allowlist output when installing VIS on Claude/Codex on each laptop."
+      ]
+    }
+  },
   "usageIncludeDirs": ["app", "pages", "components", "content", "docs", "lib", "src"],
   "maxUsageFileBytes": 524288,
   "privateDirPatterns": [

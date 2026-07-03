@@ -39,6 +39,7 @@ npm test
 node bin\vis.mjs doctor
 node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos"
 node bin\vis.mjs usage --usage-root "C:\Users\frank\starlight\repos\frankx.ai-vercel-website"
+node bin\vis.mjs scan-profile frank-estate
 node bin\vis.mjs dashboard --limit 3000
 ```
 
@@ -84,6 +85,7 @@ npm run lint
 npm test
 node bin\vis.mjs doctor
 node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos" --json
+node bin\vis.mjs scan-profile frank-estate --json
 node bin\vis.mjs dashboard --limit 3000
 claude mcp get vis-mcp
 ```
@@ -113,6 +115,9 @@ The source registry is `docs/VIS_TASK_REGISTRY.json`. It creates or updates labe
 node bin\vis.mjs init
 node bin\vis.mjs doctor
 node bin\vis.mjs scan --media-root <path>
+node bin\vis.mjs profiles
+node bin\vis.mjs scan-profile frank-estate
+node bin\vis.mjs scan-profile frank-estate --execute
 node bin\vis.mjs usage --usage-root <path>
 node bin\vis.mjs report
 node bin\vis.mjs dashboard --limit 3000

@@ -30,6 +30,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add local curation primitives for annotations, custom tags, ratings, color labels, collections, saved searches, CLI, MCP, and dashboard visibility.
 - [x] Add GitHub task registry, issue templates, and task sync script.
 - [x] Sync task registry into GitHub Issues and milestones.
+- [x] Add `frank-estate` scan profile dry-run for repos, brand image-system, Drive/Eagle vault paths, Music IS, website usage roots, and MCP allowlist generation.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.

@@ -22,12 +22,14 @@ import {
   getAsset,
   getSummary,
   indexProject,
+  listScanProfiles,
   listSavedSearches,
   loadConfig,
   openVisDatabase,
   recordPublication,
   resolveAssetId,
   resolveMediaRoots,
+  resolveScanProfile,
   scanUsageOnly,
   scoreAsset,
   scoreCollection,
@@ -65,6 +67,7 @@ const VALUE_FLAGS = new Set([
   '--path', '--uri', '--platform', '--url', '--route', '--caption', '--campaign',
   '--status', '--query', '--folder', '--collection', '--use', '--max-kb',
   '--note', '--notes', '--rating', '--color', '--curation-status', '--name', '--min-rating',
+  '--profile',
 ])
 
 function positionalArgs() {
@@ -191,6 +194,65 @@ function cmdUsage() {
   console.log(`Root:        ${result.root}`)
   console.log(`Usage edges: ${result.usageEdges}`)
   console.log(`Assets:      ${result.assets}`)
+}
+
+function cmdProfiles() {
+  const root = projectRoot()
+  const config = loadConfig(root)
+  const profiles = listScanProfiles(config)
+  if (hasFlag('--json')) {
+    printJson(profiles)
+    return
+  }
+  console.log('\n=== VIS SCAN PROFILES ===\n')
+  if (!profiles.length) {
+    console.log('No scan profiles configured in vis.config.json.')
+    return
+  }
+  for (const profile of profiles) {
+    console.log(`${profile.name}`)
+    console.log(`  ${profile.description || 'No description'}`)
+    console.log(`  media roots: ${profile.mediaRoots} | usage roots: ${profile.usageRoots} | allowed roots: ${profile.allowedRoots}`)
+  }
+}
+
+function cmdScanProfile() {
+  const root = projectRoot()
+  ensureConfig(root)
+  const name = getFlag('--profile') || positionalArgs()[0]
+  if (!name) throw new Error('Usage: vis scan-profile <profile-name> [--execute] [--json]')
+  const config = loadConfig(root)
+  const profile = resolveScanProfile(root, config, name)
+
+  if (!hasFlag('--execute')) {
+    if (hasFlag('--json')) {
+      printJson({ dryRun: true, profile })
+      return
+    }
+    printScanProfile(profile)
+    return
+  }
+
+  if (!profile.existingMediaRoots.length) {
+    throw new Error(`Scan profile "${name}" has no existing media roots. Run without --execute to inspect missing roots.`)
+  }
+
+  const result = indexProject({
+    root,
+    mediaRoots: profile.existingMediaRoots,
+    config: profile.existingUsageRoots.length ? { usageRoots: profile.existingUsageRoots } : null,
+    reset: !hasFlag('--diff'),
+  })
+  const output = { profile, result }
+  if (hasFlag('--json')) {
+    printJson(output)
+    return
+  }
+  printIndexSummary(result)
+  if (profile.missingMediaRoots.length || profile.missingUsageRoots.length) {
+    console.log('\nMissing profile roots:')
+    for (const missing of [...profile.missingMediaRoots, ...profile.missingUsageRoots]) console.log(`  - ${missing}`)
+  }
 }
 
 function cmdSearch() {
@@ -493,11 +555,36 @@ function printIndexSummary(result) {
   console.log(`Atlas JSON:    ${result.atlasPath}`)
 }
 
+function printScanProfile(profile) {
+  console.log(`\n=== VIS SCAN PROFILE: ${profile.name} ===\n`)
+  if (profile.description) console.log(`${profile.description}\n`)
+  console.log('Existing media roots:')
+  if (profile.existingMediaRoots.length) for (const root of profile.existingMediaRoots) console.log(`  OK ${root}`)
+  else console.log('  none')
+  console.log('\nMissing media roots:')
+  if (profile.missingMediaRoots.length) for (const root of profile.missingMediaRoots) console.log(`  NO ${root}`)
+  else console.log('  none')
+  console.log('\nExisting usage roots:')
+  if (profile.existingUsageRoots.length) for (const root of profile.existingUsageRoots) console.log(`  OK ${root}`)
+  else console.log('  none')
+  console.log('\nMissing usage roots:')
+  if (profile.missingUsageRoots.length) for (const root of profile.missingUsageRoots) console.log(`  NO ${root}`)
+  else console.log('  none')
+  if (profile.notes.length) {
+    console.log('\nNotes:')
+    for (const note of profile.notes) console.log(`  - ${note}`)
+  }
+  console.log('\nDry run only. Add --execute to index existing roots.')
+  console.log(`MCP allowlist from existing roots: ${profile.mcpAllowedRoots || 'none'}`)
+}
+
 const commands = {
   init: cmdInit,
   audit: cmdReport,
   scan: cmdScan,
   index: cmdScan,
+  profiles: cmdProfiles,
+  'scan-profile': cmdScanProfile,
   report: cmdReport,
   usage: cmdUsage,
   search: cmdSearch,
@@ -528,6 +615,9 @@ Commands:
   vis scan                         Build SQLite graph and JSON exports
   vis scan --media-root <path>      Index an additional local media root
   vis scan --usage-root <path>      Scan route/content usage outside project root
+  vis profiles                     List configured scan profiles
+  vis scan-profile <name>          Dry-run a named multi-root scan profile
+  vis scan-profile <name> --execute Index existing roots from a scan profile
   vis audit                        Alias for report summary
   vis report                       Print graph summary
   vis report --html                Generate dashboard HTML

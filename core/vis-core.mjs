@@ -24,6 +24,7 @@ export const DEFAULT_CONFIG = {
   placeholderImages: ['blog-hero-aurora.svg', 'placeholder.png', 'default-hero.png'],
   contentDirs: ['app', 'pages', 'components', 'content', 'data', 'docs', 'lib', 'src'],
   usageRoots: null,
+  scanProfiles: {},
   usageIncludeDirs: ['app', 'pages', 'components', 'content', 'docs', 'lib', 'src'],
   maxUsageFileBytes: 512 * 1024,
   privateDirPatterns: [
@@ -112,12 +113,28 @@ export function normalizeConfig(config) {
   merged.skipSuffixes = uniq(merged.skipSuffixes || [])
   merged.contentDirs = uniq(merged.contentDirs || DEFAULT_CONFIG.contentDirs)
   merged.privateDirPatterns = uniq(merged.privateDirPatterns || DEFAULT_CONFIG.privateDirPatterns)
+  merged.scanProfiles = merged.scanProfiles || {}
   return merged
 }
 
 export function resolveProjectPath(root, maybeRelative) {
   if (!maybeRelative) return null
-  return path.isAbsolute(maybeRelative) ? path.normalize(maybeRelative) : path.resolve(root, maybeRelative)
+  const expanded = expandPathTokens(maybeRelative)
+  return path.isAbsolute(expanded) ? path.normalize(expanded) : path.resolve(root, expanded)
+}
+
+export function expandPathTokens(value) {
+  if (!value) return value
+  let next = String(value)
+  if (next === '~') next = process.env.USERPROFILE || process.env.HOME || next
+  else if (next.startsWith(`~${path.sep}`) || next.startsWith('~/')) {
+    const home = process.env.USERPROFILE || process.env.HOME || '~'
+    next = path.join(home, next.slice(2))
+  }
+  next = next.replace(/%([^%]+)%/g, (match, key) => process.env[key] || process.env[key.toUpperCase()] || match)
+  next = next.replace(/\$\{([^}]+)\}/g, (match, key) => process.env[key] || process.env[key.toUpperCase()] || match)
+  next = next.replace(/\$([A-Za-z_][A-Za-z0-9_]*)/g, (match, key) => process.env[key] || process.env[key.toUpperCase()] || match)
+  return next
 }
 
 export function getIndexPath(root, config = loadConfig(root)) {
@@ -473,6 +490,72 @@ export function resolveMediaRoots(root, config = loadConfig(root), overrideRoots
     .filter(Boolean)
     .map(candidate => resolveProjectPath(root, candidate))
     .filter(candidate => candidate && fs.existsSync(candidate))
+}
+
+export function listScanProfiles(config = DEFAULT_CONFIG) {
+  return Object.entries(config.scanProfiles || {}).map(([name, profile]) => ({
+    name,
+    description: profile.description || '',
+    mediaRoots: (profile.mediaRoots || []).length,
+    usageRoots: (profile.usageRoots || []).length,
+    allowedRoots: (profile.allowedRoots || []).length,
+  }))
+}
+
+export function resolveScanProfile(root, config = loadConfig(root), profileName = 'default') {
+  const profiles = config.scanProfiles || {}
+  const profile = profiles[profileName]
+  if (!profile) {
+    const names = Object.keys(profiles)
+    throw new Error(`Unknown VIS scan profile "${profileName}". Available profiles: ${names.join(', ') || 'none'}`)
+  }
+
+  const media = resolveProfilePaths(root, profile.mediaRoots || [])
+  const usage = resolveProfilePaths(root, profile.usageRoots || [])
+  const allowed = resolveProfilePaths(root, profile.allowedRoots || profile.mediaRoots || [])
+
+  return {
+    name: profileName,
+    description: profile.description || '',
+    notes: profile.notes || [],
+    mediaRoots: media.resolved,
+    existingMediaRoots: media.existing,
+    missingMediaRoots: media.missing,
+    usageRoots: usage.resolved,
+    existingUsageRoots: usage.existing,
+    missingUsageRoots: usage.missing,
+    allowedRoots: allowed.resolved,
+    existingAllowedRoots: allowed.existing,
+    missingAllowedRoots: allowed.missing,
+    mcpAllowedRoots: allowed.existing.join(path.delimiter),
+    commands: {
+      dryRun: `node bin\\vis.mjs scan-profile ${profileName}`,
+      execute: `node bin\\vis.mjs scan-profile ${profileName} --execute`,
+      dashboard: 'node bin\\vis.mjs dashboard --limit 3000',
+    },
+  }
+}
+
+function resolveProfilePaths(root, values = []) {
+  const resolved = uniq(values.map(value => resolveProjectPath(root, value)).filter(Boolean))
+  return {
+    resolved,
+    existing: pruneNestedPaths(resolved.filter(candidate => fs.existsSync(candidate))),
+    missing: resolved.filter(candidate => !fs.existsSync(candidate)),
+  }
+}
+
+function pruneNestedPaths(values = []) {
+  const sorted = uniq(values.map(value => path.resolve(value))).sort((a, b) => a.length - b.length)
+  const keep = []
+  for (const candidate of sorted) {
+    const nested = keep.some(parent => {
+      const relative = path.relative(parent, candidate)
+      return relative && !relative.startsWith('..') && !path.isAbsolute(relative)
+    })
+    if (!nested) keep.push(candidate)
+  }
+  return keep
 }
 
 export function walkMediaFiles(startDir, config = DEFAULT_CONFIG) {

@@ -10,12 +10,15 @@ import {
   detectDimensions,
   detectMediaRole,
   detectSuitability,
+  expandPathTokens,
   getSummary,
   indexProject,
+  listScanProfiles,
   listSavedSearches,
   loadConfig,
   openVisDatabase,
   recordPublication,
+  resolveScanProfile,
   saveSearch,
   searchAssets,
   traceAsset,
@@ -137,6 +140,40 @@ test('reports malformed VIS config with a useful error', () => {
     fs.writeFileSync(path.join(root, 'vis.config.json'), '{ bad json')
     assert.throws(() => loadConfig(root), /Invalid VIS config JSON/)
   } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('resolves scan profiles with environment-expanded roots', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-profile-'))
+  const previous = process.env.VIS_TEST_ROOT
+  try {
+    process.env.VIS_TEST_ROOT = root
+    fs.mkdirSync(path.join(root, 'vault'), { recursive: true })
+    fs.mkdirSync(path.join(root, 'site'), { recursive: true })
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      scanProfiles: {
+        test: {
+          description: 'Test scan profile',
+          mediaRoots: ['%VIS_TEST_ROOT%/vault', '%VIS_TEST_ROOT%/missing'],
+          usageRoots: ['$VIS_TEST_ROOT/site'],
+          allowedRoots: ['${VIS_TEST_ROOT}/vault'],
+        },
+      },
+    }, null, 2))
+
+    assert.equal(expandPathTokens('%VIS_TEST_ROOT%'), root)
+    const config = loadConfig(root)
+    assert.equal(listScanProfiles(config)[0].name, 'test')
+    const profile = resolveScanProfile(root, config, 'test')
+    assert.equal(profile.existingMediaRoots.length, 1)
+    assert.equal(profile.missingMediaRoots.length, 1)
+    assert.equal(profile.existingUsageRoots.length, 1)
+    assert.equal(profile.existingAllowedRoots.length, 1)
+    assert.match(profile.commands.execute, /scan-profile test --execute/)
+  } finally {
+    if (previous === undefined) delete process.env.VIS_TEST_ROOT
+    else process.env.VIS_TEST_ROOT = previous
     fs.rmSync(root, { recursive: true, force: true })
   }
 })

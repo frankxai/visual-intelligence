@@ -49,6 +49,8 @@ npm install
 npm run doctor
 npm run lint
 npm test
+node bin\vis.mjs profiles
+node bin\vis.mjs scan-profile frank-estate
 node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos" --json
 node bin\vis.mjs scan --media-root "<Google Drive>\Starlight Creative Vault" --json
 node bin\vis.mjs dashboard --limit 3000
@@ -70,6 +72,8 @@ claude mcp get vis-mcp
 node bin\vis.mjs search eagle --limit 3
 node bin\vis.mjs doctor --json
 ```
+
+Use the `MCP allowlist from existing roots` line from `node bin\vis.mjs scan-profile frank-estate` when installing VIS MCP on each laptop. Add `--execute` only after the dry-run roots look correct.
 
 ## Laptop 2 Setup
 
