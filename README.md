@@ -26,6 +26,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Finds local similarity review groups with dependency-free metadata heuristics while semantic embeddings remain adapter-planned.
 - Scans website/content routes to map where assets appear.
 - Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
+- Supports dry-run-first batch curation for Eagle-style multi-select review, tagging, and collection moves.
 - Builds Music IS handoff packets that group audio, cover art, Canvas/video, proof docs, prompts, rights, approval, and next release-gate action.
 - Generates a static dashboard/PWA shell for fast visual browsing, local media previews, smart collections, and asset detail drawers.
 - Exposes MCP resources and tools for agents via `visual://asset/{asset_id}`.
@@ -138,6 +139,8 @@ node bin\vis.mjs similar <asset_id|visual://asset/...|path|query>
 node bin\vis.mjs score <asset_id>
 node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --collection "Homepage candidates"
 node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --collection "Homepage candidates" --execute
+node bin\vis.mjs batch-annotate <asset_id> <asset_id> --tag review --curation-status needs-review --collection "VIS Review Queue"
+node bin\vis.mjs batch-annotate <asset_id> <asset_id> --tag review --curation-status needs-review --collection "VIS Review Queue" --execute
 node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite
 node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite --execute
 node bin\vis.mjs saved-searches
@@ -177,6 +180,7 @@ Tools:
 - `score_collection`
 - `create_curation_packet`
 - `annotate_asset`
+- `bulk_annotate_assets`
 - `list_saved_searches`
 - `save_search`
 - `list_music_releases`

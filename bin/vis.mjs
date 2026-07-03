@@ -13,6 +13,7 @@ import {
   DEFAULT_CONFIG,
   VIS_VERSION,
   annotateAsset,
+  annotateAssets,
   createCurationPacket,
   exportCloudinaryManifest,
   exportNftMetadataReport,
@@ -68,7 +69,7 @@ function getAllFlags(name) {
 const VALUE_FLAGS = new Set([
   '--root', '-r', '--media-root', '--asset-root', '--usage-root', '--output', '-o', '--limit',
   '--tag', '--mood', '--category', '--media-type', '--asset', '--asset-id',
-  '--path', '--uri', '--platform', '--url', '--route', '--caption', '--campaign',
+  '--path', '--uri', '--assets', '--ids', '--platform', '--url', '--route', '--caption', '--campaign',
   '--status', '--query', '--folder', '--collection', '--use', '--max-kb',
   '--note', '--notes', '--rating', '--color', '--curation-status', '--name', '--min-rating',
   '--profile', '--library', '--eagle-library', '--port', '--host', '--min-score', '--pool-limit',
@@ -100,8 +101,24 @@ function usageRoots() {
   return getAllFlags('--usage-root')
 }
 
+function assetRefArgs() {
+  return uniq([
+    ...positionalArgs(),
+    ...getAllFlags('--asset'),
+    ...getAllFlags('--asset-id'),
+    ...getAllFlags('--path'),
+    ...getAllFlags('--uri'),
+    ...getAllFlags('--assets').flatMap(value => String(value).split(',')),
+    ...getAllFlags('--ids').flatMap(value => String(value).split(',')),
+  ].map(value => String(value || '').trim()).filter(Boolean))
+}
+
 function printJson(value) {
   console.log(JSON.stringify(value, null, 2))
+}
+
+function uniq(values) {
+  return [...new Set(values)]
 }
 
 function ensureConfig(root) {
@@ -449,6 +466,24 @@ function cmdAnnotate() {
   printJson(result)
 }
 
+function cmdBatchAnnotate() {
+  const root = projectRoot()
+  const refs = assetRefArgs()
+  if (!refs.length) throw new Error('Usage: vis batch-annotate <asset...> [--tag <tag>] [--collection <name>] [--curation-status <status>] [--execute]')
+  const result = annotateAssets(root, refs, {
+    tags: getAllFlags('--tag'),
+    note: getFlag('--note') || getFlag('--notes'),
+    rating: getFlag('--rating'),
+    color: getFlag('--color'),
+    curationStatus: getFlag('--curation-status') || getFlag('--status'),
+    collection: getFlag('--collection'),
+    replaceTags: hasFlag('--replace-tags'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
 function cmdSavedSearches() {
   const root = projectRoot()
   printJson(listSavedSearches(root))
@@ -721,6 +756,8 @@ const commands = {
   'find-similar': cmdSimilar,
   score: cmdScore,
   annotate: cmdAnnotate,
+  'batch-annotate': cmdBatchAnnotate,
+  'bulk-annotate': cmdBatchAnnotate,
   'saved-searches': cmdSavedSearches,
   'save-search': cmdSaveSearch,
   'music-releases': cmdMusicReleases,
@@ -761,6 +798,7 @@ Commands:
   vis similar [asset|query]         Find visually adjacent assets and review groups
   vis score [asset]                Score asset or collection readiness
   vis annotate <asset>             Dry-run or save tags, notes, rating, color, collection
+  vis batch-annotate <asset...>     Dry-run or save curation metadata across assets
   vis saved-searches               List saved smart-folder searches
   vis save-search --name <name>     Dry-run or save a smart search
   vis music-releases               List Music IS release media packets

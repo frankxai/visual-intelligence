@@ -2159,6 +2159,67 @@ ON CONFLICT(collection_id, asset_id) DO UPDATE SET
   }
 }
 
+export function annotateAssets(dbOrRoot, assetRefs = [], args = {}) {
+  const providedRefs = assetRefs === null || assetRefs === undefined ? [] : assetRefs
+  const refs = normalizeAssetRefs(providedRefs.length ? providedRefs : args.assetRefs || args.asset_refs || args.assets || args.asset_ids || args.assetIds || [])
+  if (!refs.length) throw new Error('Batch annotation requires at least one asset reference')
+
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const execute = args.execute === true
+    const actor = args.actor || 'vis-cli'
+    const batchId = args.batchId || args.batch_id || stableId('batch_annotation', `${actor}:${refs.join('|')}:${JSON.stringify({
+      tags: normalizeTagInput(args.tags ?? args.tag ?? []),
+      rating: args.rating || null,
+      color: args.color || args.colorLabel || args.color_label || null,
+      status: args.curationStatus || args.curation_status || args.status || null,
+      collection: args.collection || null,
+    })}`)
+    const items = []
+    const errors = []
+
+    for (const ref of refs) {
+      try {
+        const result = annotateAsset(db, ref, {
+          ...args,
+          actor,
+          execute,
+        })
+        items.push({
+          ref,
+          asset_id: result.annotation.asset_id,
+          annotation: result.annotation,
+        })
+      } catch (error) {
+        errors.push({ ref, error: error.message })
+      }
+    }
+
+    return {
+      dryRun: !execute,
+      batch_id: batchId,
+      requested: refs.length,
+      annotated: items.length,
+      failed: errors.length,
+      operation: {
+        tags: normalizeTagInput(args.tags ?? args.tag ?? []),
+        replace_tags: args.replaceTags === true || args.replace_tags === true,
+        rating: normalizeRating(args.rating ?? null),
+        color_label: normalizeNullable(args.color || args.colorLabel || args.color_label || null),
+        curation_status: normalizeNullable(args.curationStatus || args.curation_status || args.status || null),
+        collection: normalizeNullable(args.collection || null),
+      },
+      items,
+      errors,
+      note: execute
+        ? 'Batch curation saved. Each asset records its own annotation provenance event.'
+        : 'Dry run only. Pass execute: true or CLI --execute after human review to persist.',
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
 export function listSavedSearches(dbOrRoot) {
   const { db, close } = resolveDbArgs(dbOrRoot)
   try {
@@ -2917,6 +2978,13 @@ function normalizeTagInput(value) {
   const raw = Array.isArray(value) ? value : String(value || '').split(',')
   return uniq(raw.flatMap(item => String(item || '').split(','))
     .map(item => item.trim().toLowerCase())
+    .filter(Boolean))
+}
+
+function normalizeAssetRefs(value) {
+  const raw = Array.isArray(value) ? value : String(value || '').split(',')
+  return uniq(raw.flatMap(item => Array.isArray(item) ? item : String(item || '').split(/[,\n]+/))
+    .map(item => String(item || '').trim())
     .filter(Boolean))
 }
 

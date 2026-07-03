@@ -10,6 +10,7 @@ import { createInterface } from 'readline'
 import path from 'path'
 import {
   annotateAsset,
+  annotateAssets,
   createCurationPacket,
   exportCloudinaryManifest,
   exportNftMetadataReport,
@@ -130,6 +131,38 @@ function toolAnnotateAsset(args = {}) {
   }))
 }
 
+function toolBulkAnnotateAssets(args = {}) {
+  const assetRefs = [
+    ...(Array.isArray(args.asset_ids) ? args.asset_ids : []),
+    ...(Array.isArray(args.assetIds) ? args.assetIds : []),
+    ...(Array.isArray(args.assets) ? args.assets : []),
+    ...(Array.isArray(args.uris) ? args.uris : []),
+    ...(Array.isArray(args.paths) ? args.paths : []),
+    args.asset_id,
+    args.assetId,
+    args.uri,
+    args.path,
+  ].filter(Boolean)
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: annotateAssets(db, assetRefs, { ...args, execute: false }),
+    }))
+  }
+  return withDb(db => annotateAssets(db, assetRefs, {
+    tags: args.tags || args.tag || [],
+    note: args.note || args.notes,
+    rating: args.rating,
+    color: args.color || args.color_label || args.colorLabel,
+    curationStatus: args.curation_status || args.curationStatus || args.status,
+    collection: args.collection,
+    replaceTags: args.replace_tags === true || args.replaceTags === true,
+    actor: 'vis-mcp',
+    execute: args.execute === true && WRITE_ENABLED,
+  }))
+}
+
 function toolListSavedSearches() {
   return withDb(db => listSavedSearches(db))
 }
@@ -236,6 +269,7 @@ const TOOL_HANDLERS = {
   score_collection: toolScoreCollection,
   create_curation_packet: toolCreateCurationPacket,
   annotate_asset: toolAnnotateAsset,
+  bulk_annotate_assets: toolBulkAnnotateAssets,
   list_saved_searches: toolListSavedSearches,
   save_search: toolSaveSearch,
   list_music_releases: toolListMusicReleases,
@@ -315,6 +349,20 @@ const TOOLS = [
     curation_status: stringProp('curated, favorite, approved, rejected, needs-review'),
     collection: stringProp('Collection name to add the asset into'),
     execute: booleanProp('Persist annotation when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('bulk_annotate_assets', 'Dry-run or save local curation metadata across multiple assets. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
+    asset_ids: { type: 'array', items: { type: 'string' }, description: 'VIS asset_ids' },
+    assets: { type: 'array', items: { type: 'string' }, description: 'Asset ids, visual URIs, or paths' },
+    uris: { type: 'array', items: { type: 'string' }, description: 'visual://asset/{asset_id} URIs' },
+    paths: { type: 'array', items: { type: 'string' }, description: 'Local or relative paths' },
+    tags: { type: 'array', items: { type: 'string' }, description: 'Custom curation tags' },
+    note: stringProp('Curation note'),
+    rating: numberProp('Rating 1-5'),
+    color: stringProp('Color label'),
+    curation_status: stringProp('curated, favorite, approved, rejected, needs-review'),
+    collection: stringProp('Collection name to add assets into'),
+    replace_tags: booleanProp('Replace existing custom tags instead of merging'),
+    execute: booleanProp('Persist annotations when VIS_ENABLE_WRITES=1'),
   }),
   tool('list_saved_searches', 'List saved VIS smart-folder searches.', {}),
   tool('save_search', 'Dry-run or save a VIS smart-folder search. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {

@@ -612,6 +612,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
         <button id="selectVisible">Select visible</button>
         <button id="clearSelection">Clear</button>
         <button id="copySelection">Copy packets</button>
+        <button id="copyCurationCommand">Copy curate cmd</button>
       </div>
     </div>
     <div class="workspace">
@@ -990,6 +991,32 @@ function copySelectedPackets(){
   const packets = assets.map(asset => packetFor(asset));
   copy(JSON.stringify({ generatedAt: new Date().toISOString(), count: packets.length, packets }, null, 2));
 }
+function copyBatchCurationCommand(){
+  const assets = [...selectedIds].map(id => DATA.assets.find(asset => asset.asset_id === id)).filter(Boolean);
+  if (!assets.length) return toast("Select assets first");
+  const ids = assets.map(asset => asset.asset_id);
+  const command = "node bin\\\\vis.mjs batch-annotate " + ids.map(shellArg).join(" ") + " --tag review --curation-status needs-review --collection " + shellArg("VIS Review Queue");
+  copy(JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    count: ids.length,
+    command,
+    note: "Dry-run by default. Add --execute only after reviewing the planned batch curation.",
+    mcp_tool: {
+      name: "bulk_annotate_assets",
+      arguments: {
+        asset_ids: ids,
+        tags: ["review"],
+        curation_status: "needs-review",
+        collection: "VIS Review Queue",
+        execute: false
+      }
+    },
+    assets: assets.map(asset => ({ asset_id: asset.asset_id, visual_uri: asset.visual_uri, title: asset.title, media_type: asset.media_type, path: asset.absolute_path || asset.relative_path }))
+  }, null, 2));
+}
+function shellArg(value){
+  return '"' + String(value || "").replaceAll('"', '\\"') + '"';
+}
 function copy(text){
   if (!text) return toast("Nothing to copy");
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1025,6 +1052,7 @@ $("sortFilter").addEventListener("change", e => { state.sort = e.target.value; r
 $("selectVisible").addEventListener("click", () => { for (const asset of filteredAssets().slice(0,700)) selectedIds.add(asset.asset_id); renderAll(); });
 $("clearSelection").addEventListener("click", () => { selectedIds.clear(); renderAll(); });
 $("copySelection").addEventListener("click", copySelectedPackets);
+$("copyCurationCommand").addEventListener("click", copyBatchCurationCommand);
 $("closeDrawer").addEventListener("click", () => { $("drawer").classList.remove("open"); $("drawer").setAttribute("aria-hidden","true"); });
 document.addEventListener("keydown", e => {
   const tag = String(e.target?.tagName || "").toLowerCase();

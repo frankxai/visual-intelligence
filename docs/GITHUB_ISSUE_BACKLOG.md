@@ -301,6 +301,7 @@ Tasks:
 - [x] Add local dependency-free visual similarity review groups using metadata heuristics.
 - [x] Add CLI and MCP similarity review commands.
 - [x] Add dashboard similarity review queue and smart collection.
+- [x] Add dry-run-first batch curation across CLI, MCP, and dashboard selected-assets handoff.
 - [ ] Research permissive local embedding options and external adapter options.
 - [ ] Add embedding table/schema.
 - [ ] Add CLI dry-run for embedding selected assets.
@@ -390,7 +391,8 @@ Benchmark Eagle capabilities without copying proprietary UX, then ship the VIS-s
 Tasks:
 - [ ] Keep `docs/EAGLE_PARITY_ROADMAP.md` current.
 - [ ] Add smart collections for inbox, rights, prompt gaps, usage, orphans, duplicates, music, video, NFT/Web3, website-ready, and social-ready.
-- [ ] Add source/folder navigation and batch curation packet copy.
+- [x] Add source/folder navigation and batch curation packet copy.
+- [x] Add dry-run-first batch curation command copy plus CLI/MCP write gates.
 - [ ] Add VIS curation memory: notes, tags, ratings, color labels, collections, and saved searches.
 - [ ] Add audio preview and Music IS packet handoff.
 - [ ] Add Eagle metadata adapter research for folders, tags, notes, and source URLs.

@@ -5,6 +5,7 @@ import os from 'os'
 import path from 'path'
 import {
   annotateAsset,
+  annotateAssets,
   createCurationPacket,
   detectCategory,
   detectDimensions,
@@ -227,6 +228,56 @@ test('imports Eagle metadata as provider locations, annotations, and collections
       assert.equal(trace.asset.locations[0].provider_id, 'abc123')
       assert.equal(trace.asset.collections[0].name, 'Eagle / Music Covers')
       assert.ok(trace.provenance.some(event => event.event_type === 'eagle-metadata-imported'))
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('batch annotates assets dry-run first and records collection provenance on execute', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-batch-annotate-'))
+  try {
+    const imageRoot = path.join(root, 'public', 'images')
+    fs.mkdirSync(imageRoot, { recursive: true })
+    fs.writeFileSync(path.join(imageRoot, 'cover-one.svg'), '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="red"/></svg>')
+    fs.writeFileSync(path.join(imageRoot, 'cover-two.svg'), '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="blue"/></svg>')
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      mediaRoots: ['public/images'],
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+    }, null, 2))
+
+    indexProject({ root })
+    const db = openVisDatabase(root)
+    try {
+      const refs = searchAssets(db, { query: 'cover', maxResults: 5 }).map(asset => asset.asset_id)
+      assert.equal(refs.length, 2)
+
+      const dryRun = annotateAssets(db, refs, {
+        tags: ['design-review'],
+        rating: 4,
+        curationStatus: 'needs-review',
+        collection: 'Design Review',
+      })
+      assert.equal(dryRun.dryRun, true)
+      assert.equal(dryRun.annotated, 2)
+      assert.equal(getSummary(db).annotations, 0)
+
+      const executed = annotateAssets(db, refs, {
+        tags: ['design-review'],
+        rating: 4,
+        curationStatus: 'needs-review',
+        collection: 'Design Review',
+        execute: true,
+      })
+      assert.equal(executed.dryRun, false)
+      assert.equal(executed.annotated, 2)
+      assert.equal(getSummary(db).annotations, 2)
+      assert.equal(db.prepare('SELECT COUNT(*) AS count FROM collection_item').get().count, 2)
+      assert.equal(db.prepare("SELECT COUNT(*) AS count FROM provenance_event WHERE event_type = 'annotated'").get().count, 2)
     } finally {
       db.close()
     }
