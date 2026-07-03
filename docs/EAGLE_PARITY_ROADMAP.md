@@ -33,8 +33,8 @@ Do not build a full Eagle replacement first. Build the things Eagle, Google Phot
 | --- | --- | --- | --- | --- |
 | Fast visual library | Mature desktop grid, previews, folders, tags, filters | Static dashboard grid with filters and detail drawer | PWA/desktop cockpit with persistent state, virtual grid, batch actions | Use Eagle now; build VIS for agentic cockpit |
 | Capture/import | Browser extension and desktop imports | Scanner indexes files already on disk | Watch folders, Drive/Eagle import manifests, mobile inbox scan | Use Eagle/Drive first |
-| Folders/tags/notes | Core strength | Category/tag inference from paths and names | Eagle metadata adapter for folders, tags, notes, source URLs | Adapter, not clone |
-| Smart collections | Strong filters/smart folders | Smart collections in static cockpit | Saved queries, review boards, inboxes | Build VIS-specific views |
+| Folders/tags/notes | Core strength | Category/tag inference plus VIS annotations for notes, ratings, color labels, custom tags, and collections | Eagle metadata adapter for folders, tags, notes, source URLs | Adapter, not clone |
+| Smart collections | Strong filters/smart folders | Static cockpit smart collections plus saved searches | Saved queries, review boards, inboxes, PWA persistence | Build VIS-specific views |
 | Duplicate check | Built-in | SHA-256 duplicate groups | Visual similarity and cross-location merge review | Build graph + optional model adapter |
 | AI organization | Eagle AI Search/Action/MCP announced | Rule-based tags, MCP search/trace/packets | Agent run sidecars, semantic search, eval loops, curation packets | Build VIS intelligence; interop with Eagle MCP |
 | Local privacy | On-prem library | Local SQLite and ignored runtime data | Path allowlists, redaction, encrypted backups | Build |
@@ -75,6 +75,7 @@ Recommended naming:
 - Batch packet copy.
 - Audio preview and Music IS packet.
 - Website/social action packets.
+- Local curation memory for notes, tags, ratings, color labels, collections, and saved searches.
 
 ### E2: Eagle Adapter
 

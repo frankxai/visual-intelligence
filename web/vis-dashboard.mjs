@@ -6,6 +6,7 @@ import {
   findOrphans,
   getSummary,
   listAssets,
+  listSavedSearches,
   loadConfig,
   openVisDatabase,
   parseJson,
@@ -22,6 +23,7 @@ export function generateDashboard(root, options = {}) {
     const summary = getSummary(db)
     const duplicates = findDuplicates(db, { limit: 20 })
     const orphans = findOrphans(db, { limit: 60 })
+    const savedSearches = listSavedSearches(db)
     const packetSamples = Object.fromEntries(
       assets.slice(0, 300).map(asset => [asset.asset_id, createCurationPacket(db, asset.asset_id)]),
     )
@@ -41,6 +43,7 @@ export function generateDashboard(root, options = {}) {
       assets: normalizedAssets,
       duplicates,
       orphans,
+      savedSearches,
       packetSamples,
       scores,
       ...facets,
@@ -64,6 +67,9 @@ function deriveDashboardFacets(assets, duplicates, orphans) {
     ['website-used', 'Used on sites', asset => Number(asset.usage_count || 0) > 0],
     ['orphans', 'Orphans', asset => orphanIds.has(asset.asset_id) || Number(asset.usage_count || 0) === 0],
     ['duplicates', 'Duplicate sample', asset => duplicateAssetIds.has(asset.asset_id)],
+    ['curated', 'Curated', asset => Boolean(asset.annotation)],
+    ['favorites', 'Favorites', asset => Number(asset.rating || 0) >= 4 || ['favorite', 'approved'].includes(asset.curation_status)],
+    ['unannotated', 'Needs notes', asset => !asset.annotation],
     ['music', 'Music / audio', asset => asset.workflow === 'music-release' || asset.media_type === 'audio' || (asset.tags || []).includes('music')],
     ['video-motion', 'Video / motion', asset => asset.media_type === 'video'],
     ['nft-web3', 'NFT / Web3', asset => asset.category === 'nft-web3' || (asset.tags || []).includes('web3')],
@@ -314,10 +320,16 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <div class="metric"><span>Locations</span><strong id="mLocations">0</strong></div>
       <div class="metric"><span>Usage edges</span><strong id="mUsage">0</strong></div>
       <div class="metric"><span>Prompts</span><strong id="mPrompts">0</strong></div>
+      <div class="metric"><span>Annotations</span><strong id="mAnnotations">0</strong></div>
+      <div class="metric"><span>Saved searches</span><strong id="mSavedSearches">0</strong></div>
     </section>
     <section class="rail-section">
       <h2>Smart Collections</h2>
       <div class="lane-list" id="smartCollections"></div>
+    </section>
+    <section class="rail-section">
+      <h2>Saved Searches</h2>
+      <div class="lane-list" id="savedSearches"></div>
     </section>
     <section class="rail-section">
       <h2>Categories</h2>
@@ -418,7 +430,7 @@ const DATA = ${json};
 const DUPLICATE_IDS = new Set(DATA.duplicateAssetIds || []);
 let activeCategory = "";
 const selectedIds = new Set();
-const state = { query:"", media:"", readiness:"", source:"", folder:"", smart:"", sort:"newest" };
+const state = { query:"", media:"", readiness:"", source:"", folder:"", smart:"", saved:"", sort:"newest" };
 const $ = (id) => document.getElementById(id);
 
 function fmt(n){ return Number(n || 0).toLocaleString(); }
@@ -441,7 +453,7 @@ function assetScore(asset){
   return DATA.scores[asset.asset_id] || null;
 }
 function assetHay(asset){
-  return [asset.asset_id, asset.title, asset.relative_path, asset.public_path, asset.category, asset.mood, asset.rights_status, asset.approval_status, asset.media_role, asset.workflow, sourceLabel(asset), folderLabel(asset), ...(asset.tags || [])].join(" ").toLowerCase();
+  return [asset.asset_id, asset.title, asset.relative_path, asset.public_path, asset.category, asset.mood, asset.rights_status, asset.approval_status, asset.media_role, asset.workflow, asset.curation_status, asset.annotation_notes, sourceLabel(asset), folderLabel(asset), ...(asset.tags || [])].join(" ").toLowerCase();
 }
 function readiness(asset){
   if (asset.approval_status === "approved") return "approved";
@@ -464,11 +476,29 @@ function smartMatches(asset, id){
   if (id === "website-used") return Number(asset.usage_count || 0) > 0;
   if (id === "orphans") return Number(asset.usage_count || 0) === 0;
   if (id === "duplicates") return DUPLICATE_IDS.has(asset.asset_id);
+  if (id === "curated") return Boolean(asset.annotation);
+  if (id === "favorites") return Number(asset.rating || 0) >= 4 || ["favorite","approved"].includes(asset.curation_status);
+  if (id === "unannotated") return !asset.annotation;
   if (id === "music") return asset.workflow === "music-release" || asset.media_type === "audio" || (asset.tags || []).includes("music");
   if (id === "video-motion") return asset.media_type === "video";
   if (id === "nft-web3") return asset.category === "nft-web3" || (asset.tags || []).includes("web3");
   if (id === "website-ready") return asset.media_type === "image" && asset.rights_status !== "blocked" && Number(asset.sizeKB || 0) <= 2000;
   if (id === "social-ready") return ["image","video"].includes(asset.media_type) && asset.rights_status !== "blocked";
+  return true;
+}
+function savedSearchMatches(asset, id){
+  if (!id) return true;
+  const search = (DATA.savedSearches || []).find(item => item.saved_search_id === id || item.name === id);
+  if (!search) return true;
+  const filters = search.filters || {};
+  if (filters.mediaType && asset.media_type !== filters.mediaType) return false;
+  if (filters.category && asset.category !== filters.category) return false;
+  if (filters.tag && !(asset.tags || []).includes(filters.tag)) return false;
+  if (filters.mood && asset.mood !== filters.mood) return false;
+  if (filters.curationStatus && asset.curation_status !== filters.curationStatus) return false;
+  if (filters.minRating && Number(asset.rating || 0) < Number(filters.minRating)) return false;
+  const query = String(search.query || filters.query || "").trim().toLowerCase().split(/\\s+/).filter(Boolean);
+  if (query.length && !query.every(word => assetHay(asset).includes(word))) return false;
   return true;
 }
 function mediaPreview(asset, mode){
@@ -485,6 +515,7 @@ function filteredAssets(){
   const rows = DATA.assets.filter(asset => {
     if (activeCategory && asset.category !== activeCategory) return false;
     if (state.smart && !smartMatches(asset, state.smart)) return false;
+    if (state.saved && !savedSearchMatches(asset, state.saved)) return false;
     if (state.folder && folderLabel(asset) !== state.folder) return false;
     if (state.source && sourceLabel(asset) !== state.source) return false;
     if (state.media && asset.media_type !== state.media) return false;
@@ -529,6 +560,8 @@ function renderMetrics(){
   $("mLocations").textContent = fmt(s.locations);
   $("mUsage").textContent = fmt(s.usageEdges);
   $("mPrompts").textContent = fmt(s.prompts);
+  $("mAnnotations").textContent = fmt(s.annotations);
+  $("mSavedSearches").textContent = fmt(s.savedSearches);
   $("sAssets").textContent = fmt(DATA.assets.length);
   $("sPrompts").textContent = fmt(s.prompts);
   $("sDuplicates").textContent = fmt(DATA.duplicates.length);
@@ -537,6 +570,7 @@ function renderMetrics(){
   $("brief").textContent = "Local-first VIS cockpit for " + DATA.root + ". It keeps browsing, provenance, website usage, social readiness, NFT/Web3 review, and Music IS handoff in one agent-readable view.";
   const focus = [];
   if (state.smart) focus.push("Smart: " + labelFor(DATA.smartCollections, state.smart));
+  if (state.saved) focus.push("Saved: " + savedSearchLabel(state.saved));
   if (activeCategory) focus.push("Category: " + activeCategory);
   if (state.folder) focus.push("Folder: " + state.folder);
   if (state.source) focus.push("Source: " + state.source);
@@ -545,6 +579,9 @@ function renderMetrics(){
 }
 function labelFor(list, id){
   return (list || []).find(item => item.id === id)?.label || id;
+}
+function savedSearchLabel(id){
+  return (DATA.savedSearches || []).find(item => item.saved_search_id === id || item.name === id)?.name || id;
 }
 function laneButton(item, active, attr){
   return '<button class="lane-btn" aria-pressed="'+(active ? "true" : "false")+'" '+attr+'="'+esc(item.id)+'"><span>'+esc(item.label)+'</span><span class="lane-count">'+fmt(item.count)+'</span></button>';
@@ -555,6 +592,7 @@ function renderFacetList(id, items, activeValue, attr, allLabel, total){
   for (const btn of $(id).querySelectorAll(".lane-btn")) {
     btn.addEventListener("click", () => {
       if (attr === "data-smart") state.smart = btn.getAttribute(attr) || "";
+      if (attr === "data-saved") state.saved = btn.getAttribute(attr) || "";
       if (attr === "data-category") activeCategory = btn.getAttribute(attr) || "";
       if (attr === "data-source") state.source = btn.getAttribute(attr) || "";
       if (attr === "data-folder") state.folder = btn.getAttribute(attr) || "";
@@ -566,7 +604,13 @@ function renderRail(){
   const categories = {};
   for (const asset of DATA.assets) categories[asset.category || "uncategorized"] = (categories[asset.category || "uncategorized"] || 0) + 1;
   const categoryItems = Object.entries(categories).sort((a,b)=>b[1]-a[1]).slice(0,30).map(([id,count]) => ({ id, label:id, count }));
+  const savedItems = (DATA.savedSearches || []).map(search => ({
+    id: search.saved_search_id,
+    label: search.name,
+    count: DATA.assets.filter(asset => savedSearchMatches(asset, search.saved_search_id)).length
+  }));
   renderFacetList("smartCollections", DATA.smartCollections || [], state.smart, "data-smart", "All smart views", DATA.assets.length);
+  renderFacetList("savedSearches", savedItems, state.saved, "data-saved", "All saved searches", DATA.assets.length);
   renderFacetList("lanes", categoryItems, activeCategory, "data-category", "All categories", DATA.assets.length);
   renderFacetList("sources", DATA.sources || [], state.source, "data-source", "All sources", DATA.assets.length);
   renderFacetList("folders", DATA.folders || [], state.folder, "data-folder", "All folders", DATA.assets.length);
@@ -587,7 +631,8 @@ function renderGrid(){
         '<div class="asset-body">' +
           '<div class="asset-title">'+esc(asset.title || asset.asset_id)+'</div>' +
           '<div class="asset-meta"><span class="pill">'+esc(asset.media_type)+'</span>'+readinessPill(asset)+'<span class="pill">'+fmt(asset.sizeKB)+' KB</span></div>' +
-          '<div class="asset-meta"><span class="pill">'+esc(asset.media_role || asset.workflow || asset.category || "asset")+'</span>'+(score ? '<span class="pill">'+fmt(score.score)+'</span>' : "")+'</div>' +
+          '<div class="asset-meta"><span class="pill">'+esc(asset.media_role || asset.workflow || asset.category || "asset")+'</span>'+(score ? '<span class="pill">'+fmt(score.score)+'</span>' : "")+(asset.rating ? '<span class="pill good">'+fmt(asset.rating)+'/5</span>' : "")+'</div>' +
+          (asset.color_label || asset.curation_status ? '<div class="asset-meta"><span class="pill">'+esc(asset.color_label || asset.curation_status)+'</span></div>' : "") +
         '</div>' +
       '</button>' +
     '</article>';
@@ -651,6 +696,11 @@ function openAsset(assetId){
     '<div class="kv"><span>Category</span><div>'+esc(asset.category || "")+'</div></div>' +
     '<div class="kv"><span>Media role</span><div>'+esc(asset.media_role || "")+'</div></div>' +
     '<div class="kv"><span>Workflow</span><div>'+esc(asset.workflow || "")+'</div></div>' +
+    '<div class="kv"><span>Curation</span><div>'+esc(asset.curation_status || "uncurated")+'</div></div>' +
+    '<div class="kv"><span>Rating</span><div>'+esc(asset.rating ? asset.rating + " / 5" : "unrated")+'</div></div>' +
+    '<div class="kv"><span>Color label</span><div>'+esc(asset.color_label || "")+'</div></div>' +
+    '<div class="kv"><span>Custom tags</span><div>'+esc((asset.custom_tags || []).join(", "))+'</div></div>' +
+    '<div class="kv"><span>Notes</span><div>'+esc(asset.annotation_notes || "")+'</div></div>' +
     '<div class="kv"><span>Rights</span><div>'+esc(asset.rights_status || "unknown")+'</div></div>' +
     '<div class="kv"><span>Approval</span><div>'+esc(asset.approval_status || "candidate")+'</div></div>' +
     '<div class="kv"><span>Dimensions</span><div>'+esc(asset.width && asset.height ? asset.width + "x" + asset.height : "unknown")+'</div></div>' +

@@ -22,6 +22,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Stores assets, versions, locations, prompt sidecars, usage edges, publications, evaluations, rights, and approval state in SQLite.
 - Detects duplicate content by SHA-256 and samples orphan assets with no detected usage.
 - Scans website/content routes to map where assets appear.
+- Adds local curation metadata: notes, custom tags, ratings, color labels, collections, and saved smart-folder searches.
 - Generates a static dashboard for fast visual browsing and asset detail drawers.
 - Exposes MCP resources and tools for agents via `visual://asset/{asset_id}`.
 - Produces Codex-ready curation packets with path, `visual://` URI, rights, provenance, and next action.
@@ -109,6 +110,11 @@ node bin\vis.mjs packet <asset_id|visual://asset/...|path> --use "homepage hero"
 node bin\vis.mjs duplicates
 node bin\vis.mjs orphans
 node bin\vis.mjs score <asset_id>
+node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --collection "Homepage candidates"
+node bin\vis.mjs annotate <asset_id> --tag favorite --rating 5 --color mint --collection "Homepage candidates" --execute
+node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite
+node bin\vis.mjs save-search --name "Favorite music assets" --query music --tag favorite --execute
+node bin\vis.mjs saved-searches
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum --execute
 node bin\vis.mjs cloudinary-manifest --category brand
@@ -140,6 +146,9 @@ Tools:
 - `score_asset`
 - `score_collection`
 - `create_curation_packet`
+- `annotate_asset`
+- `list_saved_searches`
+- `save_search`
 - `record_publication`
 - `export_cloudinary_manifest`
 - `export_nft_metadata_report`

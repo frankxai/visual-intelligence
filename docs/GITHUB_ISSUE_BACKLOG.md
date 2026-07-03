@@ -377,6 +377,7 @@ Tasks:
 - [ ] Keep `docs/EAGLE_PARITY_ROADMAP.md` current.
 - [ ] Add smart collections for inbox, rights, prompt gaps, usage, orphans, duplicates, music, video, NFT/Web3, website-ready, and social-ready.
 - [ ] Add source/folder navigation and batch curation packet copy.
+- [ ] Add VIS curation memory: notes, tags, ratings, color labels, collections, and saved searches.
 - [ ] Add audio preview and Music IS packet handoff.
 - [ ] Add Eagle metadata adapter research for folders, tags, notes, and source URLs.
 - [ ] Document what remains Eagle-owned versus VIS-owned.

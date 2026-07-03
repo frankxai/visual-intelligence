@@ -9,6 +9,7 @@
 import { createInterface } from 'readline'
 import path from 'path'
 import {
+  annotateAsset,
   createCurationPacket,
   exportCloudinaryManifest,
   exportNftMetadataReport,
@@ -17,11 +18,13 @@ import {
   findProjectRoot,
   getAsset,
   getSummary,
+  listSavedSearches,
   loadConfig,
   mapUsage,
   openVisDatabase,
   parseJson,
   recordPublication,
+  saveSearch,
   scoreAsset,
   scoreCollection,
   searchAssets,
@@ -92,6 +95,48 @@ function toolCreateCurationPacket(args = {}) {
   }))
 }
 
+function toolAnnotateAsset(args = {}) {
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: annotateAsset(db, args.asset_id || args.assetId || args.uri || args.path, { ...args, execute: false }),
+    }))
+  }
+  return withDb(db => annotateAsset(db, args.asset_id || args.assetId || args.uri || args.path, {
+    tags: args.tags || args.tag || [],
+    note: args.note || args.notes,
+    rating: args.rating,
+    color: args.color || args.color_label || args.colorLabel,
+    curationStatus: args.curation_status || args.curationStatus || args.status,
+    collection: args.collection,
+    actor: 'vis-mcp',
+    execute: args.execute === true && WRITE_ENABLED,
+  }))
+}
+
+function toolListSavedSearches() {
+  return withDb(db => listSavedSearches(db))
+}
+
+function toolSaveSearch(args = {}) {
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: saveSearch(db, { ...args, execute: false }),
+    }))
+  }
+  return withDb(db => saveSearch(db, {
+    ...args,
+    mediaType: args.media_type || args.mediaType,
+    curationStatus: args.curation_status || args.curationStatus || args.status,
+    minRating: args.min_rating || args.minRating,
+    actor: 'vis-mcp',
+    execute: args.execute === true && WRITE_ENABLED,
+  }))
+}
+
 function toolRecordPublication(args = {}) {
   if (args.execute === true && !WRITE_ENABLED) {
     return withDb(db => ({
@@ -138,6 +183,9 @@ const TOOL_HANDLERS = {
   score_asset: toolScoreAsset,
   score_collection: toolScoreCollection,
   create_curation_packet: toolCreateCurationPacket,
+  annotate_asset: toolAnnotateAsset,
+  list_saved_searches: toolListSavedSearches,
+  save_search: toolSaveSearch,
   record_publication: toolRecordPublication,
   export_cloudinary_manifest: toolCloudinaryManifest,
   export_nft_metadata_report: toolNftMetadataReport,
@@ -190,6 +238,30 @@ const TOOLS = [
     uri: stringProp('visual://asset/{asset_id}'),
     path: stringProp('Local or relative path'),
     intended_use: stringProp('Website/social/NFT/content use case'),
+  }),
+  tool('annotate_asset', 'Dry-run or save local curation metadata: tags, notes, rating, color label, status, and collection.', {
+    asset_id: stringProp('VIS asset_id'),
+    uri: stringProp('visual://asset/{asset_id}'),
+    path: stringProp('Local or relative path'),
+    tags: { type: 'array', items: { type: 'string' }, description: 'Custom curation tags' },
+    note: stringProp('Curation note'),
+    rating: numberProp('Rating 1-5'),
+    color: stringProp('Color label'),
+    curation_status: stringProp('curated, favorite, approved, rejected, needs-review'),
+    collection: stringProp('Collection name to add the asset into'),
+    execute: booleanProp('Persist annotation when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('list_saved_searches', 'List saved VIS smart-folder searches.', {}),
+  tool('save_search', 'Dry-run or save a VIS smart-folder search. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
+    name: stringProp('Saved search name'),
+    query: stringProp('Search query'),
+    tag: stringProp('Tag filter'),
+    category: stringProp('Category filter'),
+    media_type: stringProp('image, video, or audio'),
+    mood: stringProp('Mood filter'),
+    curation_status: stringProp('Curation status filter'),
+    min_rating: numberProp('Minimum curation rating'),
+    execute: booleanProp('Persist saved search when VIS_ENABLE_WRITES=1'),
   }),
   tool('record_publication', 'Dry-run or record where an asset was published. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
     asset_id: stringProp('VIS asset_id'),

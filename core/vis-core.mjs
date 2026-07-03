@@ -200,6 +200,17 @@ CREATE TABLE IF NOT EXISTS asset_usage (
   detected_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS asset_annotation (
+  asset_id TEXT PRIMARY KEY REFERENCES asset(asset_id) ON DELETE CASCADE,
+  rating INTEGER,
+  color_label TEXT,
+  curation_status TEXT NOT NULL DEFAULT 'uncurated',
+  notes TEXT,
+  custom_tags_json TEXT NOT NULL DEFAULT '[]',
+  updated_by TEXT,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS asset_derivative (
   derivative_id TEXT PRIMARY KEY,
   source_asset_id TEXT NOT NULL REFERENCES asset(asset_id) ON DELETE CASCADE,
@@ -325,6 +336,16 @@ CREATE TABLE IF NOT EXISTS storage_object (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS saved_search (
+  saved_search_id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  query TEXT,
+  filters_json TEXT NOT NULL DEFAULT '{}',
+  created_by TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS provenance_event (
   provenance_event_id TEXT PRIMARY KEY,
   asset_id TEXT NOT NULL REFERENCES asset(asset_id) ON DELETE CASCADE,
@@ -340,6 +361,7 @@ CREATE INDEX IF NOT EXISTS idx_asset_version_asset ON asset_version(asset_id);
 CREATE INDEX IF NOT EXISTS idx_asset_location_asset ON asset_location(asset_id);
 CREATE INDEX IF NOT EXISTS idx_asset_location_path ON asset_location(absolute_path);
 CREATE INDEX IF NOT EXISTS idx_asset_usage_asset ON asset_usage(asset_id);
+CREATE INDEX IF NOT EXISTS idx_asset_annotation_status ON asset_annotation(curation_status);
 CREATE INDEX IF NOT EXISTS idx_publication_asset ON publication(asset_id);
 CREATE INDEX IF NOT EXISTS idx_provenance_asset ON provenance_event(asset_id);
 `)
@@ -862,6 +884,12 @@ SELECT
   l.public_path,
   l.root,
   l.repo,
+  an.rating,
+  an.color_label,
+  an.curation_status,
+  an.notes AS annotation_notes,
+  an.custom_tags_json,
+  an.updated_at AS annotated_at,
   COALESCE(u.usage_count, 0) AS usage_count,
   COALESCE(p.prompt_count, 0) AS prompt_count,
   COALESCE(pub.publication_count, 0) AS publication_count,
@@ -869,6 +897,7 @@ SELECT
 FROM asset a
 LEFT JOIN asset_location l ON l.asset_id = a.asset_id AND l.exists_now = 1
 LEFT JOIN asset_version v ON v.version_id = l.version_id
+LEFT JOIN asset_annotation an ON an.asset_id = a.asset_id
 LEFT JOIN (SELECT asset_id, COUNT(*) AS usage_count FROM asset_usage GROUP BY asset_id) u ON u.asset_id = a.asset_id
 LEFT JOIN (SELECT asset_id, COUNT(*) AS prompt_count FROM prompt GROUP BY asset_id) p ON p.asset_id = a.asset_id
 LEFT JOIN (SELECT asset_id, COUNT(*) AS publication_count FROM publication GROUP BY asset_id) pub ON pub.asset_id = a.asset_id
@@ -921,6 +950,13 @@ export function getAsset(dbOrRoot, assetRef, options = {}) {
       ...asset,
       versions: db.prepare('SELECT * FROM asset_version WHERE asset_id = ? ORDER BY created_at DESC').all(assetId),
       locations: db.prepare('SELECT * FROM asset_location WHERE asset_id = ? ORDER BY exists_now DESC, seen_at DESC').all(assetId),
+      annotation: db.prepare('SELECT * FROM asset_annotation WHERE asset_id = ?').get(assetId) || null,
+      collections: db.prepare(`
+SELECT c.*, ci.position, ci.traits_json, ci.readiness_score, ci.notes AS item_notes
+FROM collection_item ci
+JOIN collection c ON c.collection_id = ci.collection_id
+WHERE ci.asset_id = ?
+ORDER BY c.updated_at DESC`).all(assetId),
       usage: db.prepare('SELECT * FROM asset_usage WHERE asset_id = ? ORDER BY detected_at DESC').all(assetId),
       prompts: db.prepare('SELECT * FROM prompt WHERE asset_id = ? ORDER BY created_at DESC').all(assetId),
       publications: db.prepare('SELECT * FROM publication WHERE asset_id = ? ORDER BY created_at DESC').all(assetId),
@@ -1108,6 +1144,7 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
     const versionMetadata = parseJson(latestVersion.metadata_json, {})
     const mediaRole = versionMetadata.mediaRole || null
     const workflow = versionMetadata.workflow || null
+    const customTags = parseJson(asset.annotation?.custom_tags_json, [])
     const uri = `visual://asset/${asset.asset_id}`
     const isMusic = workflow === 'music-release' || asset.media_type === 'audio' || mediaRole === 'cover-art' || mediaRole === 'music-canvas'
     return {
@@ -1117,6 +1154,14 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
       media_type: asset.media_type,
       media_role: mediaRole,
       workflow,
+      curation: asset.annotation ? {
+        rating: asset.annotation.rating ?? null,
+        color_label: asset.annotation.color_label || null,
+        curation_status: asset.annotation.curation_status || 'uncurated',
+        notes: asset.annotation.notes || null,
+        custom_tags: customTags,
+        collections: (asset.collections || []).map(collection => collection.name),
+      } : null,
       local_path: primaryLocation.absolute_path,
       relative_path: primaryLocation.relative_path,
       public_path: primaryLocation.public_path,
@@ -1126,7 +1171,7 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
       duration_seconds: latestVersion.duration_seconds || null,
       rights_status: asset.rights_status,
       approval_status: asset.approval_status,
-      tags: parseJson(asset.tags_json, []),
+      tags: uniq([...parseJson(asset.tags_json, []), ...customTags]),
       prompt: asset.prompts[0]?.prompt_text || null,
       provenance_summary: {
         prompts: asset.prompts.length,
@@ -1147,12 +1192,161 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
         primaryLocation.absolute_path ? `Local path: ${primaryLocation.absolute_path}` : null,
         mediaRole ? `Media role: ${mediaRole}` : null,
         workflow ? `Workflow: ${workflow}` : null,
+        asset.annotation?.rating ? `Rating: ${asset.annotation.rating}/5` : null,
+        asset.annotation?.curation_status ? `Curation: ${asset.annotation.curation_status}` : null,
         options.intendedUse ? `Intended use: ${options.intendedUse}` : null,
         isMusic ? 'Music handoff: keep Music IS as the release source of truth; use VIS for provenance, discovery, and linked asset packets.' : null,
         `Rights: ${asset.rights_status}; Approval: ${asset.approval_status}`,
         score?.nextAction ? `Next action: ${score.nextAction}` : null,
       ].filter(Boolean).join('\n'),
     }
+  } finally {
+    if (close) db.close()
+  }
+}
+
+export function annotateAsset(dbOrRoot, assetRef, args = {}) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const ref = assetRef || args.assetId || args.asset_id || args.asset || args.uri || args.path
+    const assetId = resolveAssetId(db, ref)
+    if (!assetId) throw new Error('Asset not found for annotation')
+
+    const current = db.prepare('SELECT * FROM asset_annotation WHERE asset_id = ?').get(assetId)
+    const incomingTags = normalizeTagInput(args.tags ?? args.tag ?? [])
+    const currentTags = parseJson(current?.custom_tags_json, [])
+    const customTags = args.replaceTags || args.replace_tags ? incomingTags : uniq([...currentTags, ...incomingTags])
+    const rating = normalizeRating(args.rating ?? current?.rating ?? null)
+    const colorLabel = normalizeNullable(args.colorLabel ?? args.color_label ?? args.color ?? current?.color_label ?? null)
+    const curationStatus = normalizeNullable(args.curationStatus ?? args.curation_status ?? args.status ?? current?.curation_status ?? 'curated') || 'curated'
+    const notes = normalizeNullable(args.notes ?? args.note ?? current?.notes ?? null)
+    const collectionName = normalizeNullable(args.collection || args.collectionName || args.collection_name || null)
+    const actor = args.actor || 'vis-cli'
+    const updatedAt = nowIso()
+    const annotation = {
+      asset_id: assetId,
+      rating,
+      color_label: colorLabel,
+      curation_status: curationStatus,
+      notes,
+      custom_tags: customTags,
+      collection: collectionName,
+      updated_by: actor,
+      updated_at: updatedAt,
+    }
+
+    if (args.execute !== true) {
+      return { dryRun: true, annotation }
+    }
+
+    db.prepare(`
+INSERT INTO asset_annotation (asset_id, rating, color_label, curation_status, notes, custom_tags_json, updated_by, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(asset_id) DO UPDATE SET
+  rating = excluded.rating,
+  color_label = excluded.color_label,
+  curation_status = excluded.curation_status,
+  notes = excluded.notes,
+  custom_tags_json = excluded.custom_tags_json,
+  updated_by = excluded.updated_by,
+  updated_at = excluded.updated_at
+`).run(assetId, rating, colorLabel, curationStatus, notes, JSON.stringify(customTags), actor, updatedAt)
+
+    let collection = null
+    if (collectionName) {
+      collection = upsertCollection(db, {
+        name: collectionName,
+        type: args.collectionType || args.collection_type || 'curation',
+        description: args.collectionDescription || args.collection_description || null,
+        metadata: { source: 'asset_annotation' },
+      })
+      const position = nextCollectionPosition(db, collection.collection_id)
+      db.prepare(`
+INSERT INTO collection_item (collection_id, asset_id, position, traits_json, readiness_score, notes)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(collection_id, asset_id) DO UPDATE SET
+  traits_json = excluded.traits_json,
+  readiness_score = COALESCE(excluded.readiness_score, collection_item.readiness_score),
+  notes = COALESCE(excluded.notes, collection_item.notes)
+`).run(
+        collection.collection_id,
+        assetId,
+        position,
+        JSON.stringify({ tags: customTags, colorLabel, curationStatus }),
+        args.readinessScore || args.readiness_score || null,
+        notes,
+      )
+    }
+
+    recordProvenance(db, {
+      assetId,
+      eventType: 'annotated',
+      actor,
+      source: 'vis-annotation',
+      payload: { ...annotation, collection },
+    })
+
+    return { dryRun: false, annotation: { ...annotation, collection } }
+  } finally {
+    if (close) db.close()
+  }
+}
+
+export function listSavedSearches(dbOrRoot) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    return db.prepare('SELECT * FROM saved_search ORDER BY updated_at DESC, name ASC').all()
+      .map(row => ({ ...row, filters: parseJson(row.filters_json, {}) }))
+  } finally {
+    if (close) db.close()
+  }
+}
+
+export function saveSearch(dbOrRoot, args = {}) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const name = normalizeNullable(args.name)
+    if (!name) throw new Error('Saved search requires a name')
+    const filters = {
+      ...(args.filters || {}),
+      query: args.query || args.filters?.query || '',
+      tag: args.tag || args.filters?.tag || null,
+      category: args.category || args.filters?.category || null,
+      mediaType: args.mediaType || args.media_type || args.filters?.mediaType || null,
+      mood: args.mood || args.filters?.mood || null,
+      curationStatus: args.curationStatus || args.curation_status || args.filters?.curationStatus || null,
+      minRating: normalizeRating(args.minRating || args.min_rating || args.filters?.minRating || null),
+    }
+    const savedSearch = {
+      saved_search_id: args.savedSearchId || args.saved_search_id || stableId('search', name),
+      name,
+      query: filters.query || '',
+      filters,
+      created_by: args.actor || 'vis-cli',
+      updated_at: nowIso(),
+    }
+    if (args.execute !== true) return { dryRun: true, savedSearch }
+
+    const existing = db.prepare('SELECT created_at FROM saved_search WHERE saved_search_id = ? OR name = ?').get(savedSearch.saved_search_id, name)
+    db.prepare(`
+INSERT INTO saved_search (saved_search_id, name, query, filters_json, created_by, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(saved_search_id) DO UPDATE SET
+  name = excluded.name,
+  query = excluded.query,
+  filters_json = excluded.filters_json,
+  created_by = excluded.created_by,
+  updated_at = excluded.updated_at
+`).run(
+      savedSearch.saved_search_id,
+      name,
+      savedSearch.query,
+      JSON.stringify(filters),
+      savedSearch.created_by,
+      existing?.created_at || savedSearch.updated_at,
+      savedSearch.updated_at,
+    )
+    return { dryRun: false, savedSearch }
   } finally {
     if (close) db.close()
   }
@@ -1297,10 +1491,13 @@ export function getSummary(dbOrRoot) {
     const prompts = countRows(db, 'prompt')
     const publications = countRows(db, 'publication')
     const evals = countRows(db, 'eval_record')
+    const annotations = countRows(db, 'asset_annotation')
+    const savedSearches = countRows(db, 'saved_search')
     const byMediaType = db.prepare('SELECT media_type, COUNT(*) AS count FROM asset GROUP BY media_type ORDER BY count DESC').all()
     const byCategory = db.prepare('SELECT category, COUNT(*) AS count FROM asset GROUP BY category ORDER BY count DESC LIMIT 25').all()
     const byRights = db.prepare('SELECT rights_status, COUNT(*) AS count FROM asset GROUP BY rights_status ORDER BY count DESC').all()
-    return { assets, versions, locations, usageEdges, prompts, publications, evals, byMediaType, byCategory, byRights }
+    const byCurationStatus = db.prepare('SELECT curation_status, COUNT(*) AS count FROM asset_annotation GROUP BY curation_status ORDER BY count DESC').all()
+    return { assets, versions, locations, usageEdges, prompts, publications, evals, annotations, savedSearches, byMediaType, byCategory, byRights, byCurationStatus }
   } finally {
     if (close) db.close()
   }
@@ -1379,9 +1576,23 @@ export function countRows(db, table, where = null) {
 export function normalizeAssetRow(row) {
   if (!row) return row
   const versionMetadata = parseJson(row.metadata_json, {})
+  const baseTags = parseJson(row.tags_json, [])
+  const customTags = parseJson(row.custom_tags_json, [])
   return {
     ...row,
-    tags: parseJson(row.tags_json, []),
+    tags: uniq([...baseTags, ...customTags]),
+    base_tags: baseTags,
+    custom_tags: customTags,
+    annotation: row.curation_status || row.rating || row.color_label || row.annotation_notes || customTags.length
+      ? {
+          rating: row.rating ?? null,
+          color_label: row.color_label || null,
+          curation_status: row.curation_status || 'uncurated',
+          notes: row.annotation_notes || null,
+          custom_tags: customTags,
+          updated_at: row.annotated_at || null,
+        }
+      : null,
     version_metadata: versionMetadata,
     media_role: versionMetadata.mediaRole || null,
     workflow: versionMetadata.workflow || null,
@@ -1794,6 +2005,58 @@ function recommendNextAction(asset, flags) {
   if (!asset.evals.length) return 'Run visual quality eval and approve/reject.'
   if (!asset.usage.length) return 'Choose a target website/social/collection usage and record it.'
   return 'Ready for curation packet or derivative export.'
+}
+
+function upsertCollection(db, args = {}) {
+  const name = normalizeNullable(args.name)
+  if (!name) throw new Error('Collection requires a name')
+  const ts = nowIso()
+  const collectionId = args.collectionId || args.collection_id || stableId('collection', name)
+  db.prepare(`
+INSERT INTO collection (collection_id, name, type, description, status, metadata_json, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(collection_id) DO UPDATE SET
+  name = excluded.name,
+  type = excluded.type,
+  description = COALESCE(excluded.description, collection.description),
+  metadata_json = excluded.metadata_json,
+  updated_at = excluded.updated_at
+`).run(
+    collectionId,
+    name,
+    args.type || 'curation',
+    args.description || null,
+    args.status || 'draft',
+    JSON.stringify(args.metadata || {}),
+    ts,
+    ts,
+  )
+  return db.prepare('SELECT * FROM collection WHERE collection_id = ?').get(collectionId)
+}
+
+function nextCollectionPosition(db, collectionId) {
+  const row = db.prepare('SELECT MAX(position) AS position FROM collection_item WHERE collection_id = ?').get(collectionId)
+  return Number(row?.position || 0) + 1
+}
+
+function normalizeRating(value) {
+  if (value === null || value === undefined || value === '') return null
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+  return Math.max(1, Math.min(5, Math.round(parsed)))
+}
+
+function normalizeTagInput(value) {
+  const raw = Array.isArray(value) ? value : String(value || '').split(',')
+  return uniq(raw.flatMap(item => String(item || '').split(','))
+    .map(item => item.trim().toLowerCase())
+    .filter(Boolean))
+}
+
+function normalizeNullable(value) {
+  if (value === null || value === undefined) return null
+  const next = String(value).trim()
+  return next ? next : null
 }
 
 function slugify(value) {

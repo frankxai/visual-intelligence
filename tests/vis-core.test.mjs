@@ -4,6 +4,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import {
+  annotateAsset,
   createCurationPacket,
   detectCategory,
   detectDimensions,
@@ -11,9 +12,11 @@ import {
   detectSuitability,
   getSummary,
   indexProject,
+  listSavedSearches,
   loadConfig,
   openVisDatabase,
   recordPublication,
+  saveSearch,
   searchAssets,
   traceAsset,
 } from '../core/vis-core.mjs'
@@ -58,13 +61,42 @@ test('indexes assets, usage, trace, and dry-run publication records', () => {
       assert.equal(asset.width, 1)
       assert.equal(asset.height, 1)
 
+      const annotationDryRun = annotateAsset(db, asset.asset_id, {
+        tags: ['favorite', 'homepage'],
+        rating: 5,
+        color: 'mint',
+        collection: 'Homepage candidates',
+      })
+      assert.equal(annotationDryRun.dryRun, true)
+
+      const annotation = annotateAsset(db, asset.asset_id, {
+        tags: ['favorite', 'homepage'],
+        note: 'Strong homepage candidate.',
+        rating: 5,
+        color: 'mint',
+        curationStatus: 'favorite',
+        collection: 'Homepage candidates',
+        execute: true,
+      })
+      assert.equal(annotation.dryRun, false)
+
       const trace = traceAsset(db, asset.asset_id)
       assert.equal(trace.asset.usage.length, 1)
       assert.equal(trace.asset.prompts.length, 1)
+      assert.equal(trace.asset.annotation.rating, 5)
+      assert.equal(trace.asset.collections[0].name, 'Homepage candidates')
 
       const packet = createCurationPacket(db, asset.asset_id, { intendedUse: 'homepage hero' })
       assert.match(packet.codex_prompt, /visual:\/\/asset\//)
       assert.match(packet.codex_prompt, /homepage hero/)
+      assert.equal(packet.curation.rating, 5)
+      assert.ok(packet.tags.includes('favorite'))
+
+      const savedSearchDryRun = saveSearch(db, { name: 'Favorite homepage assets', query: 'hero', tag: 'favorite' })
+      assert.equal(savedSearchDryRun.dryRun, true)
+      const savedSearch = saveSearch(db, { name: 'Favorite homepage assets', query: 'hero', tag: 'favorite', execute: true })
+      assert.equal(savedSearch.dryRun, false)
+      assert.equal(listSavedSearches(db).length, 1)
 
       const publication = recordPublication(db, {
         assetId: asset.asset_id,
@@ -73,6 +105,9 @@ test('indexes assets, usage, trace, and dry-run publication records', () => {
       })
       assert.equal(publication.dryRun, true)
       assert.equal(summary.publications, 0)
+      const updatedSummary = getSummary(db)
+      assert.equal(updatedSummary.annotations, 1)
+      assert.equal(updatedSummary.savedSearches, 1)
     } finally {
       db.close()
     }

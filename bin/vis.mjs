@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url'
 import {
   DEFAULT_CONFIG,
   VIS_VERSION,
+  annotateAsset,
   createCurationPacket,
   exportCloudinaryManifest,
   exportNftMetadataReport,
@@ -21,6 +22,7 @@ import {
   getAsset,
   getSummary,
   indexProject,
+  listSavedSearches,
   loadConfig,
   openVisDatabase,
   recordPublication,
@@ -29,6 +31,7 @@ import {
   scanUsageOnly,
   scoreAsset,
   scoreCollection,
+  saveSearch,
   searchAssets,
   traceAsset,
 } from '../core/vis-core.mjs'
@@ -61,6 +64,7 @@ const VALUE_FLAGS = new Set([
   '--tag', '--mood', '--category', '--media-type', '--asset', '--asset-id',
   '--path', '--uri', '--platform', '--url', '--route', '--caption', '--campaign',
   '--status', '--query', '--folder', '--collection', '--use', '--max-kb',
+  '--note', '--notes', '--rating', '--color', '--curation-status', '--name', '--min-rating',
 ])
 
 function positionalArgs() {
@@ -159,6 +163,8 @@ function cmdReport() {
     console.log(`Locations:    ${summary.locations}`)
     console.log(`Usage edges:  ${summary.usageEdges}`)
     console.log(`Prompts:      ${summary.prompts}`)
+    console.log(`Annotations:  ${summary.annotations || 0}`)
+    console.log(`Saved search: ${summary.savedSearches || 0}`)
     console.log(`Publications: ${summary.publications}`)
     console.log(`Evals:        ${summary.evals}`)
     console.log('\nMedia types:')
@@ -271,6 +277,47 @@ function cmdScore() {
   const ref = positionalArgs()[0]
   if (ref) printJson(scoreAsset(root, ref))
   else printJson(scoreCollection(root, getFlag('--collection')))
+}
+
+function cmdAnnotate() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri')
+  if (!ref) throw new Error('Usage: vis annotate <asset|path|uri> [--tag <tag>] [--note <note>] [--rating 1-5] [--execute]')
+  const result = annotateAsset(root, ref, {
+    tags: getAllFlags('--tag'),
+    note: getFlag('--note') || getFlag('--notes'),
+    rating: getFlag('--rating'),
+    color: getFlag('--color'),
+    curationStatus: getFlag('--curation-status') || getFlag('--status'),
+    collection: getFlag('--collection'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdSavedSearches() {
+  const root = projectRoot()
+  printJson(listSavedSearches(root))
+}
+
+function cmdSaveSearch() {
+  const root = projectRoot()
+  const name = getFlag('--name') || positionalArgs()[0]
+  const query = getFlag('--query') || positionalArgs().slice(name ? 1 : 0).join(' ')
+  const result = saveSearch(root, {
+    name,
+    query,
+    tag: getFlag('--tag'),
+    category: getFlag('--category'),
+    mediaType: getFlag('--media-type'),
+    mood: getFlag('--mood'),
+    curationStatus: getFlag('--curation-status') || getFlag('--status'),
+    minRating: getFlag('--min-rating'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
 }
 
 function cmdRecordPublication() {
@@ -401,6 +448,8 @@ function cmdDoctor() {
     console.log(`  locations:   ${summary.locations}`)
     console.log(`  usageEdges:  ${summary.usageEdges}`)
     console.log(`  prompts:     ${summary.prompts}`)
+    console.log(`  annotations: ${summary.annotations || 0}`)
+    console.log(`  savedSearch: ${summary.savedSearches || 0}`)
   }
   console.log('\nMCP:')
   console.log(`  ${result.mcp.command}`)
@@ -459,6 +508,9 @@ const commands = {
   duplicates: cmdDuplicates,
   orphans: cmdOrphans,
   score: cmdScore,
+  annotate: cmdAnnotate,
+  'saved-searches': cmdSavedSearches,
+  'save-search': cmdSaveSearch,
   'record-publication': cmdRecordPublication,
   'cloudinary-manifest': cmdCloudinaryManifest,
   'nft-report': cmdNftReport,
@@ -487,6 +539,9 @@ Commands:
   vis duplicates                   List duplicate content groups
   vis orphans                      List assets with no detected usage
   vis score [asset]                Score asset or collection readiness
+  vis annotate <asset>             Dry-run or save tags, notes, rating, color, collection
+  vis saved-searches               List saved smart-folder searches
+  vis save-search --name <name>     Dry-run or save a smart search
   vis record-publication --asset <id> --platform <x> [--url <url>] [--execute]
   vis cloudinary-manifest          Dry-run Cloudinary upload manifest
   vis nft-report                   Dry-run NFT metadata readiness report
