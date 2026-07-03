@@ -362,3 +362,27 @@ Acceptance:
 - [ ] New tasks can be opened consistently.
 - [ ] Weekly review can move issues across Now/Next/Later.
 ```
+
+## Issue 16: Build Eagle parity cockpit slice and adapter path
+
+Labels: `dashboard`, `adapter`, `product`
+Milestone: `M1 Daily Cockpit`
+
+Body:
+
+```markdown
+Benchmark Eagle capabilities without copying proprietary UX, then ship the VIS-specific advantage layer.
+
+Tasks:
+- [ ] Keep `docs/EAGLE_PARITY_ROADMAP.md` current.
+- [ ] Add smart collections for inbox, rights, prompt gaps, usage, orphans, duplicates, music, video, NFT/Web3, website-ready, and social-ready.
+- [ ] Add source/folder navigation and batch curation packet copy.
+- [ ] Add audio preview and Music IS packet handoff.
+- [ ] Add Eagle metadata adapter research for folders, tags, notes, and source URLs.
+- [ ] Document what remains Eagle-owned versus VIS-owned.
+
+Acceptance:
+- [ ] Frank can use Eagle for daily designer browsing while VIS shows provenance, usage, MCP, and agent packets.
+- [ ] VIS dashboard exposes the first Eagle-inspired cockpit slice.
+- [ ] Eagle remains optional and no proprietary Eagle code is copied.
+```

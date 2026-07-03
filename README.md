@@ -195,6 +195,7 @@ See [docs/OPEN_SOURCE_TECH_RADAR.md](docs/OPEN_SOURCE_TECH_RADAR.md) before abso
 - [Architecture](docs/ARCHITECTURE.md)
 - [Research](docs/RESEARCH.md)
 - [Open Source Tech Radar](docs/OPEN_SOURCE_TECH_RADAR.md)
+- [Eagle Parity Roadmap](docs/EAGLE_PARITY_ROADMAP.md)
 - [Project Board](docs/PROJECT_BOARD.md)
 - [Setup Runbook](docs/SETUP_RUNBOOK.md)
 - [GitHub Issue Backlog](docs/GITHUB_ISSUE_BACKLOG.md)

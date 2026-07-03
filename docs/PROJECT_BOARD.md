@@ -24,6 +24,8 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 ## Now
 
 - [ ] Buy Eagle and install it on the two primary laptops.
+- [x] Add Eagle parity roadmap and current build/use decision to repo docs.
+- [x] Add first VIS cockpit slice for smart collections, source/folder navigation, batch packets, audio preview, and Music IS handoff.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.
@@ -34,6 +36,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 ## Next
 
 - [ ] Build a Next.js/PWA dashboard to replace the static HTML dashboard for daily use.
+- [ ] Turn the static cockpit slice into saved project tasks and GitHub Issues when API limits reset.
 - [ ] Add Eagle adapter: detect Eagle library metadata, folders, tags, notes, URLs, and assets without copying proprietary code.
 - [ ] Add Google Drive metadata adapter with provider IDs and sync health.
 - [ ] Add Google Photos/manual mobile inbox intake workflow.

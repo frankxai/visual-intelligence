@@ -498,6 +498,8 @@ export function buildAssetEntry(root, mediaRoot, filePath, config = DEFAULT_CONF
   const category = detectCategory(filePath, mediaRoot, root)
   const tags = detectTags(`${relRoot} ${category} ${path.basename(filePath)}`)
   const mood = detectMood(filePath, category, mediaType)
+  const mediaRole = detectMediaRole(filePath, mediaType, tags)
+  const workflow = detectWorkflow(filePath, category, mediaRole, tags)
   const dims = detectDimensions(filePath, readDimensionHeader(filePath, ext), ext)
   const sidecars = findPromptSidecars(filePath, config)
 
@@ -524,6 +526,8 @@ export function buildAssetEntry(root, mediaRoot, filePath, config = DEFAULT_CONF
     repo: path.basename(root),
     category,
     mood,
+    mediaRole,
+    workflow,
     tags,
     sidecars,
     createdAt: stats.birthtime?.toISOString?.() || stats.mtime.toISOString(),
@@ -580,7 +584,7 @@ ON CONFLICT(version_id) DO UPDATE SET
     entry.height,
     entry.durationSeconds,
     entry.createdAt || ts,
-    JSON.stringify({ modifiedAt: entry.modifiedAt, title: entry.title }),
+    JSON.stringify({ modifiedAt: entry.modifiedAt, title: entry.title, mediaRole: entry.mediaRole, workflow: entry.workflow }),
   )
 
   const locationId = stableId('loc', entry.absolutePath)
@@ -644,6 +648,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       byteSize: entry.byteSize,
       width: entry.width,
       height: entry.height,
+      mediaRole: entry.mediaRole,
+      workflow: entry.workflow,
     },
     eventId: stableId('prov', `${entry.assetId}:${entry.versionId}:indexed:${entry.absolutePath}`),
   })
@@ -787,10 +793,18 @@ export function exportLegacyRegistry(dbOrRoot, rootMaybe, configMaybe) {
       width: asset.width,
       height: asset.height,
       mediaType: asset.media_type,
+      mediaRole: asset.media_role,
+      workflow: asset.workflow,
       tags: parseJson(asset.tags_json, []),
       mood: asset.mood,
       theme: detectTheme(asset.category, asset.relative_path || ''),
-      suitableFor: detectSuitability(parseJson(asset.tags_json, []), asset.mood, Math.round((asset.byte_size || 0) / 1024)),
+      suitableFor: detectSuitability(
+        parseJson(asset.tags_json, []),
+        asset.mood,
+        Math.round((asset.byte_size || 0) / 1024),
+        asset.media_type,
+        asset.media_role,
+      ),
       rightsStatus: asset.rights_status,
       approvalStatus: asset.approval_status,
     }))
@@ -842,6 +856,7 @@ SELECT
   v.width,
   v.height,
   v.duration_seconds,
+  v.metadata_json,
   l.absolute_path,
   l.relative_path,
   l.public_path,
@@ -1026,6 +1041,10 @@ export function scoreAsset(dbOrRoot, assetRef) {
       score -= 8
       flags.push('missing image dimensions')
     }
+    if (asset.media_type === 'audio' && !latest.duration_seconds) {
+      score -= 4
+      flags.push('audio duration not detected; verify in Music IS proof folder')
+    }
     if (!asset.prompts.length) {
       score -= 8
       flags.push('no prompt/provenance sidecar linked')
@@ -1086,18 +1105,25 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
     const score = scoreAsset(db, asset.asset_id)
     const primaryLocation = asset.locations.find(loc => loc.exists_now) || asset.locations[0] || {}
     const latestVersion = asset.versions[0] || {}
+    const versionMetadata = parseJson(latestVersion.metadata_json, {})
+    const mediaRole = versionMetadata.mediaRole || null
+    const workflow = versionMetadata.workflow || null
     const uri = `visual://asset/${asset.asset_id}`
+    const isMusic = workflow === 'music-release' || asset.media_type === 'audio' || mediaRole === 'cover-art' || mediaRole === 'music-canvas'
     return {
       asset_id: asset.asset_id,
       visual_uri: uri,
       title: asset.title,
       media_type: asset.media_type,
+      media_role: mediaRole,
+      workflow,
       local_path: primaryLocation.absolute_path,
       relative_path: primaryLocation.relative_path,
       public_path: primaryLocation.public_path,
       version_id: latestVersion.version_id,
       sha256: latestVersion.sha256,
       dimensions: latestVersion.width && latestVersion.height ? `${latestVersion.width}x${latestVersion.height}` : null,
+      duration_seconds: latestVersion.duration_seconds || null,
       rights_status: asset.rights_status,
       approval_status: asset.approval_status,
       tags: parseJson(asset.tags_json, []),
@@ -1108,13 +1134,21 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
         publications: asset.publications.length,
         evals: asset.evals.length,
       },
+      music_handoff: isMusic ? {
+        canonical_system: 'Music IS',
+        vis_role: 'index, provenance, cover/canvas/audio discovery, and agent packet handoff',
+        release_gate: 'Use Music IS proof folder and release checklist before distribution.',
+      } : null,
       score,
       intended_use: options.intendedUse || null,
       next_recommended_action: score?.nextAction,
       codex_prompt: [
         `Use this VIS asset: ${uri}`,
         primaryLocation.absolute_path ? `Local path: ${primaryLocation.absolute_path}` : null,
+        mediaRole ? `Media role: ${mediaRole}` : null,
+        workflow ? `Workflow: ${workflow}` : null,
         options.intendedUse ? `Intended use: ${options.intendedUse}` : null,
+        isMusic ? 'Music handoff: keep Music IS as the release source of truth; use VIS for provenance, discovery, and linked asset packets.' : null,
         `Rights: ${asset.rights_status}; Approval: ${asset.approval_status}`,
         score?.nextAction ? `Next action: ${score.nextAction}` : null,
       ].filter(Boolean).join('\n'),
@@ -1344,9 +1378,13 @@ export function countRows(db, table, where = null) {
 
 export function normalizeAssetRow(row) {
   if (!row) return row
+  const versionMetadata = parseJson(row.metadata_json, {})
   return {
     ...row,
     tags: parseJson(row.tags_json, []),
+    version_metadata: versionMetadata,
+    media_role: versionMetadata.mediaRole || null,
+    workflow: versionMetadata.workflow || null,
     sizeKB: row.byte_size ? Math.round(row.byte_size / 1024) : null,
     visual_uri: row.asset_id ? `visual://asset/${row.asset_id}` : null,
     file_url: row.absolute_path ? pathToFileURL(row.absolute_path).href : null,
@@ -1524,6 +1562,9 @@ function parseSvgViewBox(value) {
 export function detectCategory(filePath, mediaRoot, root) {
   const rel = slash(path.relative(root, filePath)).toLowerCase()
   const parts = slash(path.relative(mediaRoot, filePath)).split('/').filter(Boolean)
+  if (/\b(music-is|music_os|music-os|suno|song|track|audio|stems?|release|lyrics|distrokid|spotify|bandcamp|canvas)\b/.test(rel)) {
+    return 'music-releases'
+  }
   if (rel.includes('animelegends')) return rel.includes('mascot') ? 'animelegends-mascots' : 'animelegends'
   if (rel.includes('arcanea')) {
     if (rel.includes('guardian')) return 'arcanea-guardians'
@@ -1535,6 +1576,45 @@ export function detectCategory(filePath, mediaRoot, root) {
   if (rel.includes('character') || rel.includes('mascot') || rel.includes('avatar')) return 'characters'
   if (parts.length > 1) return parts[0]
   return path.basename(path.dirname(filePath)) || 'assets'
+}
+
+export function detectMediaRole(filePath, mediaType, tags = []) {
+  const rel = slash(filePath).toLowerCase()
+  const taggedMusic = tags.includes('music') || /\b(music-is|music_os|music-os|suno|song|track|audio|release|lyrics)\b/.test(rel)
+  if (mediaType === 'audio') {
+    if (/\b(stem|stems|vox|vocal|drum|bass|guitar|piano|instrumental)\b/.test(rel)) return 'music-stem'
+    if (/\b(master|final|release|distrokid|spotify|bandcamp)\b/.test(rel)) return 'song-master'
+    if (/\b(demo|draft|sketch|idea|scratch)\b/.test(rel)) return 'song-demo'
+    if (/\b(loop|sample|one-shot|oneshot|pack)\b/.test(rel)) return 'music-sample'
+    if (/\b(voice|vo|narration|spoken)\b/.test(rel)) return 'voice-audio'
+    return 'song-audio'
+  }
+  if (mediaType === 'video') {
+    if (/\b(canvas|spotify-canvas|visualizer)\b/.test(rel)) return 'music-canvas'
+    if (/\b(reel|short|tiktok|youtube-short|story)\b/.test(rel)) return 'social-video'
+    return 'motion-asset'
+  }
+  if (mediaType === 'image') {
+    if (taggedMusic && /\b(cover|album|artwork|single|ep)\b/.test(rel)) return 'cover-art'
+    if (/\b(hero|og|banner|social|thumbnail|poster)\b/.test(rel)) return 'campaign-visual'
+    if (tags.includes('web3')) return 'nft-trait-or-master'
+    if (tags.includes('brand')) return 'brand-asset'
+  }
+  return `${mediaType || 'unknown'}-asset`
+}
+
+export function detectWorkflow(filePath, category, mediaRole, tags = []) {
+  const rel = slash(filePath).toLowerCase()
+  if (
+    category === 'music-releases' ||
+    tags.includes('music') ||
+    ['song-master', 'song-demo', 'song-audio', 'music-stem', 'music-canvas', 'cover-art'].includes(mediaRole)
+  ) return 'music-release'
+  if (category === 'nft-web3' || tags.includes('web3')) return 'nft-collection'
+  if (/\b(app|pages|components|public|website|landing|hero|og)\b/.test(rel) || tags.includes('hero')) return 'website'
+  if (/\b(social|post|reel|short|story|thumbnail)\b/.test(rel) || tags.includes('distribution')) return 'social'
+  if (category === 'brand' || tags.includes('brand')) return 'brand-system'
+  return 'asset-library'
 }
 
 export function detectTags(text) {
@@ -1562,8 +1642,17 @@ export function detectTheme(category, filename) {
   return 'dark'
 }
 
-export function detectSuitability(tags, mood, sizeKB) {
+export function detectSuitability(tags, mood, sizeKB, mediaType = 'image', mediaRole = '') {
   const suitable = []
+  if (mediaType === 'audio') {
+    if (mediaRole === 'song-master') suitable.push('release-master')
+    if (mediaRole === 'music-stem') suitable.push('production-stem')
+    if (mediaRole === 'song-demo') suitable.push('music-review')
+    suitable.push('music-is-handoff')
+    return uniq(suitable)
+  }
+  if (mediaRole === 'music-canvas') suitable.push('spotify-canvas')
+  if (mediaRole === 'cover-art') suitable.push('release-art')
   if (tags.includes('hero') && sizeKB > 100) suitable.push('hero')
   if (mood === 'atmospheric' && sizeKB > 200) suitable.push('website-showcase')
   if (sizeKB > 30 && sizeKB < 900) suitable.push('card-thumbnail')
@@ -1695,8 +1784,12 @@ function groupCount(rows, key) {
 }
 
 function recommendNextAction(asset, flags) {
+  const latest = asset.versions?.[0] || {}
+  const metadata = parseJson(latest.metadata_json, {})
+  const workflow = metadata.workflow || asset.workflow
   if (asset.rights_status === 'blocked') return 'Do not publish. Replace or resolve rights.'
   if (flags.some(flag => flag.includes('rights'))) return 'Set rights status before public use.'
+  if (workflow === 'music-release') return 'Open or create the Music IS proof folder and attach cover, Canvas, lyrics, credits, and release gate status.'
   if (!asset.prompts.length) return 'Attach prompt or provenance sidecar before using as a generated master.'
   if (!asset.evals.length) return 'Run visual quality eval and approve/reject.'
   if (!asset.usage.length) return 'Choose a target website/social/collection usage and record it.'

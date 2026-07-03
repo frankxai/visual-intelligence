@@ -5,7 +5,10 @@ import os from 'os'
 import path from 'path'
 import {
   createCurationPacket,
+  detectCategory,
   detectDimensions,
+  detectMediaRole,
+  detectSuitability,
   getSummary,
   indexProject,
   loadConfig,
@@ -76,6 +79,21 @@ test('indexes assets, usage, trace, and dry-run publication records', () => {
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }
+})
+
+test('classifies music release assets without flattening them into generic visuals', () => {
+  const root = path.join(os.tmpdir(), 'vis-music-root')
+  const mediaRoot = path.join(root, 'verticals', 'music-is', 'proof-folders')
+  const masterPath = path.join(mediaRoot, 'Arcanea Records', 'single-release', 'final-master.wav')
+  const coverPath = path.join(mediaRoot, 'Arcanea Records', 'single-release', 'cover-art.png')
+
+  assert.equal(detectCategory(masterPath, mediaRoot, root), 'music-releases')
+  assert.equal(detectMediaRole(masterPath, 'audio', ['music']), 'song-master')
+  assert.equal(detectMediaRole(coverPath, 'image', ['music']), 'cover-art')
+  assert.deepEqual(detectSuitability(['music'], 'sonic', 6400, 'audio', 'song-master'), [
+    'release-master',
+    'music-is-handoff',
+  ])
 })
 
 test('reports malformed VIS config with a useful error', () => {
