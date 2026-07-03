@@ -21,8 +21,10 @@ Google Tasks should not become the product backlog. Use it for time-bound person
 1. Add or change work in `docs/VIS_TASK_REGISTRY.json`.
 2. Run `npm run tasks:dry-run`.
 3. Run `npm run tasks:sync -- --execute` when the dry-run is clean.
-4. Update `docs/PROJECT_BOARD.md` only when the Now/Next/Later view changes.
-5. Commit and push the repo changes so the other laptop and Claude can cross-check.
+4. Run `npm run project:status` to inspect open install, product, blocked, and reminder lanes.
+5. Run `npm run project:report` when a repo-visible status report should be refreshed.
+6. Update `docs/PROJECT_BOARD.md` only when the Now/Next/Later view changes.
+7. Commit and push the repo changes so the other laptop and Claude can cross-check.
 
 ## Board Model
 
@@ -60,7 +62,7 @@ Use agent labels when useful:
 
 ## Google Tasks Layer
 
-Create these as personal reminders if you want phone-native nudges:
+Create these as personal reminders if you want phone-native nudges. The copy-ready list lives in `docs/GOOGLE_TASKS_REMINDER_LAYER.md`.
 
 - Buy Eagle and install it on laptop 1.
 - Install Eagle and Google Drive for desktop on laptop 2.
@@ -123,7 +125,8 @@ The weekly review should:
 3. Review rights, duplicate, orphan, and prompt gaps.
 4. Pick one product improvement for the week.
 5. Update issue labels and `docs/PROJECT_BOARD.md`.
-6. Log any product or market learning.
+6. Run `npm run project:report`.
+7. Log any product or market learning.
 
 ## GitHub Projects V2
 

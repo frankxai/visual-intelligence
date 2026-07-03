@@ -47,12 +47,14 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add live Eagle-style smart collection evaluation across CLI, MCP, dashboard, schema, docs, and tests.
 - [x] Add Eagle-style color palette extraction, color search, dashboard swatches, and color-indexed smart view.
 - [x] Add dry-run-first batch rename for selected designer/music assets across core, CLI, MCP, docs, and tests.
+- [x] Add project status/report command plus Google Tasks reminder layer.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.
 - [ ] Point VIS scanner at Drive vault, Eagle library, repo assets, and Music IS proof folders.
 - [ ] Install VIS MCP for Claude/Codex on both laptops.
 - [ ] Run `npm run doctor`, `npm run lint`, `npm test`, estate scan, usage scan, and dashboard generation on both laptops.
+- [ ] Run two-laptop VIS software install and MCP evidence report.
 
 ## Next
 
@@ -64,6 +66,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [ ] Verify Music IS release packets against Frank's real proof folders after next estate scan.
 - [x] Add agent run logging sidecars for generated media.
 - [ ] Add semantic embeddings and stronger visual similarity using a permissive local model or external adapter.
+- [ ] Run weekly VIS product experiment and reporting loop.
 
 ## Later
 

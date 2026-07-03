@@ -470,6 +470,89 @@
         "Done: Blocked targets prevent accidental overwrites by default.",
         "Done: Music release assets can use workflow/media-role templates without making VIS the Music IS source of truth."
       ]
+    },
+    {
+      "key": "VIS-022",
+      "title": "Add VIS project status reporting and Google Tasks reminder layer",
+      "milestone": "M0 Personal Estate Setup",
+      "status": "done",
+      "labels": ["setup", "product", "good-first-internal"],
+      "summary": "Make VIS manageable as a real project by adding a registry-driven status report, copy-ready Google Tasks reminder layer, and explicit command flow for future agents.",
+      "tasks": [
+        "Done: Add project status/report command driven by docs/VIS_TASK_REGISTRY.json.",
+        "Done: Add copy-ready Google Tasks reminder document for human device/account actions.",
+        "Done: Update project operating rules so GitHub Issues stay canonical and Google Tasks stay personal.",
+        "Done: Regenerate project status report from registry and synced issue links.",
+        "Done: Add package scripts for project status and report generation."
+      ],
+      "acceptance": [
+        "Done: Agents can run npm run project:status to see open install, product, and reminder lanes.",
+        "Done: Frank can create Google Tasks without making Google Tasks the product backlog.",
+        "Done: The second laptop and Claude can cross-check from one documented command block.",
+        "Done: The project tracker continues to sync through GitHub Issues and milestones."
+      ]
+    },
+    {
+      "key": "VIS-023",
+      "title": "Run two-laptop VIS software install and MCP evidence report",
+      "milestone": "M0 Personal Estate Setup",
+      "labels": ["setup", "mcp", "human-gated", "agent:claude"],
+      "summary": "Verify that both laptops can install, run, scan, serve, and expose VIS through MCP with evidence recorded in GitHub.",
+      "tasks": [
+        "Run git fetch, checkout, pull, npm install, npm run project:status, npm run lint, npm test, and node bin\\vis.mjs doctor on laptop 1.",
+        "Run the same command set on laptop 2.",
+        "Install or verify vis-mcp in Claude on laptop 1.",
+        "Install or verify vis-mcp in Claude on laptop 2.",
+        "Run scan-profile frank-estate --json on both laptops and compare allowed roots.",
+        "Generate dashboard on both laptops and confirm it opens.",
+        "Comment evidence, command summaries, blockers, and local path differences on the GitHub issue."
+      ],
+      "acceptance": [
+        "Both laptops can run VIS without missing dependencies.",
+        "Claude can see the VIS MCP server on both laptops or the blocker is clearly documented.",
+        "A selected visual:// asset packet resolves to a valid local path on both machines.",
+        "Generated data remains ignored and no secrets are printed or committed."
+      ]
+    },
+    {
+      "key": "VIS-024",
+      "title": "Run weekly VIS product experiment and reporting loop",
+      "milestone": "M4 Product Beta",
+      "labels": ["product", "research", "good-first-internal"],
+      "summary": "Turn VIS evolution into a weekly experiment loop with one product bet, one validation run, and one short report.",
+      "tasks": [
+        "Pick one weekly experiment from Eagle parity, mobile intake, music assets, provenance, dashboard, or adapter workflow.",
+        "Define success criteria before implementation.",
+        "Run the smallest useful validation: CLI, MCP, dashboard, or real workflow evidence.",
+        "Record results, screenshots or command summaries, and next decision in GitHub.",
+        "Regenerate docs/PROJECT_STATUS_REPORT.md after updating issue statuses."
+      ],
+      "acceptance": [
+        "Each week has one clear experiment owner and result.",
+        "Failures and blocked experiments are documented rather than disappearing.",
+        "Product scope evolves from evidence instead of intuition alone.",
+        "The loop remains light enough for a solo founder to maintain."
+      ]
+    },
+    {
+      "key": "VIS-025",
+      "title": "Enable GitHub Projects v2 board after gh project scope refresh",
+      "milestone": "M0 Personal Estate Setup",
+      "status": "blocked",
+      "labels": ["setup", "human-gated"],
+      "summary": "Create a GitHub Projects v2 board for Visual Intelligence OS after the local GitHub CLI token is refreshed with project scope.",
+      "tasks": [
+        "Run gh auth refresh -s read:project,project from a trusted shell.",
+        "Create GitHub Project named Visual Intelligence OS.",
+        "Add open VIS issues and group by milestone/status.",
+        "Keep docs/VIS_TASK_REGISTRY.json as canonical even after Projects v2 exists.",
+        "Document the project URL in docs/PROJECT_OPERATING_SYSTEM.md and docs/PROJECT_BOARD.md."
+      ],
+      "acceptance": [
+        "GitHub Projects v2 board exists and is linked from the repo docs.",
+        "Issues, milestones, status labels, and registry remain aligned.",
+        "No work is blocked if Projects v2 is unavailable."
+      ]
     }
   ]
 }

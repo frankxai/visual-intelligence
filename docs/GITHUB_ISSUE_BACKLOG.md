@@ -11,7 +11,7 @@ npm run tasks:sync -- --execute
 
 Keep labels and milestones aligned with `docs/PROJECT_BOARD.md`. GitHub Projects v2 is pending local token project scope; GitHub Issues plus milestones are the canonical tracker for now.
 
-Synced on 2026-07-03 as GitHub issues #8-#23. See `docs/GITHUB_ISSUE_SYNC_REPORT.md`.
+Synced on 2026-07-03 as GitHub issues #8-#32. See `docs/GITHUB_ISSUE_SYNC_REPORT.md`.
 
 ## Labels
 
@@ -29,6 +29,8 @@ Synced on 2026-07-03 as GitHub issues #8-#23. See `docs/GITHUB_ISSUE_SYNC_REPORT
 - `status:in-progress`
 - `status:blocked`
 - `status:done`
+- `agent:codex`
+- `agent:claude`
 
 ## Milestones
 
@@ -545,4 +547,107 @@ Acceptance:
 - [x] Execute mode renames selected files and records provenance.
 - [x] Blocked targets prevent accidental overwrites by default.
 - [x] Music release assets can use workflow/media-role templates without making VIS the Music IS source of truth.
+```
+
+## Issue 22: Add VIS project status reporting and Google Tasks reminder layer
+
+Labels: `setup`, `product`, `good-first-internal`
+Milestone: `M0 Personal Estate Setup`
+Status: `done`
+GitHub: https://github.com/frankxai/visual-intelligence/issues/29
+
+Body:
+
+```markdown
+Make VIS manageable as a real project by adding a registry-driven status report, copy-ready Google Tasks reminder layer, and explicit command flow for future agents.
+
+Tasks:
+- [x] Add project status/report command driven by `docs/VIS_TASK_REGISTRY.json`.
+- [x] Add copy-ready Google Tasks reminder document for human device/account actions.
+- [x] Update project operating rules so GitHub Issues stay canonical and Google Tasks stay personal.
+- [x] Regenerate project status report from registry and synced issue links.
+- [x] Add package scripts for project status and report generation.
+
+Acceptance:
+- [x] Agents can run `npm run project:status` to see open install, product, and reminder lanes.
+- [x] Frank can create Google Tasks without making Google Tasks the product backlog.
+- [x] The second laptop and Claude can cross-check from one documented command block.
+- [x] The project tracker continues to sync through GitHub Issues and milestones.
+```
+
+## Issue 23: Run two-laptop VIS software install and MCP evidence report
+
+Labels: `setup`, `mcp`, `human-gated`, `agent:claude`
+Milestone: `M0 Personal Estate Setup`
+GitHub: https://github.com/frankxai/visual-intelligence/issues/30
+
+Body:
+
+```markdown
+Verify that both laptops can install, run, scan, serve, and expose VIS through MCP with evidence recorded in GitHub.
+
+Tasks:
+- [ ] Run git fetch, checkout, pull, npm install, npm run project:status, npm run lint, npm test, and node bin\vis.mjs doctor on laptop 1.
+- [ ] Run the same command set on laptop 2.
+- [ ] Install or verify vis-mcp in Claude on laptop 1.
+- [ ] Install or verify vis-mcp in Claude on laptop 2.
+- [ ] Run scan-profile frank-estate --json on both laptops and compare allowed roots.
+- [ ] Generate dashboard on both laptops and confirm it opens.
+- [ ] Comment evidence, command summaries, blockers, and local path differences on the GitHub issue.
+
+Acceptance:
+- [ ] Both laptops can run VIS without missing dependencies.
+- [ ] Claude can see the VIS MCP server on both laptops or the blocker is clearly documented.
+- [ ] A selected visual:// asset packet resolves to a valid local path on both machines.
+- [ ] Generated data remains ignored and no secrets are printed or committed.
+```
+
+## Issue 24: Run weekly VIS product experiment and reporting loop
+
+Labels: `product`, `research`, `good-first-internal`
+Milestone: `M4 Product Beta`
+GitHub: https://github.com/frankxai/visual-intelligence/issues/31
+
+Body:
+
+```markdown
+Turn VIS evolution into a weekly experiment loop with one product bet, one validation run, and one short report.
+
+Tasks:
+- [ ] Pick one weekly experiment from Eagle parity, mobile intake, music assets, provenance, dashboard, or adapter workflow.
+- [ ] Define success criteria before implementation.
+- [ ] Run the smallest useful validation: CLI, MCP, dashboard, or real workflow evidence.
+- [ ] Record results, screenshots or command summaries, and next decision in GitHub.
+- [ ] Regenerate `docs/PROJECT_STATUS_REPORT.md` after updating issue statuses.
+
+Acceptance:
+- [ ] Each week has one clear experiment owner and result.
+- [ ] Failures and blocked experiments are documented rather than disappearing.
+- [ ] Product scope evolves from evidence instead of intuition alone.
+- [ ] The loop remains light enough for a solo founder to maintain.
+```
+
+## Issue 25: Enable GitHub Projects v2 board after gh project scope refresh
+
+Labels: `setup`, `human-gated`
+Milestone: `M0 Personal Estate Setup`
+Status: `blocked`
+GitHub: https://github.com/frankxai/visual-intelligence/issues/32
+
+Body:
+
+```markdown
+Create a GitHub Projects v2 board for Visual Intelligence OS after the local GitHub CLI token is refreshed with project scope.
+
+Tasks:
+- [ ] Run gh auth refresh -s read:project,project from a trusted shell.
+- [ ] Create GitHub Project named Visual Intelligence OS.
+- [ ] Add open VIS issues and group by milestone/status.
+- [ ] Keep `docs/VIS_TASK_REGISTRY.json` as canonical even after Projects v2 exists.
+- [ ] Document the project URL in `docs/PROJECT_OPERATING_SYSTEM.md` and `docs/PROJECT_BOARD.md`.
+
+Acceptance:
+- [ ] GitHub Projects v2 board exists and is linked from the repo docs.
+- [ ] Issues, milestones, status labels, and registry remain aligned.
+- [ ] No work is blocked if Projects v2 is unavailable.
 ```

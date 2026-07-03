@@ -14,7 +14,8 @@ npm run tasks:sync -- --execute
 
 - Labels synced: 16
 - Milestones created: 5
-- New VIS issues created: 21
+- Registry-backed VIS issues: 25
+- Latest new VIS issues created: VIS-022 through VIS-025 / issues #29-#32
 - Existing VIS issues updated on 2026-07-03 from the registry
 - Status labels added: `status:blocked`, `status:done`
 - VIS-010 / issue #17 marked `status:done` and closed as completed
@@ -24,17 +25,21 @@ npm run tasks:sync -- --execute
 - VIS-019 / issue #26 marked `status:done` and closed as completed
 - VIS-020 / issue #27 marked `status:done` and closed as completed
 - VIS-021 / issue #28 marked `status:done` and closed as completed
+- VIS-022 / issue #29 marked `status:done` and closed as completed
+- VIS-023 / issue #30 opened for two-laptop install, MCP, and evidence reporting
+- VIS-024 / issue #31 opened for weekly product experiment reporting
+- VIS-025 / issue #32 opened as `status:blocked` until `gh` has project scope
 - GitHub Projects v2: pending local `gh` token project scope
 
 ## Milestones
 
 | Milestone | Open Issues |
 | --- | ---: |
-| M0 Personal Estate Setup | 5 |
+| M0 Personal Estate Setup | 6 |
 | M1 Daily Cockpit | 3 |
-| M2 Asset Intelligence | 5 |
+| M2 Asset Intelligence | 4 |
 | M3 Media Expansion | 1 |
-| M4 Product Beta | 2 |
+| M4 Product Beta | 3 |
 
 ## Issues
 
@@ -61,6 +66,10 @@ npm run tasks:sync -- --execute
 | VIS-019 | [#26 Add live smart collection evaluation for Eagle-style queues](https://github.com/frankxai/visual-intelligence/issues/26) | M1 Daily Cockpit |
 | VIS-020 | [#27 Add color palette intelligence for Eagle-style filtering](https://github.com/frankxai/visual-intelligence/issues/27) | M1 Daily Cockpit |
 | VIS-021 | [#28 Add dry-run batch rename for Eagle-style bulk cleanup](https://github.com/frankxai/visual-intelligence/issues/28) | M1 Daily Cockpit |
+| VIS-022 | [#29 Add VIS project status reporting and Google Tasks reminder layer](https://github.com/frankxai/visual-intelligence/issues/29) | M0 Personal Estate Setup |
+| VIS-023 | [#30 Run two-laptop VIS software install and MCP evidence report](https://github.com/frankxai/visual-intelligence/issues/30) | M0 Personal Estate Setup |
+| VIS-024 | [#31 Run weekly VIS product experiment and reporting loop](https://github.com/frankxai/visual-intelligence/issues/31) | M4 Product Beta |
+| VIS-025 | [#32 Enable GitHub Projects v2 board after gh project scope refresh](https://github.com/frankxai/visual-intelligence/issues/32) | M0 Personal Estate Setup |
 
 ## Existing Legacy Issues
 
