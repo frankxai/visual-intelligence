@@ -9,6 +9,7 @@ VIS turns scattered images, videos, audio files, prompts, website references, an
 - GitHub repo: https://github.com/frankxai/visual-intelligence
 - Active implementation branch: `codex/visual-intelligence-os-v02`
 - Main integration path: PR into `main`, not direct push
+- Execution tracker: GitHub Issues and milestones synced from `docs/VIS_TASK_REGISTRY.json`
 - Local-first source of truth: `data/vis.sqlite`
 - Local visual dashboard export: `data/vis-dashboard.html`
 - Agent layer: read-first MCP server at `mcp/vis-mcp-server.mjs`
@@ -94,6 +95,17 @@ git diff --stat codex/visual-intelligence-os-v02..origin/claude/asset-os-coordin
 ```
 
 Use Claude's branch for coordination notes. Use this Codex branch for the SQLite/MCP/dashboard implementation.
+
+## Task Sync
+
+VIS keeps its operating backlog in Git and syncs it to GitHub Issues:
+
+```powershell
+npm run tasks:dry-run
+npm run tasks:sync -- --execute
+```
+
+The source registry is `docs/VIS_TASK_REGISTRY.json`. It creates or updates labels, milestones, and the issue backlog. GitHub Projects v2 is intentionally not automated until the local `gh` token has project scope; Issues plus milestones are the current canonical tracker.
 
 ## CLI
 
@@ -206,6 +218,8 @@ See [docs/OPEN_SOURCE_TECH_RADAR.md](docs/OPEN_SOURCE_TECH_RADAR.md) before abso
 - [Open Source Tech Radar](docs/OPEN_SOURCE_TECH_RADAR.md)
 - [Eagle Parity Roadmap](docs/EAGLE_PARITY_ROADMAP.md)
 - [Project Board](docs/PROJECT_BOARD.md)
+- [VIS Task Registry](docs/VIS_TASK_REGISTRY.json)
+- [GitHub Issue Sync Report](docs/GITHUB_ISSUE_SYNC_REPORT.md)
 - [Setup Runbook](docs/SETUP_RUNBOOK.md)
 - [GitHub Issue Backlog](docs/GITHUB_ISSUE_BACKLOG.md)
 - [User Workflows](docs/USER_WORKFLOWS.md)

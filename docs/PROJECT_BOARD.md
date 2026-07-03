@@ -2,12 +2,13 @@
 
 Date: 2026-07-03
 
-This is the operating board for turning VIS from a working scanner/MCP prototype into Frank's daily media asset operating system and then a sellable product. GitHub Issues should become the execution source once API limits are available again. This file remains the human-readable board and cross-agent handoff.
+This is the operating board for turning VIS from a working scanner/MCP prototype into Frank's daily media asset operating system and then a sellable product. GitHub Issues are now the execution source, with this file as the human-readable board and cross-agent handoff.
 
 ## Decision
 
-- Canonical execution tracker: GitHub Issues in `frankxai/visual-intelligence`.
+- Canonical execution tracker: GitHub Issues in `frankxai/visual-intelligence`, synced from `docs/VIS_TASK_REGISTRY.json`.
 - Repo-visible fallback: this Markdown board plus `docs/GITHUB_ISSUE_BACKLOG.md`.
+- GitHub Projects v2: pending `gh auth refresh -s read:project,project`; use milestones until that scope is available.
 - Personal reminder layer: Google Tasks/Calendar only for time-bound human actions such as buying Eagle, installing on laptop 2, or weekly review.
 - Product truth: VIS repo docs, SQLite graph, MCP server, and release reports.
 
@@ -27,6 +28,8 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add Eagle parity roadmap and current build/use decision to repo docs.
 - [x] Add first VIS cockpit slice for smart collections, source/folder navigation, batch packets, audio preview, and Music IS handoff.
 - [x] Add local curation primitives for annotations, custom tags, ratings, color labels, collections, saved searches, CLI, MCP, and dashboard visibility.
+- [x] Add GitHub task registry, issue templates, and task sync script.
+- [x] Sync task registry into GitHub Issues and milestones.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.
@@ -37,7 +40,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 ## Next
 
 - [ ] Build a Next.js/PWA dashboard to replace the static HTML dashboard for daily use.
-- [ ] Turn the static cockpit slice into saved project tasks and GitHub Issues when API limits reset.
+- [ ] Add GitHub Projects v2 board after `gh` token gets project scope.
 - [ ] Add Eagle adapter: detect Eagle library metadata, folders, tags, notes, URLs, and assets without copying proprietary code.
 - [ ] Add Google Drive metadata adapter with provider IDs and sync health.
 - [ ] Add Google Photos/manual mobile inbox intake workflow.
@@ -67,6 +70,6 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 | --- | --- |
 | Drive sync conflicts corrupt Eagle library | Use one active Eagle writer at a time; wait for sync complete before switching laptops. |
 | Personal/private assets leak into exports | Keep MCP allowlists narrow; keep `data/` ignored; run security scan before commits. |
-| GitHub Issues unavailable due API limits | Keep Markdown board/backlog in repo and create issues when limits reset. |
+| GitHub Projects unavailable due token scope | Use GitHub Issues plus milestones; add Project v2 after `gh auth refresh -s project`. |
 | VIS overbuilds Eagle/Immich features | Use Eagle/Google Photos/Drive for commodity UX; build provenance, agents, usage, and product intelligence. |
 | Music workflows get flattened into visual workflows | Keep Music IS as canonical release system; VIS indexes and links media assets. |

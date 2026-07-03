@@ -2,7 +2,16 @@
 
 Date: 2026-07-03
 
-GitHub API creation was unavailable when this backlog was written, so these are issue-ready bodies. Create them under `frankxai/visual-intelligence` when the rate limit resets. Keep labels and milestones aligned with `docs/PROJECT_BOARD.md`.
+This backlog is mirrored by `docs/VIS_TASK_REGISTRY.json` and can be synced to GitHub with:
+
+```powershell
+npm run tasks:dry-run
+npm run tasks:sync -- --execute
+```
+
+Keep labels and milestones aligned with `docs/PROJECT_BOARD.md`. GitHub Projects v2 is pending local token project scope; GitHub Issues plus milestones are the canonical tracker for now.
+
+Synced on 2026-07-03 as GitHub issues #8-#23. See `docs/GITHUB_ISSUE_SYNC_REPORT.md`.
 
 ## Labels
 
