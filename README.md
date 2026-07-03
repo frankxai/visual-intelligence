@@ -22,6 +22,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 
 - Indexes image, video, and audio files into stable `asset_id`s and immutable `version_id`s.
 - Stores assets, versions, locations, prompt sidecars, usage edges, publications, evaluations, rights, and approval state in SQLite.
+- Reads and records `.vis.provenance.json` generation sidecars with prompt, model, provider, seed/settings, output paths, coding agent, repo, thread/session, and skill context.
 - Detects duplicate content by SHA-256 and samples orphan assets with no detected usage.
 - Finds local similarity review groups with dependency-free metadata heuristics while semantic embeddings remain adapter-planned.
 - Scans website/content routes to map where assets appear.
@@ -152,6 +153,8 @@ node bin\vis.mjs saved-searches
 node bin\vis.mjs music-releases
 node bin\vis.mjs music-packet <release_id|asset_id|path>
 node bin\vis.mjs serve-dashboard --port 3766
+node bin\vis.mjs record-generation <asset_id|visual://asset/...|path> --prompt "..." --model gpt-image-1 --provider openai --agent codex --skill imagegen
+node bin\vis.mjs record-generation <asset_id|visual://asset/...|path> --prompt "..." --model gpt-image-1 --provider openai --agent codex --skill imagegen --write-sidecar --execute
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum
 node bin\vis.mjs record-publication --asset <asset_id> --platform website --route /sanctum --execute
 node bin\vis.mjs cloudinary-manifest --category brand
@@ -161,7 +164,7 @@ node bin\vis.mjs optimize --max-kb 2000
 node bin\vis.mjs mcp-info
 ```
 
-`record-publication` is dry-run unless `--execute` is passed. The MCP server is stricter and also requires `VIS_ENABLE_WRITES=1`.
+`record-generation` and `record-publication` are dry-run unless `--execute` is passed. `record-generation --write-sidecar --execute` writes `<asset-name>.vis.provenance.json` beside the asset. The MCP server is stricter and also requires `VIS_ENABLE_WRITES=1`.
 
 ## MCP Surface
 
@@ -193,6 +196,7 @@ Tools:
 - `list_music_releases`
 - `create_music_release_packet`
 - `import_eagle_library`
+- `record_generation_provenance`
 - `record_publication`
 - `export_cloudinary_manifest`
 - `export_nft_metadata_report`
@@ -221,6 +225,7 @@ Build in VIS:
 - Website route/social/NFT usage maps
 - Rights, approval, evaluation, and publication records
 - Agent run and skill run capture
+- Portable `.vis.provenance.json` sidecars for generated images, video, audio, and music release assets
 
 Use through adapters:
 

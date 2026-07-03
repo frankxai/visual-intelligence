@@ -253,6 +253,7 @@ Acceptance:
 
 Labels: `mcp`, `product`
 Milestone: `M2 Asset Intelligence`
+Status: `done`
 
 Body:
 
@@ -260,14 +261,14 @@ Body:
 Every generated image/video/audio output should carry sidecar provenance even when embedded metadata is missing.
 
 Tasks:
-- [ ] Define `.vis.provenance.json` sidecar format.
-- [ ] Capture agent, model, prompt, negative prompt, seed/settings, skill, repo, thread/session, output paths.
-- [ ] Add CLI command to record generation event.
-- [ ] Teach MCP curation packets to include provenance summary.
+- [x] Define `.vis.provenance.json` sidecar format.
+- [x] Capture agent, model, prompt, negative prompt, seed/settings, skill, repo, thread/session, output paths.
+- [x] Add CLI command to record generation event.
+- [x] Teach MCP curation packets to include provenance summary.
 
 Acceptance:
-- [ ] A new generated asset can be traced from prompt to output to usage.
-- [ ] Sidecar survives movement between Drive, Eagle, and repos.
+- [x] A new generated asset can be traced from prompt to output to usage.
+- [x] Sidecar survives movement between Drive, Eagle, and repos as a portable file next to the asset.
 ```
 
 ## Issue 11: Add rights and approval review board

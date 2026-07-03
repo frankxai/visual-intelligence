@@ -225,17 +225,18 @@
       "key": "VIS-010",
       "title": "Add agent provenance sidecars for generated media",
       "milestone": "M2 Asset Intelligence",
+      "status": "done",
       "labels": ["mcp", "product"],
       "summary": "Every generated image, video, and audio output should carry sidecar provenance even when embedded metadata is missing.",
       "tasks": [
-        "Define .vis.provenance.json sidecar format.",
-        "Capture agent, model, prompt, negative prompt, seed/settings, skill, repo, thread/session, and output paths.",
-        "Add CLI command to record generation event.",
-        "Teach MCP curation packets to include provenance summary."
+        "Done: Define .vis.provenance.json sidecar format.",
+        "Done: Capture agent, model, prompt, negative prompt, seed/settings, skill, repo, thread/session, and output paths.",
+        "Done: Add CLI command to record generation event.",
+        "Done: Teach MCP curation packets to include provenance summary."
       ],
       "acceptance": [
-        "A new generated asset can be traced from prompt to output to usage.",
-        "Sidecar survives movement between Drive, Eagle, and repos."
+        "Done: A new generated asset can be traced from prompt to output to usage.",
+        "Done: Sidecar survives movement between Drive, Eagle, and repos as a portable file next to the asset."
       ]
     },
     {

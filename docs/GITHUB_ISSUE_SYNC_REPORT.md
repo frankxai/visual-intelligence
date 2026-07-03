@@ -17,6 +17,7 @@ npm run tasks:sync -- --execute
 - New VIS issues created: 16
 - Existing VIS issues updated on 2026-07-03 from the registry
 - Status labels added: `status:blocked`, `status:done`
+- VIS-010 / issue #17 marked `status:done` and closed as completed
 - VIS-015 / issue #22 marked `status:done` and closed as completed
 - GitHub Projects v2: pending local `gh` token project scope
 

@@ -56,6 +56,32 @@ flowchart LR
 - `storage_object`
 - `provenance_event`
 
+## Generation Sidecars
+
+Generated media can carry a portable sidecar next to the asset:
+
+```text
+my-image.png
+my-image.vis.provenance.json
+```
+
+VIS scans this file automatically and records:
+
+- prompt and negative prompt in `prompt`
+- provider, model, seed, settings, and output paths in `generation_event`
+- coding/media agent, repo, thread, and session in `agent_run`
+- skill/plugin name and metadata in `skill_run`
+- append-only `generation-provenance-recorded` evidence in `provenance_event`
+
+The schema lives at `schemas/vis-provenance-sidecar.schema.json`. Agents can also record the same data without a preexisting file:
+
+```powershell
+node bin\vis.mjs record-generation <asset> --prompt "..." --model gpt-image-1 --provider openai --agent codex --skill imagegen
+node bin\vis.mjs record-generation <asset> --prompt "..." --model gpt-image-1 --provider openai --agent codex --skill imagegen --write-sidecar --execute
+```
+
+The MCP tool is `record_generation_provenance`. MCP writes remain disabled unless the server is started with `VIS_ENABLE_WRITES=1` and the tool call includes `execute: true`.
+
 ## Agent Interfaces
 
 MCP resources:
@@ -77,6 +103,7 @@ MCP tools:
 - `score_asset`
 - `score_collection`
 - `create_curation_packet`
+- `record_generation_provenance`
 - `record_publication`
 - `export_cloudinary_manifest`
 - `export_nft_metadata_report`
@@ -88,4 +115,3 @@ VIS still exports `data/visual-registry.json` for old tooling. The new source of
 ## Next Architecture Step
 
 The static dashboard is the first local UI. The data contract is already suitable for a future Next.js or Tauri app without changing the scanner, MCP server, or schemas.
-

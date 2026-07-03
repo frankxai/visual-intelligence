@@ -41,6 +41,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [x] Add public-use gates so unsafe assets stay visible but are excluded from Cloudinary/NFT/export-ready handoffs by default.
 - [x] Add project operating system, issue templates, weekly review checklist, and Google Tasks reminder boundary.
 - [x] Teach GitHub task sync to use explicit registry statuses, including done and blocked.
+- [x] Add agent generation provenance sidecars across scanner, CLI, MCP, curation packets, and tests.
 - [ ] Create the Google Drive `Starlight Creative Vault` structure.
 - [ ] Configure both phones to back up to Google Photos and share curated assets into Drive.
 - [ ] Configure Eagle library inside the Drive-synced vault.
@@ -56,7 +57,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 - [ ] Add Google Drive metadata adapter with provider IDs and sync health.
 - [ ] Add Google Photos/manual mobile inbox intake workflow.
 - [ ] Verify Music IS release packets against Frank's real proof folders after next estate scan.
-- [ ] Add agent run logging sidecars for generated media.
+- [x] Add agent run logging sidecars for generated media.
 - [ ] Add semantic embeddings and stronger visual similarity using a permissive local model or external adapter.
 
 ## Later

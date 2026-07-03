@@ -30,6 +30,7 @@ import {
   listMusicReleasePackets,
   loadConfig,
   openVisDatabase,
+  recordGenerationProvenance,
   recordPublication,
   reviewAssets,
   resolveAssetId,
@@ -75,6 +76,9 @@ const VALUE_FLAGS = new Set([
   '--note', '--notes', '--rating', '--color', '--curation-status', '--name', '--min-rating',
   '--profile', '--library', '--eagle-library', '--port', '--host', '--min-score', '--pool-limit',
   '--rights-status', '--approval-status', '--reason',
+  '--prompt', '--negative-prompt', '--negative', '--model', '--provider', '--seed', '--settings',
+  '--settings-json', '--agent', '--coding-agent', '--repo', '--thread', '--session', '--skill',
+  '--sidecar', '--output-path', '--source', '--summary',
 ])
 
 function positionalArgs() {
@@ -500,6 +504,32 @@ function cmdReviewAssets() {
   printJson(result)
 }
 
+function cmdRecordGeneration() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri')
+  if (!ref) throw new Error('Usage: vis record-generation <asset|path|uri> [--prompt <text>] [--model <model>] [--agent codex] [--skill imagegen] [--execute] [--write-sidecar]')
+  const result = recordGenerationProvenance(root, ref, {
+    prompt: getFlag('--prompt'),
+    negativePrompt: getFlag('--negative-prompt') || getFlag('--negative'),
+    model: getFlag('--model'),
+    provider: getFlag('--provider'),
+    seed: getFlag('--seed'),
+    settings: getFlag('--settings') || getFlag('--settings-json'),
+    codingAgent: getFlag('--coding-agent') || getFlag('--agent'),
+    repo: getFlag('--repo'),
+    threadRef: getFlag('--thread'),
+    sessionRef: getFlag('--session'),
+    skillName: getFlag('--skill'),
+    summary: getFlag('--summary'),
+    sidecarPath: getFlag('--sidecar'),
+    outputPaths: getAllFlags('--output-path'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+    writeSidecar: hasFlag('--write-sidecar'),
+  })
+  printJson(result)
+}
+
 function cmdSavedSearches() {
   const root = projectRoot()
   printJson(listSavedSearches(root))
@@ -777,6 +807,8 @@ const commands = {
   'bulk-annotate': cmdBatchAnnotate,
   'review-assets': cmdReviewAssets,
   'approve-assets': cmdReviewAssets,
+  'record-generation': cmdRecordGeneration,
+  'record-provenance': cmdRecordGeneration,
   'saved-searches': cmdSavedSearches,
   'save-search': cmdSaveSearch,
   'music-releases': cmdMusicReleases,
@@ -819,6 +851,7 @@ Commands:
   vis annotate <asset>             Dry-run or save tags, notes, rating, color, collection
   vis batch-annotate <asset...>     Dry-run or save curation metadata across assets
   vis review-assets <asset...>      Dry-run or save rights and approval status
+  vis record-generation <asset>     Dry-run or save prompt/model/agent/skill provenance sidecar
   vis saved-searches               List saved smart-folder searches
   vis save-search --name <name>     Dry-run or save a smart search
   vis music-releases               List Music IS release media packets

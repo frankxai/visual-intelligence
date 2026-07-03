@@ -1008,6 +1008,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         source: sidecar.path,
         payload: sidecar,
       })
+      persistGenerationSidecar(db, entry, sidecar, { promptId, actor: 'vis-scanner', createdAt: ts })
     }
   }
 
@@ -1312,6 +1313,12 @@ WHERE ci.asset_id = ?
 ORDER BY c.updated_at DESC`).all(assetId),
       usage: db.prepare('SELECT * FROM asset_usage WHERE asset_id = ? ORDER BY detected_at DESC').all(assetId),
       prompts: db.prepare('SELECT * FROM prompt WHERE asset_id = ? ORDER BY created_at DESC').all(assetId),
+      generation_events: db.prepare('SELECT * FROM generation_event WHERE asset_id = ? ORDER BY created_at DESC').all(assetId)
+        .map(row => ({ ...row, settings: parseJson(row.settings_json, {}) })),
+      agent_runs: db.prepare('SELECT * FROM agent_run WHERE asset_id = ? ORDER BY created_at DESC').all(assetId)
+        .map(row => ({ ...row, metadata: parseJson(row.metadata_json, {}) })),
+      skill_runs: db.prepare('SELECT * FROM skill_run WHERE asset_id = ? ORDER BY created_at DESC').all(assetId)
+        .map(row => ({ ...row, metadata: parseJson(row.metadata_json, {}) })),
       publications: db.prepare('SELECT * FROM publication WHERE asset_id = ? ORDER BY created_at DESC').all(assetId),
       rights: db.prepare('SELECT * FROM rights_record WHERE asset_id = ? ORDER BY created_at DESC').all(assetId),
       evals: db.prepare('SELECT * FROM eval_record WHERE asset_id = ? ORDER BY created_at DESC').all(assetId),
@@ -2078,6 +2085,9 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
     const uri = `visual://asset/${asset.asset_id}`
     const isMusic = workflow === 'music-release' || asset.media_type === 'audio' || mediaRole === 'cover-art' || mediaRole === 'music-canvas'
     const publishGate = assetPublishGate(asset, { intendedUse: options.intendedUse || 'agent handoff' })
+    const latestGeneration = asset.generation_events?.[0] || null
+    const latestAgentRun = asset.agent_runs?.[0] || null
+    const latestSkillRun = asset.skill_runs?.[0] || null
     return {
       asset_id: asset.asset_id,
       visual_uri: uri,
@@ -2107,9 +2117,27 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
       prompt: asset.prompts[0]?.prompt_text || null,
       provenance_summary: {
         prompts: asset.prompts.length,
+        generation_events: asset.generation_events.length,
+        agent_runs: asset.agent_runs.length,
+        skill_runs: asset.skill_runs.length,
         usage_edges: asset.usage.length,
         publications: asset.publications.length,
         evals: asset.evals.length,
+        latest_generation: latestGeneration ? {
+          model: latestGeneration.model || null,
+          provider: latestGeneration.provider || null,
+          seed: latestGeneration.seed || null,
+          created_at: latestGeneration.created_at,
+        } : null,
+        latest_agent: latestAgentRun ? {
+          coding_agent: latestAgentRun.coding_agent || null,
+          repo: latestAgentRun.repo || null,
+          thread_ref: latestAgentRun.thread_ref || null,
+          session_ref: latestAgentRun.session_ref || null,
+        } : null,
+        latest_skill: latestSkillRun ? {
+          skill_name: latestSkillRun.skill_name || null,
+        } : null,
       },
       music_handoff: isMusic ? {
         canonical_system: 'Music IS',
@@ -2128,6 +2156,9 @@ export function createCurationPacket(dbOrRoot, assetRef, options = {}) {
         asset.annotation?.curation_status ? `Curation: ${asset.annotation.curation_status}` : null,
         options.intendedUse ? `Intended use: ${options.intendedUse}` : null,
         isMusic ? 'Music handoff: keep Music IS as the release source of truth; use VIS for provenance, discovery, and linked asset packets.' : null,
+        latestGeneration?.model ? `Generation model: ${latestGeneration.provider ? `${latestGeneration.provider}/` : ''}${latestGeneration.model}` : null,
+        latestAgentRun?.coding_agent ? `Agent run: ${latestAgentRun.coding_agent}${latestAgentRun.thread_ref ? `; thread ${latestAgentRun.thread_ref}` : ''}` : null,
+        latestSkillRun?.skill_name ? `Skill used: ${latestSkillRun.skill_name}` : null,
         `Rights: ${asset.rights_status}; Approval: ${asset.approval_status}`,
         `Public-use gate: ${publishGate.status}; ${publishGate.allowed ? 'allowed after human approval' : 'blocked until review'}`,
         publishGate.blockers.length ? `Gate blockers: ${publishGate.blockers.join('; ')}` : null,
@@ -2619,6 +2650,9 @@ export function getSummary(dbOrRoot) {
     const locations = countRows(db, 'asset_location', 'exists_now = 1')
     const usageEdges = countRows(db, 'asset_usage')
     const prompts = countRows(db, 'prompt')
+    const generationEvents = countRows(db, 'generation_event')
+    const agentRuns = countRows(db, 'agent_run')
+    const skillRuns = countRows(db, 'skill_run')
     const publications = countRows(db, 'publication')
     const evals = countRows(db, 'eval_record')
     const annotations = countRows(db, 'asset_annotation')
@@ -2627,7 +2661,98 @@ export function getSummary(dbOrRoot) {
     const byCategory = db.prepare('SELECT category, COUNT(*) AS count FROM asset GROUP BY category ORDER BY count DESC LIMIT 25').all()
     const byRights = db.prepare('SELECT rights_status, COUNT(*) AS count FROM asset GROUP BY rights_status ORDER BY count DESC').all()
     const byCurationStatus = db.prepare('SELECT curation_status, COUNT(*) AS count FROM asset_annotation GROUP BY curation_status ORDER BY count DESC').all()
-    return { assets, versions, locations, usageEdges, prompts, publications, evals, annotations, savedSearches, byMediaType, byCategory, byRights, byCurationStatus }
+    return { assets, versions, locations, usageEdges, prompts, generationEvents, agentRuns, skillRuns, publications, evals, annotations, savedSearches, byMediaType, byCategory, byRights, byCurationStatus }
+  } finally {
+    if (close) db.close()
+  }
+}
+
+export function recordGenerationProvenance(dbOrRoot, assetRef, args = {}) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const ref = assetRef || args.assetId || args.asset_id || args.asset || args.uri || args.path
+    const assetId = resolveAssetId(db, ref)
+    if (!assetId) throw new Error('Asset not found for generation provenance')
+    const asset = getAsset(db, assetId)
+    const primaryLocation = asset.locations.find(loc => loc.exists_now) || asset.locations[0] || {}
+    const latestVersion = asset.versions[0] || {}
+    const sidecarPath = args.sidecarPath || args.sidecar || defaultProvenanceSidecarPath(primaryLocation.absolute_path)
+    const loaded = sidecarPath && fs.existsSync(sidecarPath) ? readGenerationSidecar(sidecarPath) : {}
+    const sidecar = buildGenerationSidecar({
+      ...loaded,
+      ...args,
+      assetId,
+      versionId: latestVersion.version_id,
+      mediaType: asset.media_type,
+      sha256: latestVersion.sha256,
+      localPath: primaryLocation.absolute_path,
+      relativePath: primaryLocation.relative_path,
+      outputPaths: uniq([
+        ...(Array.isArray(loaded.outputPaths) ? loaded.outputPaths : []),
+        ...(Array.isArray(loaded.output_paths) ? loaded.output_paths : []),
+        ...(Array.isArray(loaded.generation?.output_paths) ? loaded.generation.output_paths : []),
+        ...(Array.isArray(loaded.generation?.outputs) ? loaded.generation.outputs : []),
+        ...(Array.isArray(loaded.asset?.output_paths) ? loaded.asset.output_paths : []),
+        ...(Array.isArray(args.outputPaths) ? args.outputPaths : []),
+        ...(Array.isArray(args.output_paths) ? args.output_paths : []),
+        ...(primaryLocation.absolute_path ? [primaryLocation.absolute_path] : []),
+      ]),
+      explicitGeneration: true,
+    }, sidecarPath)
+    const dryRun = args.execute !== true
+    const result = {
+      dryRun,
+      asset_id: assetId,
+      version_id: latestVersion.version_id || null,
+      sidecar_path: sidecarPath || null,
+      would_write_sidecar: Boolean(args.writeSidecar || args.write_sidecar),
+      provenance: sidecar,
+      records: {
+        prompt: Boolean(sidecar.promptText),
+        generation_event: hasGenerationEvidence(sidecar),
+        agent_run: hasAgentEvidence(sidecar),
+        skill_run: hasSkillEvidence(sidecar),
+      },
+    }
+    if (dryRun) return result
+
+    let promptId = null
+    const ts = sidecar.createdAt || nowIso()
+    if (sidecar.promptText) {
+      promptId = stableId('prompt', `${assetId}:${sidecarPath || 'inline'}:${sidecar.promptText}`)
+      db.prepare(`
+INSERT OR IGNORE INTO prompt (prompt_id, asset_id, source_path, prompt_text, negative_prompt, model_hint, settings_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`).run(
+        promptId,
+        assetId,
+        sidecarPath || null,
+        sidecar.promptText,
+        sidecar.negativePrompt || null,
+        sidecar.model || sidecar.modelHint || null,
+        JSON.stringify(sidecar.settings || {}),
+        ts,
+      )
+    }
+    const ids = persistGenerationSidecar(db, {
+      assetId,
+      versionId: latestVersion.version_id || null,
+    }, sidecar, {
+      promptId,
+      actor: args.actor || sidecar.codingAgent || 'vis-cli',
+      createdAt: ts,
+    })
+
+    if ((args.writeSidecar || args.write_sidecar) && sidecarPath) {
+      fs.mkdirSync(path.dirname(sidecarPath), { recursive: true })
+      fs.writeFileSync(sidecarPath, JSON.stringify(formatGenerationSidecar(sidecar), null, 2))
+    }
+
+    return {
+      ...result,
+      dryRun: false,
+      records: ids,
+    }
   } finally {
     if (close) db.close()
   }
@@ -2649,6 +2774,255 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     event.createdAt || nowIso(),
   )
   return eventId
+}
+
+function persistGenerationSidecar(db, entry, sidecarInput, options = {}) {
+  const sidecar = buildGenerationSidecar(sidecarInput, sidecarInput.path || sidecarInput.sourcePath)
+  const assetId = entry.assetId || entry.asset_id
+  const versionId = entry.versionId || entry.version_id || null
+  const ts = sidecar.createdAt || options.createdAt || nowIso()
+  const ids = {}
+
+  if (hasGenerationEvidence(sidecar)) {
+    ids.generation_event = stableId('gen', `${assetId}:${versionId || ''}:${sidecar.path || ''}:${sidecar.model || ''}:${sidecar.seed || ''}:${options.promptId || sidecar.promptText || ''}`)
+    db.prepare(`
+INSERT OR IGNORE INTO generation_event (event_id, asset_id, version_id, prompt_id, model, provider, seed, settings_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+`).run(
+      ids.generation_event,
+      assetId,
+      versionId,
+      options.promptId || null,
+      sidecar.model || sidecar.modelHint || null,
+      sidecar.provider || null,
+      sidecar.seed || null,
+      JSON.stringify({ ...(sidecar.settings || {}), output_paths: sidecar.outputPaths || [] }),
+      ts,
+    )
+  }
+
+  if (hasAgentEvidence(sidecar)) {
+    ids.agent_run = stableId('agent', `${assetId}:${sidecar.codingAgent || ''}:${sidecar.repo || ''}:${sidecar.threadRef || ''}:${sidecar.sessionRef || ''}:${sidecar.path || ''}`)
+    db.prepare(`
+INSERT OR IGNORE INTO agent_run (agent_run_id, asset_id, coding_agent, repo, thread_ref, session_ref, summary, metadata_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+`).run(
+      ids.agent_run,
+      assetId,
+      sidecar.codingAgent || null,
+      sidecar.repo || null,
+      sidecar.threadRef || null,
+      sidecar.sessionRef || null,
+      sidecar.summary || null,
+      JSON.stringify(sidecar.agentMetadata || {}),
+      ts,
+    )
+  }
+
+  if (hasSkillEvidence(sidecar)) {
+    ids.skill_run = stableId('skill', `${assetId}:${sidecar.skillName}:${ids.agent_run || ''}:${sidecar.path || ''}`)
+    db.prepare(`
+INSERT OR IGNORE INTO skill_run (skill_run_id, asset_id, skill_name, agent_run_id, metadata_json, created_at)
+VALUES (?, ?, ?, ?, ?, ?)
+`).run(
+      ids.skill_run,
+      assetId,
+      sidecar.skillName,
+      ids.agent_run || null,
+      JSON.stringify(sidecar.skillMetadata || {}),
+      ts,
+    )
+  }
+
+  if (ids.generation_event || ids.agent_run || ids.skill_run) {
+    recordProvenance(db, {
+      assetId,
+      versionId,
+      eventType: 'generation-provenance-recorded',
+      actor: options.actor || sidecar.codingAgent || 'vis',
+      source: sidecar.path || sidecar.sourcePath || null,
+      payload: formatGenerationSidecar(sidecar),
+      eventId: stableId('prov', `${assetId}:${versionId || ''}:generation-provenance-recorded:${sidecar.path || ''}:${sidecar.model || ''}:${sidecar.threadRef || ''}`),
+      createdAt: ts,
+    })
+  }
+
+  return ids
+}
+
+function readGenerationSidecar(sidecarPath) {
+  return parseJson(fs.readFileSync(sidecarPath, 'utf-8'), {})
+}
+
+function defaultProvenanceSidecarPath(assetPath) {
+  if (!assetPath) return null
+  const dir = path.dirname(assetPath)
+  const base = path.basename(assetPath, path.extname(assetPath))
+  return path.join(dir, `${base}.vis.provenance.json`)
+}
+
+function buildGenerationSidecar(input = {}, sidecarPath = null) {
+  const generation = isPlainObject(input.generation) ? input.generation : {}
+  const agent = isPlainObject(input.agent) ? input.agent : {}
+  const skill = isPlainObject(input.skill) ? input.skill : {}
+  const asset = isPlainObject(input.asset) ? input.asset : {}
+  const settings = parseSettings(firstPresent(
+    input.settings,
+    input.settings_json,
+    input.parameters,
+    generation.settings,
+    generation.parameters,
+    {},
+  ))
+  const outputPaths = asArray(firstPresent(
+    input.outputPaths,
+    input.output_paths,
+    input.outputs,
+    generation.output_paths,
+    generation.outputs,
+    asset.output_paths,
+    [],
+  )).map(String)
+  const promptText = firstPresent(
+    input.promptText,
+    input.prompt_text,
+    input.prompt,
+    generation.prompt,
+    generation.prompt_text,
+    input.input,
+    input.description,
+    '',
+  )
+  const negativePrompt = firstPresent(
+    input.negativePrompt,
+    input.negative_prompt,
+    generation.negativePrompt,
+    generation.negative_prompt,
+    null,
+  )
+  const model = firstPresent(
+    input.model,
+    input.modelHint,
+    input.model_hint,
+    generation.model,
+    generation.model_hint,
+    null,
+  )
+  const provider = firstPresent(
+    input.provider,
+    input.model_provider,
+    generation.provider,
+    null,
+  )
+  const pathHint = input.path || input.sourcePath || input.source_path || sidecarPath || null
+
+  return {
+    schema: input.schema || input.$schema || 'https://frankx.ai/schemas/vis-provenance-sidecar.schema.json',
+    schemaVersion: input.schemaVersion || input.schema_version || '1.0.0',
+    explicitGeneration: Boolean(input.explicitGeneration || input.explicit_generation),
+    provenanceKind: Boolean(
+      input.provenanceKind ||
+      input.provenance_kind ||
+      input.schema_version ||
+      input.schemaVersion ||
+      (pathHint && fs.existsSync(pathHint) && /(?:\.vis\.provenance|\.provenance)\.(json|md|txt)$/i.test(pathHint)),
+    ),
+    path: pathHint,
+    sourcePath: input.sourcePath || input.source_path || pathHint,
+    assetId: input.assetId || input.asset_id || asset.asset_id || null,
+    versionId: input.versionId || input.version_id || asset.version_id || null,
+    mediaType: input.mediaType || input.media_type || asset.media_type || null,
+    sha256: input.sha256 || asset.sha256 || null,
+    localPath: input.localPath || input.local_path || asset.local_path || null,
+    relativePath: input.relativePath || input.relative_path || asset.relative_path || null,
+    promptText: String(promptText || '').slice(0, 8000),
+    negativePrompt: negativePrompt ? String(negativePrompt).slice(0, 8000) : null,
+    model: model ? String(model) : null,
+    modelHint: model ? String(model) : null,
+    provider: provider ? String(provider) : null,
+    seed: firstPresent(input.seed, generation.seed, settings.seed, null),
+    settings,
+    outputPaths: uniq(outputPaths),
+    codingAgent: firstPresent(input.codingAgent, input.coding_agent, agent.codingAgent, agent.coding_agent, agent.name, typeof input.agent === 'string' ? input.agent : null, null),
+    repo: firstPresent(input.repo, input.repository, agent.repo, agent.repository, null),
+    threadRef: firstPresent(input.threadRef, input.thread_ref, input.thread, agent.threadRef, agent.thread_ref, agent.thread, null),
+    sessionRef: firstPresent(input.sessionRef, input.session_ref, input.session, agent.sessionRef, agent.session_ref, agent.session, null),
+    summary: firstPresent(input.summary, agent.summary, null),
+    agentMetadata: parseSettings(firstPresent(input.agentMetadata, input.agent_metadata, agent.metadata, {})),
+    skillName: firstPresent(input.skillName, input.skill_name, skill.name, skill.skill_name, agent.skillName, agent.skill_name, null),
+    skillMetadata: parseSettings(firstPresent(input.skillMetadata, input.skill_metadata, skill.metadata, {})),
+    createdAt: firstPresent(input.createdAt, input.created_at, generation.created_at, agent.created_at, null),
+  }
+}
+
+function formatGenerationSidecar(sidecarInput) {
+  const sidecar = buildGenerationSidecar(sidecarInput, sidecarInput.path || sidecarInput.sourcePath)
+  return {
+    $schema: sidecar.schema,
+    schema_version: sidecar.schemaVersion,
+    asset: {
+      asset_id: sidecar.assetId,
+      version_id: sidecar.versionId,
+      media_type: sidecar.mediaType,
+      sha256: sidecar.sha256,
+      local_path: sidecar.localPath,
+      relative_path: sidecar.relativePath,
+    },
+    generation: {
+      provider: sidecar.provider,
+      model: sidecar.model,
+      prompt: sidecar.promptText || null,
+      negative_prompt: sidecar.negativePrompt,
+      seed: sidecar.seed,
+      settings: sidecar.settings || {},
+      output_paths: sidecar.outputPaths || [],
+      created_at: sidecar.createdAt || nowIso(),
+    },
+    agent: {
+      coding_agent: sidecar.codingAgent,
+      repo: sidecar.repo,
+      thread_ref: sidecar.threadRef,
+      session_ref: sidecar.sessionRef,
+      summary: sidecar.summary,
+      metadata: sidecar.agentMetadata || {},
+    },
+    skill: sidecar.skillName ? {
+      name: sidecar.skillName,
+      metadata: sidecar.skillMetadata || {},
+    } : null,
+  }
+}
+
+function hasGenerationEvidence(sidecar) {
+  return Boolean(sidecar.provenanceKind || (sidecar.explicitGeneration && sidecar.promptText) || sidecar.model || sidecar.provider || sidecar.seed || Object.keys(sidecar.settings || {}).length || sidecar.outputPaths?.length || sidecar.codingAgent || sidecar.skillName)
+}
+
+function hasAgentEvidence(sidecar) {
+  return Boolean(sidecar.codingAgent || sidecar.repo || sidecar.threadRef || sidecar.sessionRef || sidecar.summary || Object.keys(sidecar.agentMetadata || {}).length)
+}
+
+function hasSkillEvidence(sidecar) {
+  return Boolean(sidecar.skillName)
+}
+
+function firstPresent(...values) {
+  return values.find(value => value !== undefined && value !== null && value !== '')
+}
+
+function asArray(value) {
+  if (Array.isArray(value)) return value
+  if (value === undefined || value === null || value === '') return []
+  return [value]
+}
+
+function parseSettings(value) {
+  if (typeof value === 'string') return parseJson(value, {})
+  if (isPlainObject(value)) return value
+  return {}
+}
+
+function isPlainObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value)
 }
 
 export function resolveAssetId(db, assetRef) {
@@ -3014,6 +3388,7 @@ export function findPromptSidecars(filePath, config = DEFAULT_CONFIG) {
     candidates.push(path.join(dir, `${base}${ext}`))
     candidates.push(path.join(dir, `${base}.prompt${ext}`))
     candidates.push(path.join(dir, `${base}.provenance${ext}`))
+    candidates.push(path.join(dir, `${base}.vis.provenance${ext}`))
     candidates.push(path.join(dir, `${base}.metadata${ext}`))
   }
   const found = []
@@ -3022,16 +3397,9 @@ export function findPromptSidecars(filePath, config = DEFAULT_CONFIG) {
     try {
       const raw = fs.readFileSync(candidate, 'utf-8')
       const parsed = path.extname(candidate).toLowerCase() === '.json' ? parseJson(raw, null) : null
-      const promptText = parsed
-        ? (parsed.prompt || parsed.prompt_text || parsed.input || parsed.description || raw.slice(0, 4000))
-        : extractPromptText(raw)
-      found.push({
-        path: candidate,
-        promptText: String(promptText || '').slice(0, 8000),
-        negativePrompt: parsed?.negative_prompt || parsed?.negativePrompt || null,
-        modelHint: parsed?.model || parsed?.provider || null,
-        settings: parsed?.settings || parsed?.parameters || parsed || {},
-      })
+      const sidecar = buildGenerationSidecar(parsed || { prompt: extractPromptText(raw) }, candidate)
+      if (!sidecar.promptText) sidecar.promptText = String(raw.slice(0, 4000))
+      found.push(sidecar)
     } catch {
       continue
     }

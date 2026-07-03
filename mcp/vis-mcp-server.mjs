@@ -28,6 +28,7 @@ import {
   mapUsage,
   openVisDatabase,
   parseJson,
+  recordGenerationProvenance,
   recordPublication,
   reviewAssets,
   saveSearch,
@@ -275,6 +276,35 @@ function toolRecordPublication(args = {}) {
   }))
 }
 
+function toolRecordGenerationProvenance(args = {}) {
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: recordGenerationProvenance(db, args.asset_id || args.assetId || args.uri || args.path, { ...args, execute: false }),
+    }))
+  }
+  return withDb(db => recordGenerationProvenance(db, args.asset_id || args.assetId || args.uri || args.path, {
+    prompt: args.prompt,
+    negativePrompt: args.negative_prompt || args.negativePrompt,
+    model: args.model,
+    provider: args.provider,
+    seed: args.seed,
+    settings: args.settings || args.settings_json,
+    codingAgent: args.coding_agent || args.codingAgent || args.agent,
+    repo: args.repo,
+    threadRef: args.thread_ref || args.threadRef || args.thread,
+    sessionRef: args.session_ref || args.sessionRef || args.session,
+    skillName: args.skill_name || args.skillName || args.skill,
+    summary: args.summary,
+    sidecarPath: args.sidecar_path || args.sidecarPath || args.sidecar,
+    outputPaths: args.output_paths || args.outputPaths || [],
+    actor: 'vis-mcp',
+    execute: args.execute === true && WRITE_ENABLED,
+    writeSidecar: args.write_sidecar === true || args.writeSidecar === true,
+  }))
+}
+
 function toolCloudinaryManifest(args = {}) {
   return withDb(db => exportCloudinaryManifest(db, {
     ...args,
@@ -310,6 +340,8 @@ const TOOL_HANDLERS = {
   list_music_releases: toolListMusicReleases,
   create_music_release_packet: toolCreateMusicReleasePacket,
   import_eagle_library: toolImportEagleLibrary,
+  record_generation_provenance: toolRecordGenerationProvenance,
+  record_generation: toolRecordGenerationProvenance,
   record_publication: toolRecordPublication,
   export_cloudinary_manifest: toolCloudinaryManifest,
   export_nft_metadata_report: toolNftMetadataReport,
@@ -451,6 +483,26 @@ const TOOLS = [
     campaign: stringProp('Campaign'),
     status: stringProp('planned, published, archived, failed'),
     execute: booleanProp('Persist record when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('record_generation_provenance', 'Dry-run or record prompt/model/agent/skill provenance for a generated asset. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
+    asset_id: stringProp('VIS asset_id'),
+    uri: stringProp('visual://asset/{asset_id}'),
+    path: stringProp('Local or relative path'),
+    prompt: stringProp('Generation prompt'),
+    negative_prompt: stringProp('Negative prompt'),
+    model: stringProp('Generation model'),
+    provider: stringProp('Generation provider'),
+    seed: stringProp('Generation seed'),
+    settings: { type: 'object', description: 'Generation settings or parameters' },
+    coding_agent: stringProp('Coding or media agent, e.g. codex, claude, grok, image_gen'),
+    repo: stringProp('Repo where the agent run happened'),
+    thread_ref: stringProp('Codex/Claude/Grok thread reference'),
+    session_ref: stringProp('Agent session reference'),
+    skill_name: stringProp('Skill used, e.g. visual-intelligence or imagegen'),
+    output_paths: { type: 'array', items: { type: 'string' }, description: 'Generated output paths' },
+    sidecar_path: stringProp('Optional explicit .vis.provenance.json path'),
+    write_sidecar: booleanProp('Write the sidecar file when VIS_ENABLE_WRITES=1 and execute:true'),
+    execute: booleanProp('Persist provenance when VIS_ENABLE_WRITES=1'),
   }),
   tool('export_cloudinary_manifest', 'Create a dry-run Cloudinary upload/DAM manifest. Assets with unsafe rights/approval are guarded by default.', {
     query: stringProp('Optional query'),

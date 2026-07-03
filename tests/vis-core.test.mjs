@@ -14,6 +14,7 @@ import {
   expandPathTokens,
   exportCloudinaryManifest,
   exportNftMetadataReport,
+  getAsset,
   getSummary,
   findSimilarAssets,
   indexProject,
@@ -23,6 +24,7 @@ import {
   listMusicReleasePackets,
   loadConfig,
   openVisDatabase,
+  recordGenerationProvenance,
   recordPublication,
   createMusicReleasePacket,
   reviewAssets,
@@ -119,6 +121,108 @@ test('indexes assets, usage, trace, and dry-run publication records', () => {
       const updatedSummary = getSummary(db)
       assert.equal(updatedSummary.annotations, 1)
       assert.equal(updatedSummary.savedSearches, 1)
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('captures agent generation provenance from VIS sidecars and explicit records', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-provenance-'))
+  try {
+    const mediaDir = path.join(root, 'public', 'images', 'generated')
+    fs.mkdirSync(mediaDir, { recursive: true })
+    const assetPath = path.join(mediaDir, 'music-cover.png')
+    fs.writeFileSync(assetPath, PNG_1X1)
+    fs.writeFileSync(path.join(mediaDir, 'music-cover.vis.provenance.json'), JSON.stringify({
+      schema_version: '1.0.0',
+      generation: {
+        provider: 'openai',
+        model: 'gpt-image-1',
+        prompt: 'cinematic Arcanea music cover with luminous typography space',
+        negative_prompt: 'blurry, illegible text',
+        seed: '42',
+        settings: { size: '1024x1024', quality: 'high' },
+        output_paths: [assetPath],
+        created_at: '2026-07-03T04:00:00.000Z',
+      },
+      agent: {
+        coding_agent: 'codex',
+        repo: 'visual-intelligence',
+        thread_ref: 'thread-smoke',
+        session_ref: 'session-smoke',
+        metadata: { laptop: 'primary' },
+      },
+      skill: {
+        name: 'imagegen',
+        metadata: { route: 'cover-art' },
+      },
+    }, null, 2))
+    fs.writeFileSync(path.join(root, 'vis.config.json'), JSON.stringify({
+      imagesDir: 'public/images',
+      indexPath: 'data/vis.sqlite',
+      registryPath: 'data/visual-registry.json',
+      atlasPath: 'data/vis-atlas.json',
+      dashboardPath: 'data/vis-dashboard.html',
+    }, null, 2))
+
+    const result = indexProject({ root })
+    assert.equal(result.scannedFiles, 1)
+
+    const db = openVisDatabase(root)
+    try {
+      const summary = getSummary(db)
+      assert.equal(summary.prompts, 1)
+      assert.equal(summary.generationEvents, 1)
+      assert.equal(summary.agentRuns, 1)
+      assert.equal(summary.skillRuns, 1)
+
+      const [asset] = searchAssets(db, { query: 'music cover', maxResults: 5 })
+      const detail = getAsset(db, asset.asset_id)
+      assert.equal(detail.generation_events[0].model, 'gpt-image-1')
+      assert.equal(detail.generation_events[0].provider, 'openai')
+      assert.equal(detail.agent_runs[0].coding_agent, 'codex')
+      assert.equal(detail.agent_runs[0].thread_ref, 'thread-smoke')
+      assert.equal(detail.skill_runs[0].skill_name, 'imagegen')
+
+      const packet = createCurationPacket(db, asset.asset_id, { intendedUse: 'music release cover' })
+      assert.equal(packet.provenance_summary.generation_events, 1)
+      assert.equal(packet.provenance_summary.agent_runs, 1)
+      assert.equal(packet.provenance_summary.skill_runs, 1)
+      assert.equal(packet.provenance_summary.latest_generation.model, 'gpt-image-1')
+      assert.match(packet.codex_prompt, /Generation model: openai\/gpt-image-1/)
+      assert.match(packet.codex_prompt, /Agent run: codex/)
+      assert.match(packet.codex_prompt, /Skill used: imagegen/)
+
+      const dryRun = recordGenerationProvenance(db, asset.asset_id, {
+        prompt: 'variant cover with brighter title treatment',
+        model: 'gpt-image-1',
+        provider: 'openai',
+        codingAgent: 'codex',
+        skillName: 'visual-intelligence',
+      })
+      assert.equal(dryRun.dryRun, true)
+      assert.equal(getSummary(db).generationEvents, 1)
+
+      const recorded = recordGenerationProvenance(db, asset.asset_id, {
+        prompt: 'variant cover with brighter title treatment',
+        model: 'gpt-image-1',
+        provider: 'openai',
+        codingAgent: 'codex',
+        repo: 'visual-intelligence',
+        threadRef: 'thread-smoke-2',
+        skillName: 'visual-intelligence',
+        outputPaths: [assetPath],
+        execute: true,
+      })
+      assert.equal(recorded.dryRun, false)
+      assert.ok(recorded.records.generation_event)
+      assert.equal(getSummary(db).generationEvents, 2)
+
+      const trace = traceAsset(db, asset.asset_id)
+      assert.ok(trace.provenance.some(event => event.event_type === 'generation-provenance-recorded'))
     } finally {
       db.close()
     }
