@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/vis/saved-search.schema.json",
+  "title": "VIS Saved Search",
+  "type": "object",
+  "required": ["saved_search_id", "name", "filters", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "saved_search_id": {
+      "type": "string",
+      "pattern": "^search_[a-f0-9]{24}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "query": {
+      "type": "string",
+      "maxLength": 1000
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "query": { "type": ["string", "null"] },
+        "tag": { "type": ["string", "null"] },
+        "category": { "type": ["string", "null"] },
+        "mediaType": { "type": ["string", "null"], "enum": ["image", "video", "audio", null] },
+        "mood": { "type": ["string", "null"] },
+        "color": { "type": ["string", "null"] },
+        "curationStatus": { "type": ["string", "null"] },
+        "minRating": { "type": ["integer", "number", "null"], "minimum": 1, "maximum": 5 }
+      }
+    },
+    "created_by": {
+      "type": ["string", "null"],
+      "maxLength": 120
+    },
+    "created_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

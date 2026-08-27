@@ -1,5 +1,15 @@
 node_modules/
 dist/
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/vis-dashboard.html
+data/vis-dashboard.webmanifest
+data/vis-dashboard-sw.js
+data/vis-icon.svg
+data/vis-atlas.json
+data/visual-registry.json
+data/brand-visual-dna.json
 *.log
 .env
 .DS_Store

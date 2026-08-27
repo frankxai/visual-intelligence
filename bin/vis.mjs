@@ -1,593 +1,1135 @@
 #!/usr/bin/env node
 /**
- * VIS — Visual Intelligence System CLI
+ * VIS — Visual Intelligence OS CLI
  *
- * Commands:
- *   vis init          Initialize VIS in current project (creates config + registry)
- *   vis scan          Scan images and rebuild registry
- *   vis scan --diff   Only add new/changed images
- *   vis audit         Run visual health audit
- *   vis audit --json  JSON output for CI/CD
- *   vis report        Print visual health summary
- *   vis council       Run 3-perspective quality review on an image
- *   vis optimize      Optimize oversized images (requires sharp)
- *   vis search        Search registry by tags, mood, category, filename, size
+ * Local-first asset graph for images, video, audio, prompts, usage,
+ * provenance, publications, and agent curation packets.
  */
 
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import {
+  DEFAULT_CONFIG,
+  VIS_VERSION,
+  annotateAsset,
+  annotateAssets,
+  createCurationPacket,
+  exportCloudinaryManifest,
+  exportNftMetadataReport,
+  evaluateSmartCollection,
+  findDuplicates,
+  findOrphans,
+  findSimilarAssets,
+  findProjectRoot,
+  getAsset,
+  getSummary,
+  indexProject,
+  importEagleLibrary,
+  listAssetActionRecipes,
+  listDerivativePresets,
+  listScanProfiles,
+  listSavedSearches,
+  listSmartCollections,
+  listMusicReleasePackets,
+  loadConfig,
+  openVisDatabase,
+  initCreativeVault,
+  planAssetDerivatives,
+  planCreativeVault,
+  recordGenerationProvenance,
+  recordPublication,
+  renameAssets,
+  reviewAssets,
+  runAssetActionRecipe,
+  resolveAssetId,
+  resolveMediaRoots,
+  resolveScanProfile,
+  scanUsageOnly,
+  scoreAsset,
+  scoreCollection,
+  saveSearch,
+  searchAssets,
+  traceAsset,
+  createMusicReleasePacket,
+} from '../core/vis-core.mjs'
+import { generateDashboard, serveDashboard } from '../web/vis-dashboard.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const args = process.argv.slice(2)
 const command = args[0]
 const flags = args.slice(1)
 
-// Resolve project root (look for vis.config.json or package.json)
-function findProjectRoot(dir = process.cwd()) {
-  if (fs.existsSync(path.join(dir, 'vis.config.json'))) return dir
-  if (fs.existsSync(path.join(dir, 'package.json'))) return dir
-  const parent = path.dirname(dir)
-  if (parent === dir) return process.cwd()
-  return findProjectRoot(parent)
+function getFlag(name, fallback = null) {
+  const i = flags.indexOf(name)
+  return i >= 0 && flags[i + 1] ? flags[i + 1] : fallback
 }
 
-const ROOT = findProjectRoot()
+function hasFlag(name) {
+  return flags.includes(name)
+}
 
-// Load or create config
-function loadConfig() {
-  const configPath = path.join(ROOT, 'vis.config.json')
-  if (fs.existsSync(configPath)) {
-    return JSON.parse(fs.readFileSync(configPath, 'utf-8'))
+function getAllFlags(name) {
+  const values = []
+  for (let i = 0; i < flags.length; i++) {
+    if (flags[i] === name && flags[i + 1]) values.push(flags[++i])
   }
-  return {
-    imagesDir: 'public/images',
-    registryPath: 'data/visual-registry.json',
-    brandDnaPath: 'data/brand-visual-dna.json',
-    sitemapMapPath: 'data/sitemap-image-map.json',
-    skipSuffixes: ['_thumb.jpeg', '_thumb.jpg', '_thumb.png'],
-    imageExtensions: ['.png', '.jpg', '.jpeg', '.webp'],
-    maxFileSizeKB: 2000,
-    placeholderImages: ['blog-hero-aurora.svg', 'placeholder.png'],
+  return values
+}
+
+const VALUE_FLAGS = new Set([
+  '--root', '-r', '--media-root', '--asset-root', '--usage-root', '--output', '-o', '--limit',
+  '--tag', '--mood', '--category', '--media-type', '--asset', '--asset-id',
+  '--path', '--uri', '--assets', '--ids', '--platform', '--url', '--route', '--caption', '--campaign',
+  '--status', '--query', '--folder', '--collection', '--use', '--max-kb',
+  '--note', '--notes', '--rating', '--color', '--curation-status', '--name', '--min-rating',
+  '--profile', '--library', '--eagle-library', '--port', '--host', '--min-score', '--pool-limit',
+  '--rights-status', '--approval-status', '--reason',
+  '--prompt', '--negative-prompt', '--negative', '--model', '--provider', '--seed', '--settings',
+  '--settings-json', '--agent', '--coding-agent', '--repo', '--thread', '--session', '--skill',
+  '--sidecar', '--output-path', '--source', '--summary',
+  '--recipe', '--filter-tag', '--filter-rights-status', '--filter-approval-status',
+  '--vault-root', '--sample-limit',
+  '--template', '--rename-template', '--name-template', '--start', '--pad',
+  '--preset', '--target', '--intent', '--intended-use', '--output-root', '--target-root', '--derivatives-root',
+])
+
+function positionalArgs() {
+  const values = []
+  for (let i = 0; i < flags.length; i++) {
+    const flag = flags[i]
+    if (VALUE_FLAGS.has(flag)) {
+      i++
+      continue
+    }
+    if (flag.startsWith('--')) continue
+    values.push(flag)
+  }
+  return values
+}
+
+function projectRoot() {
+  return path.resolve(getFlag('--root') || getFlag('-r') || findProjectRoot())
+}
+
+function mediaRoots() {
+  return [...getAllFlags('--media-root'), ...getAllFlags('--asset-root')]
+}
+
+function usageRoots() {
+  return getAllFlags('--usage-root')
+}
+
+function assetRefArgs() {
+  return uniq([
+    ...positionalArgs(),
+    ...getAllFlags('--asset'),
+    ...getAllFlags('--asset-id'),
+    ...getAllFlags('--path'),
+    ...getAllFlags('--uri'),
+    ...getAllFlags('--assets').flatMap(value => String(value).split(',')),
+    ...getAllFlags('--ids').flatMap(value => String(value).split(',')),
+  ].map(value => String(value || '').trim()).filter(Boolean))
+}
+
+function printJson(value) {
+  console.log(JSON.stringify(value, null, 2))
+}
+
+function uniq(values) {
+  return [...new Set(values)]
+}
+
+function ensureConfig(root) {
+  const configPath = path.join(root, 'vis.config.json')
+  if (!fs.existsSync(configPath)) {
+    fs.writeFileSync(configPath, JSON.stringify(DEFAULT_CONFIG, null, 2))
+    console.log(`Created ${configPath}`)
+  }
+  const dataDir = path.join(root, 'data')
+  fs.mkdirSync(dataDir, { recursive: true })
+  const templatePath = path.resolve(__dirname, '..', 'templates', 'brand-visual-dna.json')
+  const dnaPath = path.join(root, DEFAULT_CONFIG.brandDnaPath)
+  if (fs.existsSync(templatePath) && !fs.existsSync(dnaPath)) {
+    fs.mkdirSync(path.dirname(dnaPath), { recursive: true })
+    fs.copyFileSync(templatePath, dnaPath)
+    console.log(`Created ${dnaPath}`)
   }
 }
-
-// Tag detection rules
-const TAG_RULES = [
-  { pattern: /music|suno|audio|song|track/i, tag: 'music' },
-  { pattern: /ai|agent|agentic|llm|claude/i, tag: 'ai' },
-  { pattern: /hero/i, tag: 'hero' },
-  { pattern: /mascot|avatar/i, tag: 'mascot' },
-  { pattern: /nature|forest|garden|bloom/i, tag: 'nature' },
-  { pattern: /brand|logo/i, tag: 'brand' },
-  { pattern: /diagram|architecture|flow/i, tag: 'technical' },
-  { pattern: /infographic|poster/i, tag: 'infographic' },
-  { pattern: /screenshot/i, tag: 'screenshot' },
-  { pattern: /book|chapter|cover/i, tag: 'book' },
-  { pattern: /team/i, tag: 'team' },
-  { pattern: /portrait|headshot/i, tag: 'portrait' },
-]
-
-function detectTags(filepath) {
-  const searchStr = filepath.toLowerCase()
-  return [...new Set(TAG_RULES.filter(r => r.pattern.test(searchStr)).map(r => r.tag))]
-}
-
-function detectMood(filepath, category) {
-  const name = path.basename(filepath).toLowerCase()
-  if (name.includes('infographic') || name.includes('diagram')) return 'informational'
-  if (name.includes('poster') || name.includes('workflow')) return 'branded'
-  if (name.includes('hero') || name.includes('v3-pro')) return 'atmospheric'
-  if (category === 'design-lab' || category === 'ai-art') return 'artistic'
-  if (category === 'mascot' || category === 'team') return 'branded'
-  return 'atmospheric'
-}
-
-// ============================================================
-// COMMANDS
-// ============================================================
 
 function cmdInit() {
-  console.log('\n🔍 Initializing Visual Intelligence System...\n')
-  const config = loadConfig()
-
-  // Create vis.config.json
-  const configPath = path.join(ROOT, 'vis.config.json')
-  if (!fs.existsSync(configPath)) {
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
-    console.log('  Created vis.config.json')
-  } else {
-    console.log('  vis.config.json already exists')
+  const root = projectRoot()
+  console.log(`VIS ${VIS_VERSION}`)
+  ensureConfig(root)
+  const config = loadConfig(root)
+  const roots = resolveMediaRoots(root, config, mediaRoots())
+  if (!roots.length) {
+    console.log('Initialized. Add media to public/images or run with --media-root <path> to index another folder.')
+    return
   }
-
-  // Create data directory
-  const dataDir = path.join(ROOT, 'data')
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true })
-    console.log('  Created data/ directory')
-  }
-
-  // Create brand DNA template
-  const dnaPath = path.join(ROOT, config.brandDnaPath)
-  if (!fs.existsSync(dnaPath)) {
-    const template = {
-      version: '1.0.0',
-      brand: 'Your Brand',
-      palette: {
-        primary: { background: '#0a0a0b' },
-        accents: { primary: { hex: '#10B981', usage: 'CTA, success' } },
-      },
-      imageStandards: {
-        heroImages: { aspectRatio: '16:9', minWidth: 1600, maxFileSizeKB: 2000 },
-      },
-      qualityCouncil: {
-        perspectives: [
-          { role: 'Brand Guardian', question: 'Does this match brand visual DNA?' },
-          { role: 'Conversion Optimizer', question: 'Does this drive user action?' },
-          { role: 'Accessibility Auditor', question: 'Is this inclusive and accessible?' },
-        ],
-      },
-    }
-    fs.writeFileSync(dnaPath, JSON.stringify(template, null, 2))
-    console.log('  Created brand-visual-dna.json template')
-  }
-
-  // Run initial scan
-  console.log('\n  Running initial scan...')
-  cmdScan()
-  console.log('\n  VIS initialized. Run `vis audit` to check visual health.')
+  const result = indexProject({ root, mediaRoots: roots })
+  printIndexSummary(result)
 }
 
 function cmdScan() {
-  const config = loadConfig()
-  const imagesDir = path.resolve(ROOT, config.imagesDir)
-  const registryPath = path.resolve(ROOT, config.registryPath)
-  const diffMode = flags.includes('--diff')
+  const root = projectRoot()
+  ensureConfig(root)
+  const roots = mediaRoots()
+  const usage = usageRoots()
+  const result = indexProject({
+    root,
+    mediaRoots: roots.length ? roots : null,
+    config: usage.length ? { usageRoots: usage } : null,
+    reset: !hasFlag('--diff'),
+  })
+  if (hasFlag('--json')) printJson(result)
+  else printIndexSummary(result)
+}
 
-  if (!fs.existsSync(imagesDir)) {
-    console.error(`Images directory not found: ${imagesDir}`)
-    process.exit(1)
-  }
-
-  let existingPaths = new Set()
-  if (diffMode && fs.existsSync(registryPath)) {
-    const existing = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
-    existingPaths = new Set(existing.map(e => e.path))
-  }
-
-  const entries = []
-  function walk(dir, category = '') {
-    for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, item.name)
-      if (item.isDirectory()) { walk(full, category || item.name); continue }
-      const ext = path.extname(item.name).toLowerCase()
-      if (!config.imageExtensions.includes(ext)) continue
-      if (config.skipSuffixes.some(s => item.name.endsWith(s))) continue
-
-      const rel = '/' + path.relative(path.resolve(ROOT, 'public'), full).replace(/\\/g, '/')
-      if (diffMode && existingPaths.has(rel)) continue
-
-      const stats = fs.statSync(full)
-      const sizeKB = Math.round(stats.size / 1024)
-      const directory = path.basename(path.dirname(full))
-
-      entries.push({
-        path: rel,
-        directory,
-        category: category || directory,
-        filename: item.name,
-        sizeKB,
-        tags: detectTags(`${item.name} ${directory} ${category}`),
-        mood: detectMood(rel, category || directory),
-        theme: 'dark',
-        suitableFor: [],
-      })
+function cmdReport() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const summary = getSummary(db)
+    if (hasFlag('--json')) {
+      printJson(summary)
+      return
     }
-  }
-
-  walk(imagesDir)
-  entries.sort((a, b) => a.category.localeCompare(b.category) || a.filename.localeCompare(b.filename))
-
-  if (diffMode) {
-    const existing = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
-    const merged = [...existing, ...entries]
-    merged.sort((a, b) => a.category.localeCompare(b.category) || a.filename.localeCompare(b.filename))
-    fs.writeFileSync(registryPath, JSON.stringify(merged, null, 2))
-    console.log(`  Found ${entries.length} new images. Registry: ${merged.length} total.`)
-  } else {
-    // Ensure data dir exists
-    const dir = path.dirname(registryPath)
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(registryPath, JSON.stringify(entries, null, 2))
-    console.log(`  Registry rebuilt: ${entries.length} images`)
+    if (hasFlag('--html')) {
+      const out = generateDashboard(root, { output: getFlag('--output') || getFlag('-o') || undefined })
+      console.log(`Dashboard generated: ${out.outputPath}`)
+      return
+    }
+    console.log('\n=== VISUAL INTELLIGENCE OS REPORT ===\n')
+    console.log(`Assets:       ${summary.assets}`)
+    console.log(`Versions:     ${summary.versions}`)
+    console.log(`Locations:    ${summary.locations}`)
+    console.log(`Usage edges:  ${summary.usageEdges}`)
+    console.log(`Prompts:      ${summary.prompts}`)
+    console.log(`Annotations:  ${summary.annotations || 0}`)
+    console.log(`Saved search: ${summary.savedSearches || 0}`)
+    console.log(`Publications: ${summary.publications}`)
+    console.log(`Evals:        ${summary.evals}`)
+    console.log('\nMedia types:')
+    for (const row of summary.byMediaType) console.log(`  ${row.media_type}: ${row.count}`)
+    console.log('\nTop categories:')
+    for (const row of summary.byCategory.slice(0, 12)) console.log(`  ${row.category || 'uncategorized'}: ${row.count}`)
+  } finally {
+    db.close()
   }
 }
 
-function cmdAudit() {
-  const config = loadConfig()
-  const registryPath = path.resolve(ROOT, config.registryPath)
-  const jsonMode = flags.includes('--json')
-
-  if (!fs.existsSync(registryPath)) {
-    console.error('No registry found. Run `vis scan` first.')
-    process.exit(1)
+function cmdUsage() {
+  const root = projectRoot()
+  const usage = usageRoots()
+  const result = scanUsageOnly({
+    root,
+    config: usage.length ? { usageRoots: usage } : null,
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
   }
+  console.log('\n=== VIS USAGE SCAN COMPLETE ===\n')
+  console.log(`Root:        ${result.root}`)
+  console.log(`Usage edges: ${result.usageEdges}`)
+  console.log(`Assets:      ${result.assets}`)
+}
 
-  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
-  const issues = []
-
-  // Check oversized
-  for (const img of registry) {
-    if (img.sizeKB > config.maxFileSizeKB) {
-      issues.push({
-        type: 'oversized',
-        severity: 'low',
-        image: img.path,
-        sizeKB: img.sizeKB,
-        message: `${(img.sizeKB / 1024).toFixed(1)}MB — optimize to <${Math.round(config.maxFileSizeKB / 1024)}MB`,
-      })
-    }
+function cmdProfiles() {
+  const root = projectRoot()
+  const config = loadConfig(root)
+  const profiles = listScanProfiles(config)
+  if (hasFlag('--json')) {
+    printJson(profiles)
+    return
   }
-
-  // Placeholder detection is handled by the full audit script
-  // This lightweight version focuses on registry-based checks
-
-  const high = issues.filter(i => i.severity === 'high').length
-  const med = issues.filter(i => i.severity === 'medium').length
-  const low = issues.filter(i => i.severity === 'low').length
-
-  const score = Math.max(0, 100 - (high * 15) - (med * 5) - (low * 2))
-
-  if (jsonMode) {
-    console.log(JSON.stringify({ score, issues, registry: { total: registry.length } }, null, 2))
-  } else {
-    console.log(`\n=== VISUAL HEALTH AUDIT ===`)
-    console.log(`\nImages: ${registry.length}`)
-    console.log(`Issues: ${issues.length} (HIGH: ${high}, MEDIUM: ${med}, LOW: ${low})`)
-    issues.slice(0, 10).forEach(i => console.log(`  [${i.severity.toUpperCase()}] ${i.image}: ${i.message}`))
-    if (issues.length > 10) console.log(`  ... and ${issues.length - 10} more`)
-    console.log(`\n=== SCORE: ${score}/100 ===`)
+  console.log('\n=== VIS SCAN PROFILES ===\n')
+  if (!profiles.length) {
+    console.log('No scan profiles configured in vis.config.json.')
+    return
+  }
+  for (const profile of profiles) {
+    console.log(`${profile.name}`)
+    console.log(`  ${profile.description || 'No description'}`)
+    console.log(`  media roots: ${profile.mediaRoots} | usage roots: ${profile.usageRoots} | allowed roots: ${profile.allowedRoots}`)
   }
 }
 
-async function cmdReport() {
-  // --html flag: delegate to vis-report-html.mjs
-  if (flags.includes('--html')) {
-    const { execFileSync } = await import('child_process')
-    const reportScript = path.join(__dirname, 'vis-report-html.mjs')
-    const childArgs = ['--project', ROOT]
-    // Forward --output flag if present
-    const outputIdx = flags.indexOf('--output')
-    const outputIdxShort = flags.indexOf('-o')
-    const oi = outputIdx !== -1 ? outputIdx : outputIdxShort
-    if (oi !== -1 && flags[oi + 1]) {
-      childArgs.push('--output', flags[oi + 1])
+function cmdScanProfile() {
+  const root = projectRoot()
+  ensureConfig(root)
+  const name = getFlag('--profile') || positionalArgs()[0]
+  if (!name) throw new Error('Usage: vis scan-profile <profile-name> [--execute] [--json]')
+  const config = loadConfig(root)
+  const profile = resolveScanProfile(root, config, name)
+
+  if (!hasFlag('--execute')) {
+    if (hasFlag('--json')) {
+      printJson({ dryRun: true, profile })
+      return
     }
-    execFileSync('node', [reportScript, ...childArgs], { stdio: 'inherit', cwd: ROOT })
+    printScanProfile(profile)
     return
   }
 
-  const config = loadConfig()
-  const registryPath = path.resolve(ROOT, config.registryPath)
-
-  if (!fs.existsSync(registryPath)) {
-    console.error('No registry found. Run `vis scan` first.')
-    process.exit(1)
+  if (!profile.existingMediaRoots.length) {
+    throw new Error(`Scan profile "${name}" has no existing media roots. Run without --execute to inspect missing roots.`)
   }
 
-  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
-  const totalSizeKB = registry.reduce((s, e) => s + e.sizeKB, 0)
-  const categories = {}
-  const moods = {}
-
-  for (const e of registry) {
-    categories[e.category] = (categories[e.category] || 0) + 1
-    moods[e.mood] = (moods[e.mood] || 0) + 1
+  const result = indexProject({
+    root,
+    mediaRoots: profile.existingMediaRoots,
+    config: profile.existingUsageRoots.length ? { usageRoots: profile.existingUsageRoots } : null,
+    reset: !hasFlag('--diff'),
+  })
+  const output = { profile, result }
+  if (hasFlag('--json')) {
+    printJson(output)
+    return
   }
-
-  console.log('\n=== VISUAL INTELLIGENCE REPORT ===\n')
-  console.log(`Total images: ${registry.length}`)
-  console.log(`Total size: ${(totalSizeKB / 1024).toFixed(1)} MB`)
-  console.log(`Categories: ${Object.keys(categories).length}`)
-  console.log('\nBy category:')
-  Object.entries(categories).sort((a, b) => b[1] - a[1]).forEach(([c, n]) => console.log(`  ${c}: ${n}`))
-  console.log('\nBy mood:')
-  Object.entries(moods).sort((a, b) => b[1] - a[1]).forEach(([m, n]) => console.log(`  ${m}: ${n}`))
-
-  const oversized = registry.filter(e => e.sizeKB > (config.maxFileSizeKB || 2000))
-  if (oversized.length) {
-    console.log(`\nOversized (>${Math.round((config.maxFileSizeKB || 2000) / 1024)}MB):`)
-    oversized.forEach(e => console.log(`  ${e.path} (${(e.sizeKB / 1024).toFixed(1)}MB)`))
+  printIndexSummary(result)
+  if (profile.missingMediaRoots.length || profile.missingUsageRoots.length) {
+    console.log('\nMissing profile roots:')
+    for (const missing of [...profile.missingMediaRoots, ...profile.missingUsageRoots]) console.log(`  - ${missing}`)
   }
+}
+
+function cmdEagleImport() {
+  const root = projectRoot()
+  ensureConfig(root)
+  const libraries = [...getAllFlags('--library'), ...getAllFlags('--eagle-library')]
+  const result = importEagleLibrary(root, {
+    libraryRoots: libraries,
+    limit: Number(getFlag('--limit', 10000)),
+    execute: hasFlag('--execute'),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log(`\n=== VIS EAGLE IMPORT ${result.dryRun ? 'DRY RUN' : 'COMPLETE'} ===\n`)
+  for (const library of result.libraries) console.log(`${library.exists ? 'OK' : 'NO'} ${library.root}`)
+  console.log(`\nItems:          ${result.items}`)
+  console.log(`Importable:     ${result.importableItems}`)
+  console.log(`Missing assets: ${result.missingAssetFiles}`)
+  console.log(`Folders:        ${result.folders.length}`)
+  console.log(`Tags:           ${result.tags.length}`)
+  if (!result.dryRun) console.log(`Imported:       ${result.imported}`)
+  if (result.sample?.length) {
+    console.log('\nSample:')
+    for (const item of result.sample.slice(0, 10)) {
+      console.log(`  ${item.id}: ${item.name || path.basename(item.assetPath || item.metadataPath)}`)
+      if (item.folders.length) console.log(`    folders: ${item.folders.join(', ')}`)
+      if (item.tags.length) console.log(`    tags: ${item.tags.join(', ')}`)
+    }
+  }
+  if (result.dryRun) console.log('\nDry run only. Add --execute to merge Eagle metadata into VIS.')
 }
 
 function cmdSearch() {
-  const config = loadConfig()
-  const registryPath = path.resolve(ROOT, config.registryPath)
-
-  if (!fs.existsSync(registryPath)) {
-    console.error('No registry found. Run `vis scan` first.')
-    process.exit(1)
-  }
-
-  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
-
-  // Parse flags
-  const tagFilters = []
-  const moodFilters = []
-  const themeFilters = []
-  const suitableFilters = []
-  const categoryFilters = []
-  const positionalWords = []
-  let minSize = null
-  let maxSize = null
-
-  for (let i = 0; i < flags.length; i++) {
-    const f = flags[i]
-    if (f === '--tag' && flags[i + 1]) { tagFilters.push(flags[++i].toLowerCase()); continue }
-    if (f === '--mood' && flags[i + 1]) { moodFilters.push(flags[++i].toLowerCase()); continue }
-    if (f === '--theme' && flags[i + 1]) { themeFilters.push(flags[++i].toLowerCase()); continue }
-    if (f === '--suitable' && flags[i + 1]) { suitableFilters.push(flags[++i].toLowerCase()); continue }
-    if (f === '--category' && flags[i + 1]) { categoryFilters.push(flags[++i].toLowerCase()); continue }
-    if (f === '--min-size' && flags[i + 1]) { minSize = parseInt(flags[++i], 10); continue }
-    if (f === '--max-size' && flags[i + 1]) { maxSize = parseInt(flags[++i], 10); continue }
-    if (!f.startsWith('--')) { positionalWords.push(f.toLowerCase()) }
-  }
-
-  if (!positionalWords.length && !tagFilters.length && !moodFilters.length &&
-      !themeFilters.length && !suitableFilters.length && !categoryFilters.length &&
-      minSize === null && maxSize === null) {
-    console.error('Usage: vis search <words...> [--tag X] [--mood X] [--theme X] [--suitable X] [--category X] [--min-size KB] [--max-size KB]')
-    process.exit(1)
-  }
-
-  const results = registry.filter(img => {
-    // Positional words: each word must match at least one of tags, mood, category, or filename
-    for (const word of positionalWords) {
-      const inTags = (img.tags || []).some(t => t.toLowerCase().includes(word))
-      const inMood = (img.mood || '').toLowerCase().includes(word)
-      const inCategory = (img.category || '').toLowerCase().includes(word)
-      const inFilename = (img.filename || '').toLowerCase().includes(word)
-      if (!inTags && !inMood && !inCategory && !inFilename) return false
-    }
-
-    // Named filters: each specified value must match
-    for (const t of tagFilters) {
-      if (!(img.tags || []).some(tag => tag.toLowerCase().includes(t))) return false
-    }
-    for (const m of moodFilters) {
-      if (!(img.mood || '').toLowerCase().includes(m)) return false
-    }
-    for (const th of themeFilters) {
-      if (!(img.theme || '').toLowerCase().includes(th)) return false
-    }
-    for (const s of suitableFilters) {
-      if (!(img.suitableFor || []).some(sf => sf.toLowerCase().includes(s))) return false
-    }
-    for (const c of categoryFilters) {
-      if (!(img.category || '').toLowerCase().includes(c)) return false
-    }
-
-    // Size filters
-    if (minSize !== null && img.sizeKB < minSize) return false
-    if (maxSize !== null && img.sizeKB > maxSize) return false
-
-    return true
-  })
-
-  if (results.length === 0) {
-    console.log('\nNo images matched your query.')
-  } else {
-    console.log(`\n=== SEARCH RESULTS: ${results.length} image${results.length === 1 ? '' : 's'} ===\n`)
-    for (const img of results) {
-      console.log(`  ${img.path}`)
-      console.log(`    category: ${img.category}  |  tags: [${(img.tags || []).join(', ')}]  |  mood: ${img.mood}  |  ${img.sizeKB} KB`)
-    }
-  }
-  console.log()
-}
-
-async function cmdOptimize() {
-  const config = loadConfig()
-  const registryPath = path.resolve(ROOT, config.registryPath)
-  const dryRun = !flags.includes('--execute')
-  const skipPrompt = flags.includes('--yes')
-  const maxSizeKB = config.maxFileSizeKB || 2000
-
-  if (!fs.existsSync(registryPath)) {
-    console.error('No registry found. Run `vis scan` first.')
-    process.exit(1)
-  }
-
-  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8'))
-  const oversized = registry.filter(img => img.sizeKB > maxSizeKB)
-
-  console.log('\n=== VIS OPTIMIZE ===\n')
-
-  if (oversized.length === 0) {
-    console.log(`No oversized images found (threshold: ${maxSizeKB}KB / ${(maxSizeKB / 1024).toFixed(1)}MB).`)
-    console.log('All images are within limits.\n')
-    return
-  }
-
-  // Attempt to load sharp (only needed for --execute)
-  let sharp = null
-  if (!dryRun) {
-    try {
-      sharp = (await import('sharp')).default
-    } catch {
-      console.log('sharp not installed. Run: npm install sharp')
-      console.log('Showing dry-run analysis instead...\n')
-    }
-  }
-
-  const effectiveDryRun = dryRun || (!dryRun && !sharp)
-
-  if (effectiveDryRun) {
-    console.log('Mode: DRY RUN (use --execute to apply)\n')
-  } else {
-    console.log('Mode: EXECUTE\n')
-  }
-
-  // WebP at quality 85 typically achieves ~80% reduction on PNGs, ~30-50% on JPEGs
-  const estimateSavings = (img) => {
-    const ext = path.extname(img.filename).toLowerCase()
-    const ratio = ext === '.png' ? 0.20 : ext === '.jpeg' || ext === '.jpg' ? 0.55 : 0.40
-    const estimatedKB = Math.round(img.sizeKB * ratio)
-    return { estimatedKB, savingsKB: img.sizeKB - estimatedKB }
-  }
-
-  let totalCurrentKB = 0
-  let totalEstimatedKB = 0
-  const totalRegistryKB = registry.reduce((s, e) => s + e.sizeKB, 0)
-
-  console.log(`Oversized images (${oversized.length}):\n`)
-
-  for (const img of oversized) {
-    const { estimatedKB, savingsKB } = estimateSavings(img)
-    totalCurrentKB += img.sizeKB
-    totalEstimatedKB += estimatedKB
-
-    const currentMB = (img.sizeKB / 1024).toFixed(1)
-    const estMB = (estimatedKB / 1024).toFixed(1)
-    const saveMB = (savingsKB / 1024).toFixed(1)
-    console.log(`  ${img.path}  ${currentMB}MB -> ~${estMB}MB (WebP q85) -- save ${saveMB}MB`)
-  }
-
-  const totalSavingsMB = ((totalCurrentKB - totalEstimatedKB) / 1024).toFixed(1)
-  const totalRegistryMB = (totalRegistryKB / 1024).toFixed(1)
-  const pct = Math.round(((totalCurrentKB - totalEstimatedKB) / totalRegistryKB) * 100)
-
-  console.log(`\nEstimated total savings: ${totalSavingsMB}MB (${pct}% of ${totalRegistryMB}MB)\n`)
-
-  if (effectiveDryRun) {
-    console.log('To apply: vis optimize --execute\n')
-    return
-  }
-
-  // --- EXECUTE MODE ---
-
-  // Safety prompt
-  if (!skipPrompt) {
-    const readline = await import('readline')
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    const answer = await new Promise(resolve => {
-      rl.question('This will modify images in place. Original files will be backed up to public/images/_originals/. Continue? (use --yes to skip) (y/N) ', resolve)
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const query = positionalArgs().join(' ')
+    const results = searchAssets(db, {
+      query,
+      tag: getFlag('--tag'),
+      mood: getFlag('--mood'),
+      category: getFlag('--category'),
+      mediaType: getFlag('--media-type'),
+      color: getFlag('--color'),
+      maxResults: Number(getFlag('--limit', 20)),
     })
-    rl.close()
-    if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
-      console.log('Aborted.\n')
+    if (hasFlag('--json')) {
+      printJson(results)
       return
     }
-  }
-
-  // Create backup directory
-  const backupDir = path.resolve(ROOT, 'public/images/_originals')
-  if (!fs.existsSync(backupDir)) {
-    fs.mkdirSync(backupDir, { recursive: true })
-  }
-
-  let optimized = 0
-  let errors = 0
-  let savedKB = 0
-
-  for (const img of oversized) {
-    const absPath = path.resolve(ROOT, 'public', img.path.replace(/^\//, ''))
-    if (!fs.existsSync(absPath)) {
-      console.log(`  SKIP (not found): ${img.path}`)
-      errors++
-      continue
+    console.log(`\n=== SEARCH RESULTS: ${results.length} ===\n`)
+    for (const asset of results) {
+      console.log(`${asset.visual_uri}`)
+      console.log(`  ${asset.relative_path || asset.absolute_path}`)
+      console.log(`  ${asset.media_type} | ${asset.category || 'uncategorized'} | ${(asset.tags || []).join(', ') || 'no tags'} | ${asset.sizeKB || 0} KB`)
     }
-
-    // Backup original preserving relative path structure
-    const relFromImages = path.relative(path.resolve(ROOT, 'public/images'), absPath)
-    const backupPath = path.join(backupDir, relFromImages)
-    const backupSubdir = path.dirname(backupPath)
-    if (!fs.existsSync(backupSubdir)) {
-      fs.mkdirSync(backupSubdir, { recursive: true })
-    }
-    fs.copyFileSync(absPath, backupPath)
-
-    // Convert to WebP
-    const webpPath = absPath.replace(/\.(png|jpe?g)$/i, '.webp')
-    try {
-      await sharp(absPath)
-        .webp({ quality: 85 })
-        .toFile(webpPath)
-
-      const newStats = fs.statSync(webpPath)
-      const newSizeKB = Math.round(newStats.size / 1024)
-      const saved = img.sizeKB - newSizeKB
-
-      // Remove original if webp is a different file
-      if (webpPath !== absPath) {
-        fs.unlinkSync(absPath)
-      }
-
-      savedKB += saved
-      optimized++
-      console.log(`  OK: ${img.path} -> .webp (${(img.sizeKB / 1024).toFixed(1)}MB -> ${(newSizeKB / 1024).toFixed(1)}MB)`)
-    } catch (err) {
-      console.log(`  ERROR: ${img.path} - ${err.message}`)
-      errors++
-    }
+  } finally {
+    db.close()
   }
-
-  console.log(`\nOptimized: ${optimized}  Errors: ${errors}  Saved: ${(savedKB / 1024).toFixed(1)}MB`)
-  console.log('Originals backed up to: public/images/_originals/\n')
-
-  // Re-run scan to update registry
-  console.log('Re-scanning registry...')
-  cmdScan()
-  console.log()
 }
 
-// ============================================================
-// ROUTER
-// ============================================================
+function cmdTrace() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0]
+  if (!ref) throw new Error('Usage: vis trace <asset_id|visual://asset/...|path>')
+  const trace = traceAsset(root, ref)
+  if (!trace) throw new Error(`Asset not found: ${ref}`)
+  printJson(trace)
+}
+
+function cmdPacket() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0]
+  if (!ref) throw new Error('Usage: vis packet <asset_id|visual://asset/...|path> [--use <context>]')
+  const packet = createCurationPacket(root, ref, { intendedUse: getFlag('--use') })
+  if (!packet) throw new Error(`Asset not found: ${ref}`)
+  if (hasFlag('--json')) printJson(packet)
+  else console.log(packet.codex_prompt)
+}
+
+function cmdDashboard() {
+  const root = projectRoot()
+  const out = generateDashboard(root, {
+    output: getFlag('--output') || getFlag('-o') || undefined,
+    limit: getFlag('--limit') || undefined,
+  })
+  console.log(`Dashboard generated: ${out.outputPath}`)
+  console.log(`Assets rendered: ${out.assets}`)
+  if (out.pwa) {
+    console.log(`PWA manifest: ${path.join(path.dirname(out.outputPath), out.pwa.manifest)}`)
+    console.log(`Service worker: ${path.join(path.dirname(out.outputPath), out.pwa.serviceWorker)}`)
+  }
+}
+
+async function cmdServeDashboard() {
+  const root = projectRoot()
+  const served = await serveDashboard(root, {
+    output: getFlag('--output') || getFlag('-o') || undefined,
+    limit: getFlag('--limit') || undefined,
+    port: getFlag('--port') || undefined,
+    host: getFlag('--host') || undefined,
+    generate: !hasFlag('--no-generate'),
+  })
+  console.log(`VIS dashboard server: ${served.url}`)
+  console.log(`Serving: ${served.outputPath}`)
+  console.log('Press Ctrl+C to stop.')
+}
+
+function cmdDuplicates() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const rows = findDuplicates(db, { limit: Number(getFlag('--limit', 50)) })
+    printJson(rows)
+  } finally {
+    db.close()
+  }
+}
+
+function cmdOrphans() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const rows = findOrphans(db, { limit: Number(getFlag('--limit', 100)) })
+    printJson(rows)
+  } finally {
+    db.close()
+  }
+}
+
+function cmdSimilar() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri')
+  const results = findSimilarAssets(root, {
+    assetRef: ref,
+    query: getFlag('--query') || (!ref ? positionalArgs().join(' ') : ''),
+    mediaType: getFlag('--media-type'),
+    minScore: Number(getFlag('--min-score', 58)),
+    poolLimit: Number(getFlag('--pool-limit', 10000)),
+    limit: Number(getFlag('--limit', 20)),
+  })
+  if (hasFlag('--json')) {
+    printJson(results)
+    return
+  }
+  if (results.mode === 'asset') {
+    console.log(`\n=== VIS SIMILAR ASSETS: ${results.matches.length} ===\n`)
+    if (!results.target) {
+      console.log('No target asset found.')
+      return
+    }
+    console.log(`Target: ${results.target.visual_uri} | ${results.target.title}`)
+    for (const match of results.matches) {
+      console.log(`${match.score} | ${match.asset.visual_uri} | ${match.asset.title}`)
+      console.log(`  ${match.reasons.join(', ')}`)
+      console.log(`  ${match.asset.relative_path || match.asset.local_path || ''}`)
+    }
+    return
+  }
+  console.log(`\n=== VIS SIMILARITY REVIEW GROUPS: ${results.groups.length} ===\n`)
+  for (const group of results.groups) {
+    console.log(`${group.group_id} | score ${group.score} | ${group.assets.length} assets`)
+    console.log(`  ${group.reason.join(', ')}`)
+    for (const asset of group.assets.slice(0, 5)) console.log(`  - ${asset.visual_uri} | ${asset.title}`)
+  }
+}
+
+function cmdScore() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0]
+  if (ref) printJson(scoreAsset(root, ref))
+  else printJson(scoreCollection(root, getFlag('--collection')))
+}
+
+function cmdAnnotate() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri')
+  if (!ref) throw new Error('Usage: vis annotate <asset|path|uri> [--tag <tag>] [--note <note>] [--rating 1-5] [--execute]')
+  const result = annotateAsset(root, ref, {
+    tags: getAllFlags('--tag'),
+    note: getFlag('--note') || getFlag('--notes'),
+    rating: getFlag('--rating'),
+    color: getFlag('--color'),
+    curationStatus: getFlag('--curation-status') || getFlag('--status'),
+    collection: getFlag('--collection'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdBatchAnnotate() {
+  const root = projectRoot()
+  const refs = assetRefArgs()
+  if (!refs.length) throw new Error('Usage: vis batch-annotate <asset...> [--tag <tag>] [--collection <name>] [--curation-status <status>] [--execute]')
+  const result = annotateAssets(root, refs, {
+    tags: getAllFlags('--tag'),
+    note: getFlag('--note') || getFlag('--notes'),
+    rating: getFlag('--rating'),
+    color: getFlag('--color'),
+    curationStatus: getFlag('--curation-status') || getFlag('--status'),
+    collection: getFlag('--collection'),
+    replaceTags: hasFlag('--replace-tags'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdBatchRename() {
+  const root = projectRoot()
+  const refs = assetRefArgs()
+  const result = renameAssets(root, refs, {
+    template: getFlag('--template') || getFlag('--rename-template') || getFlag('--name-template'),
+    query: getFlag('--query'),
+    tag: getFlag('--tag'),
+    category: getFlag('--category'),
+    mediaType: getFlag('--media-type'),
+    mood: getFlag('--mood'),
+    color: getFlag('--color'),
+    start: getFlag('--start'),
+    pad: getFlag('--pad'),
+    limit: Number(getFlag('--limit', 50)),
+    allowPartial: hasFlag('--allow-partial'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdReviewAssets() {
+  const root = projectRoot()
+  const refs = assetRefArgs()
+  if (!refs.length) throw new Error('Usage: vis review-assets <asset...> [--rights-status generated-owned] [--approval-status approved] [--execute]')
+  const result = reviewAssets(root, refs, {
+    rightsStatus: getFlag('--rights-status'),
+    approvalStatus: getFlag('--approval-status'),
+    reason: getFlag('--reason') || getFlag('--note') || getFlag('--notes'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdActionRecipes() {
+  printJson(listAssetActionRecipes())
+}
+
+function cmdActionRecipe() {
+  const root = projectRoot()
+  const recipe = getFlag('--recipe') || positionalArgs()[0]
+  if (!recipe) throw new Error('Usage: vis action-recipe <recipe> [asset...] [--query <query>] [--execute]')
+  const refs = assetRefArgs().filter(ref => ref !== recipe)
+  const result = runAssetActionRecipe(root, {
+    recipe,
+    assetRefs: refs,
+    query: getFlag('--query'),
+    mediaType: getFlag('--media-type'),
+    category: getFlag('--category'),
+    mood: getFlag('--mood'),
+    color: getFlag('--color'),
+    filterTag: getFlag('--filter-tag'),
+    filterRightsStatus: getFlag('--filter-rights-status'),
+    filterApprovalStatus: getFlag('--filter-approval-status'),
+    tags: getAllFlags('--tag'),
+    note: getFlag('--note') || getFlag('--notes'),
+    rating: getFlag('--rating'),
+    color: getFlag('--color'),
+    curationStatus: getFlag('--curation-status') || getFlag('--status'),
+    collection: getFlag('--collection'),
+    rightsStatus: getFlag('--rights-status'),
+    approvalStatus: getFlag('--approval-status'),
+    reason: getFlag('--reason') || getFlag('--note') || getFlag('--notes'),
+    replaceTags: hasFlag('--replace-tags'),
+    actor: 'vis-cli',
+    limit: Number(getFlag('--limit', 50)),
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdDerivativePresets() {
+  const presets = listDerivativePresets()
+  if (hasFlag('--json')) {
+    printJson(presets)
+    return
+  }
+  console.log('\n=== VIS DERIVATIVE PRESETS ===\n')
+  for (const preset of presets) {
+    const aliases = preset.aliases?.length ? ` aliases: ${preset.aliases.join(', ')}` : ''
+    console.log(`${preset.id} | ${preset.label} | ${preset.media_types.join(', ')} | ${preset.variant_count} variants${aliases}`)
+    console.log(`  ${preset.description}`)
+    if (preset.music_boundary) console.log(`  ${preset.music_boundary}`)
+  }
+}
+
+function cmdDerivativePlan() {
+  const root = projectRoot()
+  const refs = assetRefArgs()
+  const preset = getFlag('--preset') || getFlag('--target') || getFlag('--intent') || 'website'
+  const result = planAssetDerivatives(root, refs, {
+    preset,
+    query: getFlag('--query'),
+    tag: getFlag('--tag'),
+    category: getFlag('--category'),
+    mediaType: getFlag('--media-type'),
+    mood: getFlag('--mood'),
+    color: getFlag('--color'),
+    outputRoot: getFlag('--output-root') || getFlag('--target-root') || getFlag('--derivatives-root'),
+    intendedUse: getFlag('--intended-use') || getFlag('--use'),
+    limit: Number(getFlag('--limit', 50)),
+    poolLimit: Number(getFlag('--pool-limit', 10000)),
+    execute: hasFlag('--execute'),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log(`\n=== VIS DERIVATIVE PLAN: ${result.preset} ===\n`)
+  console.log(`Plan: ${result.plan_id}`)
+  console.log(`Selected: ${result.selected} assets | planned variants: ${result.planned_variants} | blocked variants: ${result.blocked_variants}`)
+  if (result.target_root) console.log(`Target root: ${result.target_root}`)
+  if (result.music_boundary) console.log(`Music boundary: ${result.music_boundary}`)
+  const preview = result.items.slice(0, Number(getFlag('--limit', 8)))
+  for (const item of preview) {
+    console.log(`\n${item.asset_id} | ${item.media_type} | ${item.status}`)
+    console.log(`  ${item.local_path}`)
+    for (const variant of item.variants.slice(0, 4)) {
+      console.log(`  - ${variant.variant_id} -> ${variant.target_path || variant.adapter} [${variant.status}]`)
+      for (const blocker of variant.blockers || []) console.log(`    blocked: ${blocker}`)
+    }
+  }
+  if (result.items.length > preview.length) console.log(`\n...${result.items.length - preview.length} more assets. Add --json for the full manifest.`)
+  console.log('\nGates:')
+  for (const gate of result.gates) console.log(`- ${gate}`)
+}
+
+function cmdSmartCollections() {
+  const root = projectRoot()
+  const result = listSmartCollections(root, {
+    sampleLimit: Number(getFlag('--sample-limit', 0)),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log('\n=== VIS SMART COLLECTIONS ===\n')
+  for (const collection of result) {
+    const recipe = collection.action_recipe ? ` | recipe: ${collection.action_recipe}` : ''
+    console.log(`${collection.id} | ${collection.label} | ${collection.count}${recipe}`)
+    console.log(`  ${collection.description}`)
+  }
+}
+
+function cmdSmartCollection() {
+  const root = projectRoot()
+  const collection = getFlag('--collection') || positionalArgs()[0]
+  if (!collection) throw new Error('Usage: vis smart-collection <id> [--query <query>] [--limit <n>] [--json]')
+  const result = evaluateSmartCollection(root, {
+    collection,
+    query: getFlag('--query'),
+    mediaType: getFlag('--media-type'),
+    category: getFlag('--category'),
+    mood: getFlag('--mood'),
+    color: getFlag('--color'),
+    filterTag: getFlag('--filter-tag') || getFlag('--tag'),
+    filterRightsStatus: getFlag('--filter-rights-status'),
+    filterApprovalStatus: getFlag('--filter-approval-status'),
+    limit: Number(getFlag('--limit', 50)),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log(`\n=== VIS SMART COLLECTION: ${result.label} ===\n`)
+  console.log(`${result.description}`)
+  console.log(`Selected: ${result.total_selected}`)
+  if (result.commands.recipe_dry_run) console.log(`Recipe dry-run: ${result.commands.recipe_dry_run}`)
+  for (const item of result.items.slice(0, Number(getFlag('--limit', 50)))) {
+    console.log(`- ${item.asset_id} | ${item.media_type} | ${item.match_reason}`)
+    console.log(`  ${item.path}`)
+  }
+}
+
+function cmdRecordGeneration() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri')
+  if (!ref) throw new Error('Usage: vis record-generation <asset|path|uri> [--prompt <text>] [--model <model>] [--agent codex] [--skill imagegen] [--execute] [--write-sidecar]')
+  const result = recordGenerationProvenance(root, ref, {
+    prompt: getFlag('--prompt'),
+    negativePrompt: getFlag('--negative-prompt') || getFlag('--negative'),
+    model: getFlag('--model'),
+    provider: getFlag('--provider'),
+    seed: getFlag('--seed'),
+    settings: getFlag('--settings') || getFlag('--settings-json'),
+    codingAgent: getFlag('--coding-agent') || getFlag('--agent'),
+    repo: getFlag('--repo'),
+    threadRef: getFlag('--thread'),
+    sessionRef: getFlag('--session'),
+    skillName: getFlag('--skill'),
+    summary: getFlag('--summary'),
+    sidecarPath: getFlag('--sidecar'),
+    outputPaths: getAllFlags('--output-path'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+    writeSidecar: hasFlag('--write-sidecar'),
+  })
+  printJson(result)
+}
+
+function cmdSavedSearches() {
+  const root = projectRoot()
+  printJson(listSavedSearches(root))
+}
+
+function cmdMusicReleases() {
+  const root = projectRoot()
+  const results = listMusicReleasePackets(root, {
+    query: getFlag('--query') || positionalArgs().join(' '),
+    limit: Number(getFlag('--limit', 50)),
+  })
+  if (hasFlag('--json')) {
+    printJson(results)
+    return
+  }
+  console.log(`\n=== VIS MUSIC RELEASE PACKETS: ${results.length} ===\n`)
+  for (const packet of results) {
+    console.log(`${packet.release_id} | ${packet.title}`)
+    console.log(`  ${packet.gate_status}: ${packet.next_action}`)
+    console.log(`  assets ${packet.counts.assets} | audio ${packet.counts.audio} | covers ${packet.counts.covers} | canvas/video ${packet.counts.canvas + packet.counts.videos} | docs ${packet.counts.documents}`)
+    console.log(`  ${packet.release_path}`)
+  }
+}
+
+function cmdMusicPacket() {
+  const root = projectRoot()
+  const ref = positionalArgs()[0] || getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri') || getFlag('--query')
+  const packet = createMusicReleasePacket(root, ref, { intendedUse: getFlag('--use') })
+  if (!packet) throw new Error(`Music release packet not found: ${ref || 'latest'}`)
+  if (hasFlag('--json')) printJson(packet)
+  else console.log(packet.codex_prompt)
+}
+
+function cmdSaveSearch() {
+  const root = projectRoot()
+  const name = getFlag('--name') || positionalArgs()[0]
+  const query = getFlag('--query') || positionalArgs().slice(name ? 1 : 0).join(' ')
+  const result = saveSearch(root, {
+    name,
+    query,
+    tag: getFlag('--tag'),
+    category: getFlag('--category'),
+    mediaType: getFlag('--media-type'),
+    mood: getFlag('--mood'),
+    color: getFlag('--color'),
+    curationStatus: getFlag('--curation-status') || getFlag('--status'),
+    minRating: getFlag('--min-rating'),
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdRecordPublication() {
+  const root = projectRoot()
+  const result = recordPublication(root, {
+    assetId: getFlag('--asset') || getFlag('--asset-id') || getFlag('--path') || getFlag('--uri'),
+    platform: getFlag('--platform'),
+    url: getFlag('--url'),
+    route: getFlag('--route'),
+    caption: getFlag('--caption'),
+    campaign: getFlag('--campaign'),
+    status: getFlag('--status') || 'planned',
+    actor: 'vis-cli',
+    execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdCloudinaryManifest() {
+  const root = projectRoot()
+  printJson(exportCloudinaryManifest(root, {
+    query: getFlag('--query') || '',
+    category: getFlag('--category'),
+    mediaType: getFlag('--media-type'),
+    folder: getFlag('--folder') || 'visual-intelligence',
+    limit: Number(getFlag('--limit', 500)),
+    includeUnsafe: hasFlag('--include-unsafe'),
+  }))
+}
+
+function cmdNftReport() {
+  const root = projectRoot()
+  printJson(exportNftMetadataReport(root, {
+    query: getFlag('--query'),
+    category: getFlag('--category'),
+    collection: getFlag('--collection'),
+    limit: Number(getFlag('--limit', 200)),
+  }))
+}
+
+function cmdOptimize() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const maxKB = Number(getFlag('--max-kb') || loadConfig(root).maxFileSizeKB || 2000)
+    const oversized = searchAssets(db, { maxResults: 10000 }).filter(asset => (asset.sizeKB || 0) > maxKB)
+    console.log('\n=== VIS OPTIMIZE DRY RUN ===\n')
+    if (!oversized.length) {
+      console.log(`No assets exceed ${maxKB} KB.`)
+      return
+    }
+    for (const asset of oversized.slice(0, 100)) {
+      console.log(`${asset.relative_path || asset.absolute_path} (${asset.sizeKB} KB)`)
+    }
+    if (oversized.length > 100) console.log(`... and ${oversized.length - 100} more`)
+    console.log('\nOptimization execution remains human-gated. Use Cloudinary/R2 adapters or sharp derivatives in a dedicated phase.')
+  } finally {
+    db.close()
+  }
+}
+
+function cmdMcpInfo() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const summary = getSummary(db)
+    printJson({
+      command: `node ${path.resolve(__dirname, '..', 'mcp', 'vis-mcp-server.mjs')}`,
+      env: { VIS_ROOT: root },
+      readOnlyDefault: true,
+      summary,
+    })
+  } finally {
+    db.close()
+  }
+}
+
+function cmdDoctor() {
+  const root = projectRoot()
+  const configPath = path.join(root, 'vis.config.json')
+  const config = loadConfig(root)
+  const indexPath = path.isAbsolute(config.indexPath) ? config.indexPath : path.join(root, config.indexPath)
+  const dashboardPath = path.isAbsolute(config.dashboardPath) ? config.dashboardPath : path.join(root, config.dashboardPath)
+  const mcpPath = path.resolve(__dirname, '..', 'mcp', 'vis-mcp-server.mjs')
+  const checks = [
+    check('repoRoot', fs.existsSync(path.join(root, 'package.json')), root),
+    check('config', fs.existsSync(configPath), configPath),
+    check('nodeVersion', isSupportedNode(), process.version),
+    check('sqliteIndex', fs.existsSync(indexPath), indexPath),
+    check('dashboard', fs.existsSync(dashboardPath), dashboardPath),
+    check('mcpServer', fs.existsSync(mcpPath), mcpPath),
+  ]
+  let summary = null
+  if (fs.existsSync(indexPath)) {
+    const db = openVisDatabase(root, config)
+    try {
+      summary = getSummary(db)
+    } finally {
+      db.close()
+    }
+  }
+  const result = {
+    ok: checks.every(item => item.ok),
+    root,
+    version: VIS_VERSION,
+    checks,
+    summary,
+    mcp: {
+      command: `node ${mcpPath}`,
+      env: {
+        VIS_ROOT: root,
+        VIS_ALLOWED_ROOTS: root,
+        VIS_ENABLE_WRITES: '0',
+      },
+      readOnlyDefault: true,
+    },
+    nextActions: doctorNextActions(checks, summary),
+  }
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log('\n=== VIS DOCTOR ===\n')
+  for (const item of checks) console.log(`${item.ok ? 'OK ' : 'NO '} ${item.name}: ${item.detail}`)
+  if (summary) {
+    console.log('\nGraph:')
+    console.log(`  assets:      ${summary.assets}`)
+    console.log(`  versions:    ${summary.versions}`)
+    console.log(`  locations:   ${summary.locations}`)
+    console.log(`  usageEdges:  ${summary.usageEdges}`)
+    console.log(`  prompts:     ${summary.prompts}`)
+    console.log(`  annotations: ${summary.annotations || 0}`)
+    console.log(`  savedSearch: ${summary.savedSearches || 0}`)
+  }
+  console.log('\nMCP:')
+  console.log(`  ${result.mcp.command}`)
+  console.log(`  VIS_ROOT=${root}`)
+  console.log(`  VIS_ALLOWED_ROOTS=${root}`)
+  if (result.nextActions.length) {
+    console.log('\nNext actions:')
+    for (const action of result.nextActions) console.log(`  - ${action}`)
+  }
+}
+
+function check(name, ok, detail) {
+  return { name, ok: Boolean(ok), detail }
+}
+
+function isSupportedNode() {
+  const [major, minor] = process.versions.node.split('.').map(Number)
+  return major > 22 || (major === 22 && minor >= 13)
+}
+
+function doctorNextActions(checks, summary) {
+  const actions = []
+  if (!checks.find(item => item.name === 'config')?.ok) actions.push('Run: node bin/vis.mjs init')
+  if (!checks.find(item => item.name === 'nodeVersion')?.ok) actions.push('Install Node.js 22.13+; Node 24+ is recommended for this repo.')
+  if (!checks.find(item => item.name === 'sqliteIndex')?.ok) actions.push('Run: node bin/vis.mjs scan --media-root <asset-root>')
+  if (!checks.find(item => item.name === 'dashboard')?.ok) actions.push('Run: node bin/vis.mjs dashboard --limit 3000')
+  if (summary && !summary.usageEdges) actions.push('Run: node bin/vis.mjs usage --usage-root <website-or-content-repo>')
+  return actions
+}
+
+function printIndexSummary(result) {
+  console.log('\n=== VIS INDEX COMPLETE ===\n')
+  console.log(`Root:          ${result.root}`)
+  console.log(`SQLite:        ${result.indexPath}`)
+  console.log(`Scanned files: ${result.scannedFiles}`)
+  console.log(`Assets:        ${result.logicalAssets}`)
+  console.log(`Versions:      ${result.versions}`)
+  console.log(`Locations:     ${result.locations}`)
+  console.log(`Usage edges:   ${result.usageEdges}`)
+  console.log(`Registry JSON: ${result.registryPath}`)
+  console.log(`Atlas JSON:    ${result.atlasPath}`)
+}
+
+function printScanProfile(profile) {
+  console.log(`\n=== VIS SCAN PROFILE: ${profile.name} ===\n`)
+  if (profile.description) console.log(`${profile.description}\n`)
+  console.log('Existing media roots:')
+  if (profile.existingMediaRoots.length) for (const root of profile.existingMediaRoots) console.log(`  OK ${root}`)
+  else console.log('  none')
+  console.log('\nMissing media roots:')
+  if (profile.missingMediaRoots.length) for (const root of profile.missingMediaRoots) console.log(`  NO ${root}`)
+  else console.log('  none')
+  console.log('\nExisting usage roots:')
+  if (profile.existingUsageRoots.length) for (const root of profile.existingUsageRoots) console.log(`  OK ${root}`)
+  else console.log('  none')
+  console.log('\nMissing usage roots:')
+  if (profile.missingUsageRoots.length) for (const root of profile.missingUsageRoots) console.log(`  NO ${root}`)
+  else console.log('  none')
+  if (profile.notes.length) {
+    console.log('\nNotes:')
+    for (const note of profile.notes) console.log(`  - ${note}`)
+  }
+  console.log('\nDry run only. Add --execute to index existing roots.')
+  console.log(`MCP allowlist from existing roots: ${profile.mcpAllowedRoots || 'none'}`)
+}
+
+function printVaultPlan(plan) {
+  console.log(`\n=== VIS CREATIVE VAULT ${plan.dryRun ? 'PLAN' : 'INITIALIZED'} ===\n`)
+  console.log(`Vault root: ${plan.vault_root}`)
+  console.log(`Exists:     ${plan.vault_exists ? 'yes' : 'no'}`)
+  console.log(`Folders:    ${plan.existing_folders}/${plan.folders.length} existing`)
+  console.log('\nFolders:')
+  for (const folder of plan.folders) {
+    console.log(`  ${folder.exists ? 'OK' : 'NO'} ${folder.path} - ${folder.label}`)
+  }
+  console.log('\nCross-device commands:')
+  console.log(`  ${plan.commands.execute}`)
+  console.log(`  ${plan.commands.scan}`)
+  console.log(`  ${plan.commands.eagle_import}`)
+  console.log('\nMCP allowlist:')
+  console.log(`  ${plan.mcp_allowed_roots}`)
+  console.log('\nPhone workflow:')
+  for (const step of plan.phone_workflow) console.log(`  - ${step}`)
+}
+
+function cmdVaultPlan() {
+  const root = projectRoot()
+  const result = planCreativeVault(root, {
+    vaultRoot: getFlag('--vault-root'),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  printVaultPlan(result)
+}
+
+function cmdVaultInit() {
+  const root = projectRoot()
+  const result = initCreativeVault(root, {
+    vaultRoot: getFlag('--vault-root'),
+    execute: hasFlag('--execute'),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  printVaultPlan(result)
+  if (result.dryRun) console.log('\nDry run only. Add --execute after the vault root is correct.')
+  else {
+    console.log(`\nCreated folders: ${result.created_folders.length}`)
+    console.log(`Manifest: ${result.manifest_written}`)
+    console.log(`Readme:   ${result.readme_written}`)
+  }
+}
 
 const commands = {
   init: cmdInit,
+  audit: cmdReport,
   scan: cmdScan,
-  audit: cmdAudit,
+  index: cmdScan,
+  profiles: cmdProfiles,
+  'scan-profile': cmdScanProfile,
+  'vault-plan': cmdVaultPlan,
+  'creative-vault': cmdVaultPlan,
+  'vault-init': cmdVaultInit,
+  'init-vault': cmdVaultInit,
+  eagle: cmdEagleImport,
+  'eagle-import': cmdEagleImport,
   report: cmdReport,
+  usage: cmdUsage,
   search: cmdSearch,
+  trace: cmdTrace,
+  packet: cmdPacket,
+  dashboard: cmdDashboard,
+  'serve-dashboard': cmdServeDashboard,
+  cockpit: cmdServeDashboard,
+  atlas: cmdDashboard,
+  duplicates: cmdDuplicates,
+  orphans: cmdOrphans,
+  similar: cmdSimilar,
+  'find-similar': cmdSimilar,
+  score: cmdScore,
+  annotate: cmdAnnotate,
+  'batch-annotate': cmdBatchAnnotate,
+  'bulk-annotate': cmdBatchAnnotate,
+  'batch-rename': cmdBatchRename,
+  rename: cmdBatchRename,
+  'review-assets': cmdReviewAssets,
+  'approve-assets': cmdReviewAssets,
+  'action-recipes': cmdActionRecipes,
+  recipes: cmdActionRecipes,
+  'action-recipe': cmdActionRecipe,
+  'run-recipe': cmdActionRecipe,
+  'ai-action': cmdActionRecipe,
+  'derivative-presets': cmdDerivativePresets,
+  'variant-presets': cmdDerivativePresets,
+  'derivative-plan': cmdDerivativePlan,
+  derivatives: cmdDerivativePlan,
+  'variant-plan': cmdDerivativePlan,
+  'export-plan': cmdDerivativePlan,
+  'smart-collections': cmdSmartCollections,
+  'smart-views': cmdSmartCollections,
+  'smart-collection': cmdSmartCollection,
+  smart: cmdSmartCollection,
+  'record-generation': cmdRecordGeneration,
+  'record-provenance': cmdRecordGeneration,
+  'saved-searches': cmdSavedSearches,
+  'save-search': cmdSaveSearch,
+  'music-releases': cmdMusicReleases,
+  'music-packet': cmdMusicPacket,
+  'record-publication': cmdRecordPublication,
+  'cloudinary-manifest': cmdCloudinaryManifest,
+  'nft-report': cmdNftReport,
   optimize: cmdOptimize,
+  doctor: cmdDoctor,
+  'mcp-info': cmdMcpInfo,
 }
 
 if (!command || command === '--help' || command === '-h') {
   console.log(`
-  VIS — Visual Intelligence System v0.1.0
+VIS — Visual Intelligence OS v${VIS_VERSION}
 
-  Commands:
-    vis init            Initialize VIS in current project
-    vis scan            Scan and rebuild image registry
-    vis scan --diff     Only add new images
-    vis audit           Run visual health audit
-    vis audit --json    JSON output for CI/CD
-    vis report          Print visual health summary
-    vis report --html   Generate self-contained HTML audit report
-    vis search <query>  Search registry by tags, mood, category, filename
-    vis optimize        Analyze oversized images (dry-run by default)
-    vis optimize --execute  Convert oversized images to WebP (backs up originals)
+Commands:
+  vis init                         Initialize config and index if media exists
+  vis scan                         Build SQLite graph and JSON exports
+  vis scan --media-root <path>      Index an additional local media root
+  vis scan --usage-root <path>      Scan route/content usage outside project root
+  vis profiles                     List configured scan profiles
+  vis scan-profile <name>          Dry-run a named multi-root scan profile
+  vis scan-profile <name> --execute Index existing roots from a scan profile
+  vis vault-plan                   Show Google Drive creative vault plan and cross-device setup status
+  vis vault-init --execute          Create Creative Vault folders and VIS manifest after review
+  vis eagle --library <path>        Dry-run Eagle library metadata import
+  vis eagle --library <path> --execute Merge Eagle metadata into VIS
+  vis audit                        Alias for report summary
+  vis report                       Print graph summary
+  vis report --html                Generate dashboard HTML
+  vis usage --usage-root <path>     Re-scan usage edges without rehashing media
+  vis dashboard                    Generate dashboard HTML and PWA shell
+  vis serve-dashboard              Serve dashboard locally with media preview proxy
+  vis search <query>               Search assets by path, tag, mood, category, color
+  vis trace <asset|path|uri>        Print full provenance and usage trace
+  vis packet <asset|path|uri>       Print Codex-ready curation packet
+  vis duplicates                   List duplicate content groups
+  vis orphans                      List assets with no detected usage
+  vis similar [asset|query]         Find visually adjacent assets and review groups
+  vis score [asset]                Score asset or collection readiness
+  vis annotate <asset>             Dry-run or save tags, notes, rating, color, collection
+  vis batch-annotate <asset...>     Dry-run or save curation metadata across assets
+  vis batch-rename <asset...>       Dry-run or execute same-folder file renames from a template
+  vis review-assets <asset...>      Dry-run or save rights and approval status
+  vis action-recipes                List dry-run asset action recipes
+  vis action-recipe <recipe>         Dry-run or apply recipe curation across matching assets
+  vis derivative-presets            List website/social/music/NFT/Cloudinary variant presets
+  vis derivative-plan --preset music Dry-run derivative/export manifest for matching assets
+  vis smart-collections             List live Eagle-style smart views with counts
+  vis smart-collection <id>          Inspect one smart view and copy the attached dry-run recipe
+  vis record-generation <asset>     Dry-run or save prompt/model/agent/skill provenance sidecar
+  vis saved-searches               List saved smart-folder searches
+  vis save-search --name <name>     Dry-run or save a smart search
+  vis music-releases               List Music IS release media packets
+  vis music-packet [release|asset]  Print Music IS handoff packet
+  vis record-publication --asset <id> --platform <x> [--url <url>] [--execute]
+  vis cloudinary-manifest          Dry-run Cloudinary upload manifest; guarded assets excluded by default
+  vis nft-report                   Dry-run NFT metadata readiness report
+  vis optimize                     Dry-run oversized asset report
+  vis doctor                       Check local install, graph, dashboard, MCP info
+  vis mcp-info                     Print MCP install info
 
-  Search flags:
-    --tag <tag>         Filter by tag
-    --mood <mood>       Filter by mood
-    --theme <theme>     Filter by theme
-    --suitable <use>    Filter by suitability
-    --category <cat>    Filter by category
-    --min-size <KB>     Minimum file size in KB
-    --max-size <KB>     Maximum file size in KB
+Options:
+  --root, -r <path>                Project root
+  --json                          JSON output where supported
+  --limit <n>                     Result limit
 
-  Options:
-    --help, -h          Show this help message
-
-  https://github.com/frankxai/visual-intelligence
-  `)
+MCP server:
+  node mcp/vis-mcp-server.mjs
+`)
 } else if (commands[command]) {
-  Promise.resolve(commands[command]()).catch(err => {
-    console.error(err.message || err)
+  Promise.resolve(commands[command]()).catch(error => {
+    console.error(error.stack || error.message || error)
     process.exit(1)
   })
 } else {

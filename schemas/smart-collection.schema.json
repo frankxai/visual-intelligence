@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/vis/smart-collection.schema.json",
+  "title": "VIS Smart Collection",
+  "type": "object",
+  "required": ["id", "label", "description", "filters", "write_model"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,80}$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "applied_filters": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "action_recipe": {
+      "type": ["string", "null"]
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sample": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "total_selected": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pool_limit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "mcp": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "command": {
+      "type": "string"
+    },
+    "write_model": {
+      "type": "string"
+    },
+    "note": {
+      "type": "string"
+    }
+  }
+}

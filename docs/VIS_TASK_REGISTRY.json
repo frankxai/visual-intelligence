@@ -1,0 +1,602 @@
+{
+  "repo": "frankxai/visual-intelligence",
+  "project": {
+    "title": "Visual Intelligence OS",
+    "status": "pending_project_scope",
+    "note": "GitHub Issues and milestones are canonical now. GitHub Projects v2 requires gh auth refresh with project scope before it can be managed from this repo."
+  },
+  "labels": [
+    { "name": "setup", "color": "0e8a16", "description": "Install, local estate setup, cross-device setup, and operational readiness." },
+    { "name": "product", "color": "1f6feb", "description": "Core VIS product capability or packaging work." },
+    { "name": "dashboard", "color": "5319e7", "description": "VIS cockpit, PWA, and visual browsing experience." },
+    { "name": "mcp", "color": "8957e5", "description": "Agent access through MCP resources, tools, and gates." },
+    { "name": "adapter", "color": "fbca04", "description": "External tool integration kept behind explicit adapter boundaries." },
+    { "name": "music", "color": "f9d0c4", "description": "Music IS, audio assets, release proof folders, covers, Canvas, lyrics, and release media." },
+    { "name": "security", "color": "d73a4a", "description": "Privacy, rights, secrets, allowlists, and human approval gates." },
+    { "name": "research", "color": "d876e3", "description": "Research, benchmarks, market analysis, and technology evaluation." },
+    { "name": "good-first-internal", "color": "a2eeef", "description": "Good first task for Frank, Codex, Claude, or another trusted internal agent." },
+    { "name": "human-gated", "color": "b60205", "description": "Requires explicit human purchase, publishing, upload, wallet, or account action." },
+    { "name": "status:todo", "color": "ededed", "description": "Unclaimed or not yet started." },
+    { "name": "status:in-progress", "color": "fbca04", "description": "Being actively worked." },
+    { "name": "status:blocked", "color": "d73a4a", "description": "Blocked by a credential, purchase, external install, or human decision." },
+    { "name": "status:done", "color": "0e8a16", "description": "Completed and verified." },
+    { "name": "agent:codex", "color": "8957e5", "description": "Claimed or primarily advanced by Codex." },
+    { "name": "agent:claude", "color": "1f6feb", "description": "Claimed or ready for cross-check by Claude." }
+  ],
+  "milestones": [
+    {
+      "title": "M0 Personal Estate Setup",
+      "description": "Two laptops and two phones can capture, sync, index, and browse assets reliably."
+    },
+    {
+      "title": "M1 Daily Cockpit",
+      "description": "Frank can use VIS daily without touching JSON or terminal for normal browsing."
+    },
+    {
+      "title": "M2 Asset Intelligence",
+      "description": "VIS understands where assets came from, where they are used, and what should happen next."
+    },
+    {
+      "title": "M3 Media Expansion",
+      "description": "Images, video, audio, music release assets, and prompts share one provenance spine."
+    },
+    {
+      "title": "M4 Product Beta",
+      "description": "VIS becomes a packaged product for AI-native creators and agentic teams."
+    }
+  ],
+  "issues": [
+    {
+      "key": "VIS-001",
+      "title": "Set up Google Drive Creative Vault across two laptops and two phones",
+      "milestone": "M0 Personal Estate Setup",
+      "labels": ["setup", "good-first-internal"],
+      "summary": "Create the Starlight Creative Vault in Google Drive and make it usable across two laptops and two phones.",
+      "tasks": [
+        "Create folder structure from docs/SETUP_RUNBOOK.md.",
+        "Install Google Drive for desktop on laptop 1.",
+        "Install Google Drive for desktop on laptop 2.",
+        "Make the vault locally available where Eagle and VIS need stable paths.",
+        "Add Drive app shortcuts on both phones.",
+        "Test phone upload into 00_INBOX_MOBILE."
+      ],
+      "acceptance": [
+        "Both laptops can see the same vault path.",
+        "Both phones can upload selected assets into Drive.",
+        "VIS can scan the vault from at least one laptop."
+      ]
+    },
+    {
+      "key": "VIS-002",
+      "title": "Buy, install, and configure Eagle as the visual inbox",
+      "milestone": "M0 Personal Estate Setup",
+      "labels": ["setup", "human-gated"],
+      "summary": "Use Eagle as the daily visual browsing and inspiration manager while VIS remains provenance and agent source of truth.",
+      "tasks": [
+        "Buy Eagle license.",
+        "Install Eagle on laptop 1.",
+        "Install Eagle on laptop 2.",
+        "Install Eagle browser extension.",
+        "Place Eagle library under 01_Eagle_Library.",
+        "Define starter folders and tags for FrankX, Arcanea, VIS, music, websites, NFT, and social.",
+        "Document sync caution: one active Eagle writer at a time."
+      ],
+      "acceptance": [
+        "Eagle opens the same synced library on both laptops.",
+        "Browser extension captures into Eagle.",
+        "VIS can scan the Eagle library folder."
+      ]
+    },
+    {
+      "key": "VIS-003",
+      "title": "Install VIS MCP and run doctor on both laptops",
+      "milestone": "M0 Personal Estate Setup",
+      "labels": ["setup", "mcp"],
+      "summary": "Make VIS agent-accessible on both laptops.",
+      "tasks": [
+        "Pull active VIS branch on laptop 1 and laptop 2.",
+        "Run npm install.",
+        "Run npm run doctor.",
+        "Run npm run lint.",
+        "Run npm test.",
+        "Install vis-mcp in Claude on both laptops.",
+        "Smoke test search_assets through MCP."
+      ],
+      "acceptance": [
+        "claude mcp get vis-mcp shows connected on both laptops.",
+        "node bin/vis.mjs doctor --json returns ok: true after scan and dashboard generation.",
+        "A selected asset packet resolves to a valid local path on both laptops."
+      ]
+    },
+    {
+      "key": "VIS-004",
+      "title": "Build VIS scan profile for Drive, Eagle, repos, and Music IS",
+      "milestone": "M0 Personal Estate Setup",
+      "labels": ["setup", "product"],
+      "summary": "Define the first canonical VIS scan roots and exclusion rules.",
+      "tasks": [
+        "Add Drive creative vault scan root.",
+        "Add Eagle library scan root.",
+        "Keep repo estate scan root.",
+        "Add Music IS proof folders.",
+        "Exclude generated, cache, and private directories.",
+        "Run scan and record counts."
+      ],
+      "acceptance": [
+        "Scan completes without indexing secrets or private memory.",
+        "Dashboard shows assets from Drive, Eagle, repos, and music proof folders.",
+        "Duplicate and orphan reports work after scan."
+      ]
+    },
+    {
+      "key": "VIS-005",
+      "title": "Build Next.js/PWA daily cockpit MVP",
+      "milestone": "M1 Daily Cockpit",
+      "labels": ["dashboard", "product"],
+      "summary": "Replace static HTML as the daily operating UI with a local-first dashboard/PWA.",
+      "tasks": [
+        "[done] Create static PWA app shell with manifest, service worker, icon, and local serve command.",
+        "[done] Add asset grid with stable thumbnails and served local media proxy.",
+        "[done] Add search, filters, tags, media type, rights, approval, and source in the static cockpit.",
+        "[done] Add detail drawer with provenance, usage, local path, and visual:// URI.",
+        "[done] Add copy actions: local path, visual URI, Codex packet, website/social packets, and Music IS packet.",
+        "Promote cockpit to richer Next.js/PWA only after static app-mode workflow is proven.",
+        "Add duplicate, orphan, and rights review panels."
+      ],
+      "acceptance": [
+        "Dashboard handles at least the current 3k+ asset graph smoothly.",
+        "Desktop and mobile responsive views pass visual QA.",
+        "No private paths are exposed outside allowed local context."
+      ]
+    },
+    {
+      "key": "VIS-006",
+      "title": "Add Eagle adapter for library metadata and import mapping",
+      "milestone": "M2 Asset Intelligence",
+      "labels": ["adapter", "product"],
+      "summary": "Read Eagle library metadata where safe and map it into VIS without copying Eagle proprietary code.",
+      "tasks": [
+        "Research Eagle library metadata format and API/plugin options.",
+        "Map Eagle folders, tags, notes, source URLs, and local file paths into VIS records.",
+        "Detect Eagle-managed assets as locations, not duplicate source truth.",
+        "Add docs for Eagle sync conflict rules."
+      ],
+      "acceptance": [
+        "VIS can show Eagle folder and tag context for indexed assets.",
+        "Eagle remains optional and adapter-only.",
+        "No Eagle proprietary code or assets are copied into VIS."
+      ]
+    },
+    {
+      "key": "VIS-007",
+      "title": "Add Google Drive metadata adapter",
+      "milestone": "M2 Asset Intelligence",
+      "labels": ["adapter"],
+      "summary": "Link Drive files to provider IDs and sync state so VIS understands cloud locations.",
+      "tasks": [
+        "Define Drive metadata fields in storage_object and location model.",
+        "Add dry-run Drive import manifest.",
+        "Add provider ID and web URL capture.",
+        "Keep credentials outside Git."
+      ],
+      "acceptance": [
+        "VIS can report local path plus Drive provider identity for a sample asset.",
+        "Adapter runs without exposing tokens.",
+        "Dry-run output is human-readable before writes."
+      ]
+    },
+    {
+      "key": "VIS-008",
+      "title": "Define mobile inbox workflow for Google Photos and Drive",
+      "milestone": "M1 Daily Cockpit",
+      "labels": ["setup", "product"],
+      "summary": "Create a repeatable phone-to-VIS workflow.",
+      "tasks": [
+        "Document when assets stay only in Google Photos.",
+        "Document when assets move to Drive inbox.",
+        "Add weekly inbox curation checklist.",
+        "Add VIS search and filter for mobile inbox assets."
+      ],
+      "acceptance": [
+        "Phone assets can become VIS assets without manual path confusion.",
+        "Mobile backup does not become product source of truth by accident."
+      ]
+    },
+    {
+      "key": "VIS-009",
+      "title": "Add music/audio integration with Music IS",
+      "milestone": "M3 Media Expansion",
+      "labels": ["music", "adapter"],
+      "summary": "Index audio and music assets while preserving Music IS as the canonical release operating system.",
+      "tasks": [
+        "[done] Index MP3, WAV, M4A, and FLAC metadata.",
+        "[done] Link Music IS proof folders through scan profiles and music release packet grouping.",
+        "[done] Link cover, Canvas, lyrics, prompt, credits, and release checklist in VIS preflight packets.",
+        "[done] Add CLI/MCP release packet handoff.",
+        "Add release packet curation view.",
+        "Avoid making VIS the release truth; Music IS remains canonical."
+      ],
+      "acceptance": [
+        "VIS can trace a song's cover, Canvas, audio, lyrics, and release usage.",
+        "Music IS catalog remains source of truth for release state."
+      ]
+    },
+    {
+      "key": "VIS-010",
+      "title": "Add agent provenance sidecars for generated media",
+      "milestone": "M2 Asset Intelligence",
+      "status": "done",
+      "labels": ["mcp", "product"],
+      "summary": "Every generated image, video, and audio output should carry sidecar provenance even when embedded metadata is missing.",
+      "tasks": [
+        "Done: Define .vis.provenance.json sidecar format.",
+        "Done: Capture agent, model, prompt, negative prompt, seed/settings, skill, repo, thread/session, and output paths.",
+        "Done: Add CLI command to record generation event.",
+        "Done: Teach MCP curation packets to include provenance summary."
+      ],
+      "acceptance": [
+        "Done: A new generated asset can be traced from prompt to output to usage.",
+        "Done: Sidecar survives movement between Drive, Eagle, and repos as a portable file next to the asset."
+      ]
+    },
+    {
+      "key": "VIS-011",
+      "title": "Add rights and approval review board",
+      "milestone": "M2 Asset Intelligence",
+      "labels": ["dashboard", "security"],
+      "summary": "Make rights and approval state visible and actionable before assets become public.",
+      "tasks": [
+        "Done: Add rights filter and review queue.",
+        "Done: Add dry-run-first rights and approval review workflow across CLI, MCP, and dashboard selected-assets handoff.",
+        "Done: Add public-use gate warnings and export guards across curation packets, dashboard website/social handoffs, Cloudinary manifests, NFT reports, publication records, and Music IS packets.",
+        "Add richer approval/reject workflow in the dashboard.",
+        "Add blocked/needs-review state.",
+        "Add direct dashboard approve/reject controls."
+      ],
+      "acceptance": [
+        "Done: Public and publishing packets warn on unknown or blocked rights.",
+        "Done: Approval changes are recorded as provenance events.",
+        "Done: Cloudinary and NFT dry-run manifests keep unsafe assets out of executable or upload-ready outputs by default.",
+        "Future publishing adapters inherit the same public-use gate."
+      ]
+    },
+    {
+      "key": "VIS-012",
+      "title": "Add semantic and visual similarity search",
+      "milestone": "M2 Asset Intelligence",
+      "labels": ["product", "research"],
+      "summary": "Add natural-language and similarity search without locking VIS to a single provider.",
+      "tasks": [
+        "Done: Add local dependency-free visual similarity review groups using metadata heuristics.",
+        "Done: Add CLI and MCP similarity review commands.",
+        "Done: Add dashboard similarity review queue and smart collection.",
+        "Done: Add dry-run-first batch curation across CLI, MCP, and dashboard selected-assets handoff.",
+        "Research permissive local embedding options and external adapter options.",
+        "Add embedding table and schema.",
+        "Add CLI dry-run for embedding selected assets.",
+        "Add semantic search UI mode."
+      ],
+      "acceptance": [
+        "Search can find assets by meaning, not only filename or tag.",
+        "Provider and model used are recorded for provenance and reproducibility."
+      ]
+    },
+    {
+      "key": "VIS-013",
+      "title": "Add R2 and Cloudinary publication/storage adapters",
+      "milestone": "M4 Product Beta",
+      "labels": ["adapter", "human-gated"],
+      "summary": "Move from dry-run manifests toward safe gated storage and delivery adapters.",
+      "tasks": [
+        "R2 approved masters dry-run to live upload gate.",
+        "Cloudinary production derivatives dry-run to live upload gate.",
+        "Store provider IDs, URLs, checksums, and status.",
+        "Never upload without human approval."
+      ],
+      "acceptance": [
+        "Dry-run manifest is reviewed before upload.",
+        "Upload records become storage objects in VIS."
+      ]
+    },
+    {
+      "key": "VIS-014",
+      "title": "Prepare private beta product package",
+      "milestone": "M4 Product Beta",
+      "labels": ["product"],
+      "summary": "Package VIS as a product for AI-native creators after the internal OS proves useful.",
+      "tasks": [
+        "Define product name and positioning.",
+        "Create demo dataset.",
+        "Create install guide.",
+        "Create pricing hypothesis.",
+        "Create beta feedback form.",
+        "Create public landing page draft."
+      ],
+      "acceptance": [
+        "A beta user can install and scan a local folder without Frank handholding.",
+        "Product claims are honest about adapter and manual boundaries."
+      ]
+    },
+    {
+      "key": "VIS-015",
+      "title": "Add GitHub issue templates and weekly review ritual",
+      "milestone": "M0 Personal Estate Setup",
+      "status": "done",
+      "labels": ["product", "setup"],
+      "summary": "Make VIS work manageable by future agents.",
+      "tasks": [
+        "Done: Add setup task issue template.",
+        "Done: Add product feature issue template.",
+        "Done: Add adapter issue template.",
+        "Done: Add weekly review checklist.",
+        "Done: Link docs from README.",
+        "Done: Document Google Tasks as a personal reminder layer, not the canonical backlog."
+      ],
+      "acceptance": [
+        "Done: New tasks can be opened consistently.",
+        "Done: Weekly review can move issues across Now, Next, and Later.",
+        "Done: Future agents can identify the source of truth and sync workflow."
+      ]
+    },
+    {
+      "key": "VIS-016",
+      "title": "Build Eagle parity cockpit slice and adapter path",
+      "milestone": "M1 Daily Cockpit",
+      "labels": ["dashboard", "adapter", "product"],
+      "summary": "Benchmark Eagle capabilities without copying proprietary UX, then ship the VIS-specific advantage layer.",
+      "tasks": [
+        "Keep docs/EAGLE_PARITY_ROADMAP.md current.",
+        "Done: Add smart collections for inbox, rights, prompt gaps, usage, orphans, duplicates, music, video, NFT/Web3, website-ready, and social-ready.",
+        "Done: Add source/folder navigation and batch curation packet copy.",
+        "Done: Add dry-run-first batch curation command copy plus CLI/MCP write gates.",
+        "Done: Add VIS curation memory: notes, tags, ratings, color labels, collections, and saved searches.",
+        "Done: Add Eagle-style color palette extraction, color search, and dashboard swatches.",
+        "Done: Add audio preview and Music IS packet handoff.",
+        "Done: Add Eagle metadata adapter research for folders, tags, notes, and source URLs.",
+        "Done: Document what remains Eagle-owned versus VIS-owned."
+      ],
+      "acceptance": [
+        "Frank can use Eagle for daily designer browsing while VIS shows provenance, usage, MCP, and agent packets.",
+        "Done: VIS dashboard exposes the first Eagle-inspired cockpit slice.",
+        "Eagle remains optional and no proprietary Eagle code is copied."
+      ]
+    },
+    {
+      "key": "VIS-017",
+      "title": "Add VIS asset action recipes for agentic curation queues",
+      "milestone": "M2 Asset Intelligence",
+      "status": "done",
+      "labels": ["product", "mcp", "dashboard", "music"],
+      "summary": "Add Eagle-inspired but VIS-native dry-run action recipes for designer asset management, Music IS release media, provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity groups.",
+      "tasks": [
+        "Done: Add recipe catalog for designer inbox, music release inbox, prompt/provenance gaps, website/social candidates, NFT/Web3 review, orphans, duplicates, and similarity review.",
+        "Done: Add core dry-run-first recipe runner that uses existing annotation, collection, rights review, and provenance paths.",
+        "Done: Add CLI commands action-recipes and action-recipe with execute gating.",
+        "Done: Add MCP tools list_asset_action_recipes and run_asset_action_recipe with VIS_ENABLE_WRITES gating.",
+        "Done: Add dashboard recipe tray that copies dry-run CLI and MCP payloads.",
+        "Done: Add schema, docs, and tests."
+      ],
+      "acceptance": [
+        "Done: A recipe dry-run selects matching assets without mutating the graph.",
+        "Done: Executing a recipe records annotations/collections and asset-action-recipe-applied provenance.",
+        "Done: Music release assets can be queued without making VIS the Music IS source of truth.",
+        "Done: MCP writes stay disabled unless VIS_ENABLE_WRITES=1 and execute:true are both present."
+      ]
+    },
+    {
+      "key": "VIS-018",
+      "title": "Add Creative Vault planner for two-laptop and mobile asset intake",
+      "milestone": "M0 Personal Estate Setup",
+      "status": "done",
+      "labels": ["setup", "product", "mcp", "music"],
+      "summary": "Add a dry-run-first Creative Vault planner and initializer so Google Drive, phones, Eagle, VIS, and Music IS share one folder contract without accidental writes.",
+      "tasks": [
+        "Done: Add Creative Vault folder contract for mobile inbox, Eagle library, approved masters, website assets, social exports, NFT collections, Music IS releases, prompts/provenance, agent outputs, archive, and manifests.",
+        "Done: Add vault-plan CLI command.",
+        "Done: Add vault-init CLI command that creates folders and writes a manifest only with --execute.",
+        "Done: Add MCP tools plan_creative_vault and init_creative_vault with VIS_ENABLE_WRITES gating.",
+        "Done: Add creative-vault-manifest JSON schema.",
+        "Done: Update setup runbook and docs."
+      ],
+      "acceptance": [
+        "Done: Dry-run planning reports candidate roots, missing folders, phone workflow, Eagle workflow, Music IS boundary, and MCP allowlist without creating files.",
+        "Done: Execute mode creates the vault folders, README, and manifest in a chosen local path.",
+        "Done: The manifest records Google Photos, Eagle, Music IS, and human-gate boundaries.",
+        "Done: Tests prove dry-run and execute behavior."
+      ]
+    },
+    {
+      "key": "VIS-019",
+      "title": "Add live smart collection evaluation for Eagle-style queues",
+      "milestone": "M1 Daily Cockpit",
+      "status": "done",
+      "labels": ["dashboard", "product", "mcp", "music"],
+      "summary": "Promote dashboard-only smart views into a shared VIS contract so CLI, MCP, dashboard, and future desktop/PWA layers can evaluate the same Eagle-style queues and attached dry-run recipe handoffs.",
+      "tasks": [
+        "Done: Add core smart collection catalog for inbox, rights review, prompt gaps, provenance gaps, usage, orphans, duplicates, similarity review, curated, favorites, unannotated, music, video, NFT/Web3, website-ready, and social-ready.",
+        "Done: Add read-only smart collection evaluator with item summaries, match reasons, CLI commands, and MCP recipe dry-run payloads.",
+        "Done: Add CLI commands smart-collections and smart-collection.",
+        "Done: Add MCP tools list_smart_collections and evaluate_smart_collection.",
+        "Done: Update dashboard to consume the shared smart collection catalog instead of owning separate labels.",
+        "Done: Add smart-collection schema, docs, and tests."
+      ],
+      "acceptance": [
+        "Done: Agents can list smart collections and inspect a queue without mutating the graph.",
+        "Done: Actionable smart collections include a dry-run recipe handoff while writes remain gated.",
+        "Done: Music smart collection routes to Music IS release inbox without making VIS the music source of truth.",
+        "Done: Dashboard, CLI, and MCP use the same smart collection catalog."
+      ]
+    },
+    {
+      "key": "VIS-020",
+      "title": "Add color palette intelligence for Eagle-style filtering",
+      "milestone": "M1 Daily Cockpit",
+      "status": "done",
+      "labels": ["dashboard", "product", "music"],
+      "summary": "Add dependency-free color palette extraction and color search so designer assets, music covers, Canvas candidates, NFT traits, and website/social visuals can be filtered by swatch or color family.",
+      "tasks": [
+        "Done: Extract SVG colors from hex, rgb(), and common named color values.",
+        "Done: Extract GIF global color tables and indexed PNG PLTE palettes.",
+        "Done: Store palette metadata on asset versions with dominant color, swatches, and color families.",
+        "Done: Add search color filters across core, CLI, MCP, saved searches, and smart collection evaluation.",
+        "Done: Add dashboard swatches in asset cards and detail drawers.",
+        "Done: Add color-indexed smart collection, schema, docs, and tests."
+      ],
+      "acceptance": [
+        "Done: VIS can search assets by color family such as blue or by nearby hex color.",
+        "Done: Palette extraction works without heavy image-processing dependencies.",
+        "Done: Music release visuals use the same palette contract without replacing Music IS.",
+        "Done: Dashboard exposes visible swatches for indexed palettes."
+      ]
+    },
+    {
+      "key": "VIS-021",
+      "title": "Add dry-run batch rename for Eagle-style bulk cleanup",
+      "milestone": "M1 Daily Cockpit",
+      "status": "done",
+      "labels": ["dashboard", "product", "mcp", "music"],
+      "summary": "Add a VIS-native batch rename planner/executor so designer assets and music-release media can be cleaned up from selected assets or search results without overwrites, cross-folder moves, or silent mutations.",
+      "tasks": [
+        "Done: Add core rename planner with template tokens such as {index}, {title}, {category}, {media_role}, and {workflow}.",
+        "Done: Keep dry-run as the default and refuse execute when planned targets are blocked unless partial execution is explicitly allowed.",
+        "Done: Execute same-folder file renames, update VIS location/title records, and record asset-renamed provenance.",
+        "Done: Add CLI command batch-rename with query/filter selection and explicit --execute.",
+        "Done: Add MCP tool batch_rename_assets with VIS_ENABLE_WRITES gating.",
+        "Done: Add docs and tests."
+      ],
+      "acceptance": [
+        "Done: Dry-run batch rename reports old and new paths without touching files.",
+        "Done: Execute mode renames selected files and records provenance.",
+        "Done: Blocked targets prevent accidental overwrites by default.",
+        "Done: Music release assets can use workflow/media-role templates without making VIS the Music IS source of truth."
+      ]
+    },
+    {
+      "key": "VIS-022",
+      "title": "Add VIS project status reporting and Google Tasks reminder layer",
+      "milestone": "M0 Personal Estate Setup",
+      "status": "done",
+      "labels": ["setup", "product", "good-first-internal"],
+      "summary": "Make VIS manageable as a real project by adding a registry-driven status report, copy-ready Google Tasks reminder layer, and explicit command flow for future agents.",
+      "tasks": [
+        "Done: Add project status/report command driven by docs/VIS_TASK_REGISTRY.json.",
+        "Done: Add copy-ready Google Tasks reminder document for human device/account actions.",
+        "Done: Update project operating rules so GitHub Issues stay canonical and Google Tasks stay personal.",
+        "Done: Regenerate project status report from registry and synced issue links.",
+        "Done: Add package scripts for project status and report generation."
+      ],
+      "acceptance": [
+        "Done: Agents can run npm run project:status to see open install, product, and reminder lanes.",
+        "Done: Frank can create Google Tasks without making Google Tasks the product backlog.",
+        "Done: The second laptop and Claude can cross-check from one documented command block.",
+        "Done: The project tracker continues to sync through GitHub Issues and milestones."
+      ]
+    },
+    {
+      "key": "VIS-023",
+      "title": "Run two-laptop VIS software install and MCP evidence report",
+      "milestone": "M0 Personal Estate Setup",
+      "labels": ["setup", "mcp", "human-gated", "agent:claude"],
+      "summary": "Verify that both laptops can install, run, scan, serve, and expose VIS through MCP with evidence recorded in GitHub.",
+      "tasks": [
+        "Run git fetch, checkout, pull, npm install, npm run project:status, npm run lint, npm test, and node bin\\vis.mjs doctor on laptop 1.",
+        "Run the same command set on laptop 2.",
+        "Install or verify vis-mcp in Claude on laptop 1.",
+        "Install or verify vis-mcp in Claude on laptop 2.",
+        "Run scan-profile frank-estate --json on both laptops and compare allowed roots.",
+        "Generate dashboard on both laptops and confirm it opens.",
+        "Comment evidence, command summaries, blockers, and local path differences on the GitHub issue."
+      ],
+      "acceptance": [
+        "Both laptops can run VIS without missing dependencies.",
+        "Claude can see the VIS MCP server on both laptops or the blocker is clearly documented.",
+        "A selected visual:// asset packet resolves to a valid local path on both machines.",
+        "Generated data remains ignored and no secrets are printed or committed."
+      ]
+    },
+    {
+      "key": "VIS-024",
+      "title": "Run weekly VIS product experiment and reporting loop",
+      "milestone": "M4 Product Beta",
+      "labels": ["product", "research", "good-first-internal"],
+      "summary": "Turn VIS evolution into a weekly experiment loop with one product bet, one validation run, and one short report.",
+      "tasks": [
+        "Pick one weekly experiment from Eagle parity, mobile intake, music assets, provenance, dashboard, or adapter workflow.",
+        "Define success criteria before implementation.",
+        "Run the smallest useful validation: CLI, MCP, dashboard, or real workflow evidence.",
+        "Record results, screenshots or command summaries, and next decision in GitHub.",
+        "Regenerate docs/PROJECT_STATUS_REPORT.md after updating issue statuses."
+      ],
+      "acceptance": [
+        "Each week has one clear experiment owner and result.",
+        "Failures and blocked experiments are documented rather than disappearing.",
+        "Product scope evolves from evidence instead of intuition alone.",
+        "The loop remains light enough for a solo founder to maintain."
+      ]
+    },
+    {
+      "key": "VIS-025",
+      "title": "Enable GitHub Projects v2 board after gh project scope refresh",
+      "milestone": "M0 Personal Estate Setup",
+      "status": "blocked",
+      "labels": ["setup", "human-gated"],
+      "summary": "Create a GitHub Projects v2 board for Visual Intelligence OS after the local GitHub CLI token is refreshed with project scope.",
+      "tasks": [
+        "Run gh auth refresh -s read:project,project from a trusted shell.",
+        "Create GitHub Project named Visual Intelligence OS.",
+        "Add open VIS issues and group by milestone/status.",
+        "Keep docs/VIS_TASK_REGISTRY.json as canonical even after Projects v2 exists.",
+        "Document the project URL in docs/PROJECT_OPERATING_SYSTEM.md and docs/PROJECT_BOARD.md."
+      ],
+      "acceptance": [
+        "GitHub Projects v2 board exists and is linked from the repo docs.",
+        "Issues, milestones, status labels, and registry remain aligned.",
+        "No work is blocked if Projects v2 is unavailable."
+      ]
+    },
+    {
+      "key": "VIS-026",
+      "title": "Add dry-run derivative and export planning manifests",
+      "milestone": "M1 Daily Cockpit",
+      "status": "done",
+      "labels": ["dashboard", "product", "mcp", "music"],
+      "summary": "Add read-only derivative/export planning so website, social, music-release, NFT/Web3, and Cloudinary variants can be reviewed before any transformation, upload, post, mint, or delete action.",
+      "tasks": [
+        "Done: Add shared derivative preset catalog for website, social, music-release, NFT/Web3, and Cloudinary targets.",
+        "Done: Add core planAssetDerivatives dry-run manifest with rights/approval blockers, output target paths, and Codex handoff text.",
+        "Done: Add CLI commands derivative-presets and derivative-plan.",
+        "Done: Add MCP tools list_derivative_presets and plan_asset_derivatives.",
+        "Done: Add asset-derivative-plan JSON schema.",
+        "Done: Add tests across image, video, and audio music-release assets."
+      ],
+      "acceptance": [
+        "Done: Unknown or unapproved assets are visible but derivative variants stay blocked.",
+        "Done: Approved generated-owned assets produce planned website/social/music/NFT/Cloudinary variant targets without writing files.",
+        "Done: Music release planning keeps Music IS canonical for release state, rights, AI disclosure, credits, and distribution gates.",
+        "Done: CLI, MCP, docs, schema, and tests expose the same dry-run contract."
+      ]
+    },
+    {
+      "key": "VIS-027",
+      "title": "Add selected-asset dashboard command shelf",
+      "milestone": "M1 Daily Cockpit",
+      "status": "done",
+      "labels": ["dashboard", "product", "mcp", "music"],
+      "summary": "Make selected assets operational from the static cockpit by copying batch Codex packets, website/social handoffs, Music IS handoffs, and derivative-plan CLI/MCP packets.",
+      "tasks": [
+        "Done: Add derivative preset data to the dashboard export payload.",
+        "Done: Add selected command shelf to the dashboard side rail.",
+        "Done: Add copy actions for selected Codex packet, website use, social use, Music IS handoff, and derivative plans.",
+        "Done: Include dry-run CLI commands and MCP tool payloads in copied handoffs.",
+        "Done: Preserve human-gated public-use, adapter, and Music IS boundaries.",
+        "Done: Add generated dashboard assertions and docs."
+      ],
+      "acceptance": [
+        "Done: Selected assets can be turned into one batch handoff without opening every detail drawer.",
+        "Done: Derivative buttons expose website, social, music-release, NFT/Web3, and Cloudinary plan packets.",
+        "Done: Music handoff keeps Music IS canonical and refuses external distribution from VIS.",
+        "Done: Dashboard generation and tests prove the shelf is present."
+      ]
+    }
+  ]
+}

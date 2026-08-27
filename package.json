@@ -1,7 +1,7 @@
 {
   "name": "visual-intelligence",
-  "version": "0.1.0",
-  "description": "Agentic visual asset management for AI-native creators. Auto-tag, audit, and manage images across your sites with AI-powered quality enforcement.",
+  "version": "0.2.0",
+  "description": "Local-first Visual Intelligence OS for AI-native creators: asset graph, provenance, MCP, dashboard, and publication readiness.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,13 +9,20 @@
     "vis": "bin/vis.mjs"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "test": "node --test src/**/*.test.mjs",
-    "lint": "eslint src/",
+    "build": "node bin/vis.mjs --help",
+    "dev": "node bin/vis.mjs dashboard",
+    "test": "node --test tests/**/*.test.mjs",
+    "lint": "node --check bin/vis.mjs && node --check core/vis-core.mjs && node --check mcp/vis-mcp-server.mjs && node --check web/vis-dashboard.mjs && node --check scripts/sync-github-tasks.mjs && node --check scripts/project-status.mjs",
     "scan": "node bin/vis.mjs scan",
     "audit": "node bin/vis.mjs audit",
-    "report": "node bin/vis.mjs report"
+    "report": "node bin/vis.mjs report",
+    "dashboard": "node bin/vis.mjs dashboard",
+    "doctor": "node bin/vis.mjs doctor",
+    "mcp": "node mcp/vis-mcp-server.mjs",
+    "tasks:dry-run": "node scripts/sync-github-tasks.mjs",
+    "tasks:sync": "node scripts/sync-github-tasks.mjs",
+    "project:status": "node scripts/project-status.mjs",
+    "project:report": "node scripts/project-status.mjs --write-report"
   },
   "keywords": [
     "visual-assets",
@@ -42,7 +49,7 @@
   },
   "homepage": "https://frankx.ai/products/visual-intelligence",
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.13.0"
   },
   "dependencies": {},
   "devDependencies": {
@@ -52,8 +59,12 @@
     "sharp": "^0.33.0"
   },
   "files": [
-    "dist/",
     "bin/",
-    "templates/"
+    "core/",
+    "mcp/",
+    "web/",
+    "schemas/",
+    "templates/",
+    "docs/"
   ]
 }
