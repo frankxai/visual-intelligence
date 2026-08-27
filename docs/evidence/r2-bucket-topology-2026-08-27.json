@@ -1,0 +1,38 @@
+{
+  "evidenceVersion": "1.0.0",
+  "observedAt": "2026-08-27T15:25:00.000Z",
+  "method": "Authenticated Cloudflare dashboard inspection",
+  "accountIdentifiersCommitted": false,
+  "buckets": [
+    {
+      "name": "starlight-dam-originals-eu",
+      "jurisdictionLabel": "EU",
+      "defaultStorageClass": "Standard",
+      "publicAccess": "Disabled",
+      "observedSizeBytes": 0
+    },
+    {
+      "name": "starlight-dam-renditions-eu",
+      "jurisdictionLabel": "EU",
+      "defaultStorageClass": "Standard",
+      "publicAccess": "Disabled",
+      "observedSizeBytes": 0
+    },
+    {
+      "name": "starlight-dam-workflow-eu",
+      "jurisdictionLabel": "EU",
+      "defaultStorageClass": "Standard",
+      "publicAccess": "Disabled",
+      "observedSizeBytes": 0
+    }
+  ],
+  "notVerifiedOrConfigured": [
+    "Object Lock or write-once retention",
+    "Bucket versioning",
+    "Lifecycle rules",
+    "Custom delivery domains",
+    "Least-privilege API credentials",
+    "Automated provider-state drift checks"
+  ],
+  "interpretation": "This is an operator-observed setup receipt, not an automated provider attestation. Content-addressed keys provide logical immutability; no storage-level immutability control is claimed."
+}
