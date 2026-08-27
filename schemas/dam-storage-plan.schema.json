@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/visual-intelligence/dam-storage-plan.schema.json",
+  "title": "VIS DAM Storage Plan",
+  "description": "A deterministic, non-uploading plan. It never copies, publishes, deletes, changes DNS, or mutates provider state.",
+  "type": "object",
+  "required": ["plan_id", "policy_version", "generated_at", "plan_only", "provider_writes_supported", "summary", "items", "gates"],
+  "properties": {
+    "plan_id": { "type": "string", "pattern": "^dam_plan_[a-f0-9]{24}$" },
+    "policy_version": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "plan_only": { "const": true },
+    "provider_writes_supported": { "const": false },
+    "filters": { "type": "object" },
+    "summary": { "type": "object" },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/item" }
+    },
+    "gates": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "notes": { "type": "array", "items": { "type": "string" } }
+  },
+  "$defs": {
+    "decision": {
+      "type": "object",
+      "required": ["action", "status", "provider"],
+      "properties": {
+        "action": { "type": "string" },
+        "status": { "type": "string", "enum": ["planned", "blocked", "keep", "no-op"] },
+        "provider": { "type": "string" },
+        "bucket": { "type": ["string", "null"] },
+        "key": { "type": ["string", "null"] },
+        "application": { "type": ["string", "null"] },
+        "profile": { "type": "string" },
+        "blockers": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "item": {
+      "type": "object",
+      "required": ["asset_id", "version_id", "sha256", "brand", "role", "source", "master", "delivery"],
+      "properties": {
+        "asset_id": { "type": "string" },
+        "version_id": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "media_type": { "type": "string" },
+        "byte_size": { "type": "integer", "minimum": 0 },
+        "brand": { "type": "string" },
+        "role": { "type": "string" },
+        "scope": {
+          "type": "object",
+          "required": ["application_policy_mapped", "applications"],
+          "properties": {
+            "application_policy_mapped": { "type": "boolean" },
+            "applications": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "source": {
+          "type": "object",
+          "required": ["class", "storage_kind", "location_id", "paths_included"],
+          "properties": {
+            "class": { "type": "string" },
+            "storage_kind": { "type": "string" },
+            "location_id": { "type": ["string", "null"] },
+            "paths_included": { "type": "boolean" },
+            "repo": { "type": ["string", "null"] },
+            "relative_path": { "type": ["string", "null"] },
+            "absolute_path": { "type": ["string", "null"] }
+          },
+          "additionalProperties": false
+        },
+        "rights_status": { "type": "string" },
+        "approval_status": { "type": "string" },
+        "quality": {
+          "type": "object",
+          "required": ["score", "score_maximum", "score_passes", "actual_export_inspected", "independent_review", "exact_version_evidence", "review_artifact_verified"],
+          "properties": {
+            "score": { "type": ["number", "null"] },
+            "score_maximum": { "type": "number" },
+            "rubric": { "type": ["string", "null"] },
+            "evaluator": { "type": ["string", "null"] },
+            "verdict": { "type": ["string", "null"] },
+            "score_passes": { "type": "boolean" },
+            "actual_export_inspected": { "type": "boolean" },
+            "independent_review": { "type": "boolean" },
+            "exact_version_evidence": { "type": "boolean" },
+            "review_artifact_verified": { "type": "boolean" },
+            "inspected_variants": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "usage_count": { "type": "integer", "minimum": 0 },
+        "explicit_delivery_edge_count": { "type": "integer", "minimum": 0 },
+        "master": { "$ref": "#/$defs/decision" },
+        "delivery": { "$ref": "#/$defs/decision" },
+        "metadata": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
