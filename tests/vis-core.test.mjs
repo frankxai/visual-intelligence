@@ -42,12 +42,42 @@ import {
   saveSearch,
   searchAssets,
   traceAsset,
+  walkMediaFiles,
 } from '../core/vis-core.mjs'
 
 const PNG_1X1 = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/l2mVxwAAAABJRU5ErkJggg==',
   'base64',
 )
+
+test('default scans ignore transient agent workspaces and attachment caches', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-scan-safety-'))
+  const transientDirs = [
+    '.worktrees',
+    '.hermes-worktrees',
+    '.claude',
+    '.claude-worktrees',
+    '.codex-artifacts',
+    '.codex-remote-attachments',
+  ]
+  try {
+    const canonicalDir = path.join(root, 'public', 'images')
+    fs.mkdirSync(canonicalDir, { recursive: true })
+    fs.writeFileSync(path.join(canonicalDir, 'canonical.png'), PNG_1X1)
+
+    for (const dir of transientDirs) {
+      const transientDir = path.join(root, dir, 'public', 'images')
+      fs.mkdirSync(transientDir, { recursive: true })
+      fs.writeFileSync(path.join(transientDir, `${dir.slice(1)}.png`), PNG_1X1)
+    }
+
+    assert.deepEqual(walkMediaFiles(root).map(file => path.relative(root, file)), [
+      path.join('public', 'images', 'canonical.png'),
+    ])
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
 
 test('indexes assets, usage, trace, and dry-run publication records', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-core-'))
