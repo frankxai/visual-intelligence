@@ -16,3 +16,6 @@ link-checker-report.txt
 # Starlight/ACOS temporary files
 .starlight/
 .gemini/
+
+# Asset OS Phase-0 raw data (local paths; public repo)
+data/phase0/
