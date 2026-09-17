@@ -3,8 +3,7 @@
   "version": "0.2.0",
   "description": "Local-first Visual Intelligence OS for AI-native creators: asset graph, provenance, MCP, dashboard, and publication readiness.",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "core/vis-core.mjs",
   "bin": {
     "vis": "bin/vis.mjs"
   },

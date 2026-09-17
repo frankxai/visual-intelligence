@@ -1,20 +1,21 @@
 # Eagle Parity And Media OS Roadmap
 
-Date: 2026-07-03
+> [!IMPORTANT]
+> **SUPERSEDED STRATEGY (2026-09-16):**  
+> The earlier July 2026 recommendation ("buy Eagle as a stepping stone") has been officially superseded by the **LUMINOUS OS & Studio** initiative. See:
+> - [`LUMINOUS_PRODUCT_VISION_AND_SPEC.md`](./LUMINOUS_PRODUCT_VISION_AND_SPEC.md) — Product requirements, PRD, and core capabilities.
+> - [`LUMINOUS_TECHNICAL_ARCHITECTURE_AND_ROADMAP.md`](./LUMINOUS_TECHNICAL_ARCHITECTURE_AND_ROADMAP.md) — Technical architecture, WebSocket event bus, and 3-sprint plan.
+> - [`LUMINOUS_NAMING_AND_TRADEMARK_ANALYSIS.md`](./LUMINOUS_NAMING_AND_TRADEMARK_ANALYSIS.md) — Brand hierarchy and trademark clearance.
+
+Date: 2026-07-03 (Updated 2026-09-16)
 
 This roadmap turns "make VIS as useful as Eagle, but agentic and provenance-native" into buildable product work. It is a capability benchmark, not a plan to copy Eagle's UI, brand, file formats, or proprietary implementation.
 
-## Current Recommendation
+## Strategic Evolution (July 2026 → September 2026)
 
-Buy Eagle for the current two-laptop designer workflow, and use Google Photos/Drive for phone capture and cloud sync. Keep VIS as the local-first intelligence layer that sees across Eagle, Drive, repo assets, website usage, social/NFT outputs, and Music IS proof folders.
+Originally, Eagle was considered as an interim human viewing inbox. However, testing proved that Eagle's 2017 desktop architecture creates a fundamental blind spot: it cannot read `.vis.provenance.json` sidecars, does not notify on agent generation streams, has no AST code-usage graph, and leaves the agent swarm completely blind to user curation and taste feedback. 
 
-Do not build a full Eagle replacement first. Build the things Eagle, Google Photos, Drive, and Immich do not solve for Frank:
-
-- Provenance from prompt, model, skill, coding agent, thread, and repo.
-- `visual://` asset identity and Codex/Claude/Grok curation packets.
-- Website route usage, social publication records, NFT/Web3 readiness, rights, approval, and evaluation history.
-- Music IS handoff for songs, stems, cover art, Canvas, lyrics, credits, and release gates.
-- Product intelligence: what asset performed, where it was published, why it was chosen, and what agents should do next.
+Under the **LUMINOUS** architecture, we build a sovereign, high-velocity desktop and web visual studio (Tauri 2.0 + SQLite + WebGPU) that bridges directly into the multi-agent swarm and multi-cloud DAM.
 
 ## Source Anchors
 

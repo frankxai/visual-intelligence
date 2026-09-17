@@ -4,10 +4,10 @@ This repo is part of the FrankX / Starlight / Arcanea agent estate.
 
 ## Classification
 
-- Repo: $title
-- Class: $Classification
-- Default health command: $HealthCommand
-- Remote: $Remote
+- Repo: visual-intelligence
+- Class: core-engine / DAM-cockpit
+- Default health command: node bin/vis.mjs --help
+- Remote: https://github.com/frankxai/visual-intelligence.git
 
 ## Agent Rules
 

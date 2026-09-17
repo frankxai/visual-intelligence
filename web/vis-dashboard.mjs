@@ -4,9 +4,11 @@ import path from 'path'
 import {
   assetPublishGate,
   createCurationPacket,
+  drainFeedbackOutbox,
   findDuplicates,
   findOrphans,
   findSimilarAssets,
+  getAsset,
   getSummary,
   listAssetActionRecipes,
   listAssets,
@@ -16,8 +18,10 @@ import {
   loadConfig,
   openVisDatabase,
   parseJson,
+  recordCurationFeedback,
   resolveProjectPath,
   scoreAsset,
+  undoCurationFeedback,
 } from '../core/vis-core.mjs'
 
 export function generateDashboard(root, options = {}) {
@@ -40,11 +44,50 @@ export function generateDashboard(root, options = {}) {
     const scores = Object.fromEntries(
       assets.slice(0, 600).map(asset => [asset.asset_id, scoreAsset(db, asset.asset_id)]),
     )
-    const normalizedAssets = assets.map(asset => ({
-      ...asset,
-      tags: parseJson(asset.tags_json, []),
-      publish_gate: assetPublishGate(asset, { intendedUse: 'dashboard public handoff' }),
-    }))
+    const promptRows = db.prepare(`
+      SELECT p.asset_id, p.prompt_text, p.negative_prompt, p.model_hint, p.source_path,
+             gen.model, gen.provider, gen.seed
+      FROM prompt p
+      LEFT JOIN generation_event gen ON gen.prompt_id = p.prompt_id OR gen.asset_id = p.asset_id
+    `).all()
+    const promptMap = new Map()
+    for (const row of promptRows) {
+      if (!promptMap.has(row.asset_id)) {
+        promptMap.set(row.asset_id, row)
+      }
+    }
+    const genRows = db.prepare('SELECT asset_id, model, provider, seed FROM generation_event').all()
+    const genMap = new Map()
+    for (const row of genRows) {
+      if (!genMap.has(row.asset_id)) genMap.set(row.asset_id, row)
+    }
+    const usageRows = db.prepare('SELECT asset_id, source_file, route, reference_text FROM asset_usage ORDER BY detected_at DESC').all()
+    const usageMap = new Map()
+    for (const row of usageRows) {
+      let list = usageMap.get(row.asset_id)
+      if (!list) {
+        list = []
+        usageMap.set(row.asset_id, list)
+      }
+      if (list.length < 8) list.push(row)
+    }
+    const normalizedAssets = assets.map(asset => {
+      const prompt = promptMap.get(asset.asset_id)
+      const gen = genMap.get(asset.asset_id)
+      const usages = usageMap.get(asset.asset_id) || []
+      return {
+        ...asset,
+        tags: parseJson(asset.tags_json, []),
+        publish_gate: assetPublishGate(asset, { intendedUse: 'dashboard public handoff' }),
+        prompt_text: prompt?.prompt_text || null,
+        negative_prompt: prompt?.negative_prompt || null,
+        gen_model: prompt?.model || gen?.model || prompt?.model_hint || null,
+        gen_provider: prompt?.provider || gen?.provider || null,
+        gen_seed: prompt?.seed || gen?.seed || null,
+        sidecar_path: prompt?.source_path || null,
+        usages: usages.map(u => ({ file: u.source_file, route: u.route, ref: u.reference_text })),
+      }
+    })
     const facets = deriveDashboardFacets(normalizedAssets, duplicates, orphans, similar)
     const payload = {
       generatedAt: new Date().toISOString(),
@@ -110,15 +153,125 @@ export function serveDashboard(root, options = {}) {
   })
 }
 
+function parseRequestBody(request) {
+  return new Promise((resolve, reject) => {
+    let body = ''
+    request.on('data', chunk => {
+      body += chunk
+      if (body.length > 5 * 1024 * 1024) {
+        request.destroy()
+        reject(new Error('Request payload too large'))
+      }
+    })
+    request.on('end', () => {
+      try {
+        resolve(body ? JSON.parse(body) : {})
+      } catch (err) {
+        reject(new Error('Invalid JSON: ' + err.message))
+      }
+    })
+    request.on('error', reject)
+  })
+}
+
+function setCorsHeaders(response) {
+  response.setHeader('access-control-allow-origin', '*')
+  response.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS, HEAD')
+  response.setHeader('access-control-allow-headers', 'content-type')
+}
+
 function handleDashboardRequest({ root, config, directory, dashboardFile, request, response }) {
   const url = new URL(request.url || '/', `http://${request.headers.host || 'localhost'}`)
+
+  if (request.method === 'OPTIONS') {
+    setCorsHeaders(response)
+    response.writeHead(204)
+    response.end()
+    return
+  }
+
   if (url.pathname.startsWith('/__vis_media/')) {
     serveMediaAsset(root, config, decodeURIComponent(url.pathname.slice('/__vis_media/'.length)), request, response)
     return
   }
 
+  if (url.pathname.startsWith('/api/asset/')) {
+    const assetId = decodeURIComponent(url.pathname.slice('/api/asset/'.length))
+    const db = openVisDatabase(root, config)
+    try {
+      const asset = getAsset(db, assetId)
+      if (!asset) {
+        setCorsHeaders(response)
+        response.writeHead(404, { 'content-type': 'application/json; charset=utf-8' })
+        response.end(JSON.stringify({ error: 'Asset not found' }))
+        return
+      }
+      const curationPacket = createCurationPacket(db, assetId)
+      setCorsHeaders(response)
+      response.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+      response.end(JSON.stringify({ ok: true, asset, curationPacket }))
+      return
+    } finally {
+      db.close()
+    }
+  }
+
+  if (url.pathname === '/api/feedback' && request.method === 'POST') {
+    parseRequestBody(request).then(body => {
+      const db = openVisDatabase(root, config)
+      try {
+        const result = recordCurationFeedback(db, {
+          ...body,
+          brand: body.brand || config.defaultBrand || 'estate',
+        })
+        setCorsHeaders(response)
+        response.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        response.end(JSON.stringify(result))
+      } finally {
+        db.close()
+      }
+    }).catch(err => {
+      setCorsHeaders(response)
+      response.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+      response.end(JSON.stringify({ ok: false, error: err.message }))
+    })
+    return
+  }
+
+  if (url.pathname === '/api/feedback/undo' && request.method === 'POST') {
+    parseRequestBody(request).then(body => {
+      const db = openVisDatabase(root, config)
+      try {
+        const result = undoCurationFeedback(db, body.asset_id || body.assetId)
+        setCorsHeaders(response)
+        response.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+        response.end(JSON.stringify(result))
+      } finally {
+        db.close()
+      }
+    }).catch(err => {
+      setCorsHeaders(response)
+      response.writeHead(400, { 'content-type': 'application/json; charset=utf-8' })
+      response.end(JSON.stringify({ ok: false, error: err.message }))
+    })
+    return
+  }
+
+  if (url.pathname === '/api/stats' && (request.method === 'GET' || request.method === 'HEAD')) {
+    const db = openVisDatabase(root, config)
+    try {
+      const summary = getSummary(db)
+      setCorsHeaders(response)
+      response.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+      response.end(JSON.stringify({ ok: true, summary }))
+      return
+    } finally {
+      db.close()
+    }
+  }
+
   if (request.method !== 'GET' && request.method !== 'HEAD') {
-    response.writeHead(405, { allow: 'GET, HEAD' })
+    response.writeHead(405, { allow: 'GET, HEAD, POST, OPTIONS' })
     response.end()
     return
   }
@@ -136,6 +289,7 @@ function handleDashboardRequest({ root, config, directory, dashboardFile, reques
     response.end('Not found')
     return
   }
+  setCorsHeaders(response)
   response.writeHead(200, {
     'content-type': contentType(target),
     'cache-control': target.endsWith('.html') ? 'no-cache' : 'public, max-age=3600',
@@ -502,13 +656,130 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .command-actions button{min-height:30px;font-size:12px;padding:0 9px}
 .command-note{color:var(--muted);font-size:12px;line-height:1.45}
 .drawer{
-  position:fixed;right:0;top:0;width:min(590px,100vw);height:100vh;background:#070A11;border-left:1px solid var(--border);
+  position:fixed;right:0;top:0;width:min(660px,100vw);height:100vh;background:#070A11;border-left:1px solid var(--border);
   transform:translateX(100%);transition:transform .18s ease;z-index:20;display:flex;flex-direction:column;
+  box-shadow:-12px 0 36px rgba(0,0,0,.65);
 }
 .drawer.open{transform:translateX(0)}
-.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;border-bottom:1px solid var(--border)}
-.drawer-head h2{font-size:16px;margin:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.drawer-body{padding:16px;overflow:auto;display:grid;gap:14px}
+.drawer-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;
+  border-bottom:1px solid var(--border);background:#090D16;
+}
+.drawer-nav{display:flex;align-items:center;gap:6px}
+.nav-btn{
+  min-height:28px;height:28px;padding:0 8px;font-size:12px;background:var(--surface);
+  border:1px solid var(--border);border-radius:5px;color:var(--ink);cursor:pointer;
+}
+.nav-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.nav-btn:disabled{opacity:.35;cursor:not-allowed}
+.drawer-index{font-size:11px;color:var(--muted);min-width:60px;text-align:center}
+.drawer-head h2{
+  font-size:15px;margin:0;min-width:0;flex:1;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;font-weight:700;color:var(--ink);
+}
+.close-btn{
+  min-height:28px;height:28px;padding:0 10px;font-size:12px;background:var(--surface);
+  border:1px solid var(--border);border-radius:5px;cursor:pointer;
+}
+.close-btn:hover{border-color:var(--rose);color:var(--rose)}
+.drawer-body{padding:16px;overflow-y:auto;display:grid;gap:14px}
+
+/* Review & Taste Curation HUD */
+.curation-card{
+  background:linear-gradient(180deg,#0D1322 0%,#080C16 100%);
+  border:1px solid #23304A;border-radius:10px;padding:14px 16px;display:grid;gap:12px;
+}
+.curation-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.curation-title{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.star-rating{display:flex;align-items:center;gap:3px}
+.star-btn{
+  background:transparent;border:none;min-height:auto;padding:2px 4px;font-size:22px;line-height:1;
+  color:#334155;cursor:pointer;transition:transform .1s ease, color .1s ease;
+}
+.star-btn:hover{transform:scale(1.25);color:var(--gold)}
+.star-btn.active{color:var(--gold)}
+.star-label{font-size:12px;color:var(--muted);margin-left:6px;font-weight:600}
+.verdict-row{display:flex;gap:8px;align-items:center}
+.btn-approve{
+  background:rgba(69,214,165,.14);border:1px solid var(--mint);color:#8FE8C0;
+  font-weight:700;font-size:13px;flex:1;min-height:34px;border-radius:6px;cursor:pointer;
+}
+.btn-approve:hover{background:rgba(69,214,165,.26)}
+.btn-reject{
+  background:rgba(255,122,144,.14);border:1px solid var(--rose);color:#FFB1BE;
+  font-weight:700;font-size:13px;flex:1;min-height:34px;border-radius:6px;cursor:pointer;
+}
+.btn-reject:hover{background:rgba(255,122,144,.26)}
+.btn-undo{
+  background:var(--surface);border:1px solid var(--border);color:var(--soft);
+  font-size:12px;padding:0 10px;min-height:34px;border-radius:6px;cursor:pointer;
+}
+.btn-undo:hover{border-color:var(--accent);color:var(--ink)}
+.defect-section{display:grid;gap:6px;border-top:1px solid rgba(255,255,255,.06);padding-top:10px}
+.defect-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:650}
+.defect-chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  background:#0B101C;border:1px solid #1E293B;color:#94A3B8;border-radius:999px;
+  font-size:11px;padding:4px 10px;cursor:pointer;transition:all .12s ease;min-height:26px;
+}
+.chip:hover{border-color:#384B66;color:#E2E8F0}
+.chip.active{background:rgba(255,122,144,.22);border-color:var(--rose);color:#FFD2DA;font-weight:600}
+.note-input{
+  width:100%;background:#06080F;border:1px solid #1F293D;border-radius:6px;color:var(--ink);
+  padding:8px 10px;font-size:12px;font-family:inherit;min-height:48px;resize:vertical;box-sizing:border-box;
+}
+.note-input:focus{outline:2px solid var(--accent);outline-offset:0}
+.curation-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.scope-select{height:32px;font-size:12px;background:#06080F;border:1px solid #1F293D;color:var(--soft);border-radius:6px;padding:0 8px}
+.btn-save-feedback{
+  background:var(--accent);color:#05060A;font-weight:750;font-size:12px;height:32px;
+  border:none;border-radius:6px;padding:0 14px;cursor:pointer;
+}
+.btn-save-feedback:hover{background:#9DC8FF}
+.receipt-hud{
+  font-family:Geist Mono,SFMono-Regular,Consolas,monospace;font-size:11px;padding:7px 10px;border-radius:6px;
+  background:rgba(69,214,165,.08);border:1px solid rgba(69,214,165,.25);color:var(--mint);display:flex;align-items:center;gap:6px;
+}
+
+/* Prompt & Reproducibility Section */
+.prompt-box{
+  background:#070C18;border:1px solid #1E2D48;border-radius:10px;padding:14px 16px;display:grid;gap:10px;
+}
+.prompt-header{display:flex;justify-content:space-between;align-items:center}
+.prompt-badge{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:6px}
+.prompt-content{
+  background:#04060C;border:1px solid #162034;border-radius:6px;padding:10px 12px;font-size:13px;line-height:1.55;
+  color:#E2E8F0;max-height:220px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;font-family:inherit;
+}
+.prompt-gap{background:rgba(245,196,93,.08);border:1px dashed rgba(245,196,93,.3);border-radius:6px;padding:12px;color:var(--gold);font-size:12px}
+.negative-prompt-box{display:grid;gap:5px}
+.negative-prompt-label{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#F87171;font-weight:650}
+.negative-prompt-content{
+  background:#0A060C;border:1px solid #331A26;border-radius:6px;padding:8px 10px;font-size:12px;color:#FCA5A5;
+}
+.prompt-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.copy-prompt-btn{
+  background:var(--accent);color:#05060A;font-weight:750;font-size:12px;height:32px;border:none;border-radius:6px;
+  padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+}
+.copy-prompt-btn:hover{background:#9DC8FF}
+
+/* Generation & Model Specs */
+.gen-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.gen-card{background:#090E19;border:1px solid #1A2438;border-radius:6px;padding:8px 10px}
+.gen-card span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.gen-card strong{display:block;font-size:12px;color:var(--ink);font-family:Geist Mono,monospace;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* AST Code Usages */
+.usage-box{background:#070A12;border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:grid;gap:8px}
+.usage-header{font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.04em;color:var(--soft)}
+.usage-item{
+  background:#0B0F1B;border:1px solid #192336;border-radius:5px;padding:6px 10px;display:flex;justify-content:space-between;
+  align-items:center;font-size:11px;font-family:Geist Mono,monospace;color:#CBD5E1;cursor:pointer;
+}
+.usage-item:hover{border-color:var(--accent);color:var(--ink)}
+.usage-ref{color:var(--muted);font-size:10px;margin-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+
 .preview{background:#05060A;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:grid;place-items:center;min-height:260px}
 .preview img,.preview video{max-width:100%;max-height:430px;display:block}
 .kv{display:grid;grid-template-columns:132px minmax(0,1fr);gap:8px;font-size:13px;border-top:1px solid var(--border);padding-top:10px}
@@ -672,8 +943,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 </div>
 <aside class="drawer" id="drawer" aria-hidden="true">
   <div class="drawer-head">
+    <div class="drawer-nav">
+      <button class="nav-btn" id="prevAssetBtn" title="Previous asset [ [ ]" aria-label="Previous asset">◀</button>
+      <span class="drawer-index mono" id="drawerIndex">0 / 0</span>
+      <button class="nav-btn" id="nextAssetBtn" title="Next asset [ ] ]" aria-label="Next asset">▶</button>
+    </div>
     <h2 id="drawerTitle">Asset</h2>
-    <button id="closeDrawer" aria-label="Close detail">Close</button>
+    <button class="close-btn" id="closeDrawer" aria-label="Close detail">✕ Esc</button>
   </div>
   <div class="drawer-body" id="drawerBody"></div>
 </aside>
@@ -686,6 +962,177 @@ let activeCategory = "";
 const selectedIds = new Set();
 const state = { query:"", media:"", readiness:"", source:"", folder:"", smart:"", saved:"", sort:"newest" };
 const $ = (id) => document.getElementById(id);
+
+let currentAssetId = null;
+let currentAssetIndex = -1;
+let currentDefects = new Set();
+let currentRating = 0;
+let lastFeedbackReceipt = null;
+const DEFECT_OPTIONS = [
+  "Artifacts / Glitches",
+  "Brand Mismatch",
+  "Anatomy / Hands",
+  "Composition / Crop",
+  "AI Slop Text",
+  "Low Resolution",
+  "Harsh Lighting",
+  "Style Drift"
+];
+
+function pathBasename(p){
+  const parts = String(p || "").replace(/\\/g, "/").split("/").filter(Boolean);
+  return parts[parts.length - 1] || p;
+}
+
+function prevAsset(){
+  const list = filteredAssets();
+  if (currentAssetIndex > 0) {
+    openAsset(list[currentAssetIndex - 1].asset_id);
+  }
+}
+
+function nextAsset(){
+  const list = filteredAssets();
+  if (currentAssetIndex >= 0 && currentAssetIndex < list.length - 1) {
+    openAsset(list[currentAssetIndex + 1].asset_id);
+  }
+}
+
+function setRating(rating, autoSubmit = true){
+  currentRating = rating;
+  updateStarUi(rating);
+  if (autoSubmit) {
+    submitFeedback(rating >= 4 ? "approve" : (rating <= 2 ? "reject" : "rate"), rating);
+  }
+}
+
+function updateStarUi(rating){
+  const stars = $("drawerBody")?.querySelectorAll(".star-btn");
+  if (!stars) return;
+  stars.forEach(btn => {
+    const val = Number(btn.dataset.value || 0);
+    if (val <= rating) btn.classList.add("active");
+    else btn.classList.remove("active");
+  });
+  const labelEl = $("drawerBody")?.querySelector("#starLabel");
+  if (labelEl) {
+    const labels = ["", "1/5 - Defective / Reject", "2/5 - Poor / Revision needed", "3/5 - Acceptable / Needs polish", "4/5 - Strong candidate", "5/5 - Exemplary brand canon"];
+    labelEl.textContent = labels[rating] || (rating ? rating + "/5" : "Click to rate");
+  }
+}
+
+function toggleDefectChip(chipName){
+  if (currentDefects.has(chipName)) currentDefects.delete(chipName);
+  else currentDefects.add(chipName);
+  const chips = $("drawerBody")?.querySelectorAll(".chip");
+  chips?.forEach(chip => {
+    if (currentDefects.has(chip.dataset.defect)) chip.classList.add("active");
+    else chip.classList.remove("active");
+  });
+}
+
+function approveCurrentAsset(){
+  currentRating = Math.max(currentRating, 4);
+  submitFeedback("approve", currentRating);
+}
+
+function rejectCurrentAsset(){
+  currentRating = currentRating > 0 && currentRating <= 2 ? currentRating : 1;
+  submitFeedback("reject", currentRating);
+}
+
+function undoCurrentAsset(){
+  if (!currentAssetId) return;
+  if (location.protocol.startsWith("http")) {
+    fetch("/api/feedback/undo", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ asset_id: currentAssetId }),
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.ok) {
+        toast("↶ Feedback reverted");
+        const asset = DATA.assets.find(a => a.asset_id === currentAssetId);
+        if (asset) {
+          asset.approval_status = data.approval_status || "candidate";
+          asset.curation_status = "uncurated";
+          asset.rating = null;
+        }
+        openAsset(currentAssetId);
+        renderGrid();
+      } else {
+        toast(data.error || "Undo failed");
+      }
+    })
+    .catch(err => toast("Undo error: " + err.message));
+  } else {
+    toast("Undo requires live dashboard server");
+  }
+}
+
+function copyCurrentPrompt(){
+  const asset = DATA.assets.find(a => a.asset_id === currentAssetId);
+  if (asset?.prompt_text) copy(asset.prompt_text);
+  else toast("No prompt text available");
+}
+
+function submitFeedback(action, ratingOverride){
+  if (!currentAssetId) return;
+  const asset = DATA.assets.find(a => a.asset_id === currentAssetId);
+  if (!asset) return;
+
+  const rating = ratingOverride !== undefined ? ratingOverride : currentRating;
+  const defects = [...currentDefects];
+  const notes = $("curationNote")?.value?.trim() || "";
+  const scope = $("curationScope")?.value || "asset";
+  const brand = asset.repo?.includes("frankx") ? "frankx" : (asset.repo?.includes("arcanea") ? "arcanea" : "estate");
+
+  const payload = {
+    asset_id: currentAssetId,
+    action,
+    rating: rating || null,
+    defects,
+    notes: notes || null,
+    scope,
+    brand,
+    actor: "frank"
+  };
+
+  if (location.protocol.startsWith("http")) {
+    fetch("/api/feedback", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.ok) {
+        lastFeedbackReceipt = data.receipt;
+        asset.rating = rating;
+        asset.approval_status = data.receipt.approval_status;
+        asset.curation_status = data.receipt.curation_status;
+        if (notes) asset.annotation_notes = notes;
+        renderGrid();
+        renderMetrics();
+        const hud = $("receiptHud");
+        if (hud) {
+          hud.innerHTML = '<span>✓</span><span>Synced to SQLite & TASTE_FEEDBACK_LEDGER.jsonl (' + esc(data.receipt.outbox_id.slice(0, 16)) + '...)</span>';
+          hud.style.display = "flex";
+        }
+        toast("✓ Decision recorded: " + (action === "approve" ? "Approved" : action === "reject" ? "Rejected" : rating + " stars"));
+      } else {
+        toast("Feedback failed: " + (data.error || "Unknown error"));
+      }
+    })
+    .catch(err => toast("Network error: " + err.message));
+  } else {
+    asset.rating = rating;
+    asset.approval_status = action === "approve" ? "approved" : (action === "reject" ? "rejected" : asset.approval_status);
+    renderGrid();
+    toast("Saved in memory (server needed for persistent ledger sync)");
+  }
+}
 
 function fmt(n){ return Number(n || 0).toLocaleString(); }
 function esc(value){
@@ -935,6 +1382,9 @@ function renderGrid(){
   $("grid").innerHTML = assets.slice(0, 700).map(asset => {
     const selected = selectedIds.has(asset.asset_id);
     const score = assetScore(asset);
+    const isApproved = asset.approval_status === "approved" || asset.curation_status === "approved";
+    const isRejected = asset.approval_status === "rejected" || asset.curation_status === "rejected";
+    const hasPrompt = Boolean(asset.prompt_text || (asset.prompt_count && asset.prompt_count > 0));
     return '<article class="asset '+(selected ? "selected" : "")+'">' +
       '<button class="asset-select" aria-label="Toggle selection" aria-pressed="'+(selected ? "true" : "false")+'" data-select="'+esc(asset.asset_id)+'">'+(selected ? "✓" : "+")+'</button>' +
       '<button class="asset-open" data-id="'+esc(asset.asset_id)+'">' +
@@ -943,7 +1393,13 @@ function renderGrid(){
           '<div class="asset-title">'+esc(asset.title || asset.asset_id)+'</div>' +
           paletteSwatches(asset, 5) +
           '<div class="asset-meta"><span class="pill">'+esc(asset.media_type)+'</span>'+readinessPill(asset)+'<span class="pill">'+fmt(asset.sizeKB)+' KB</span></div>' +
-          '<div class="asset-meta"><span class="pill">'+esc(asset.media_role || asset.workflow || asset.category || "asset")+'</span>'+(score ? '<span class="pill">'+fmt(score.score)+'</span>' : "")+(asset.rating ? '<span class="pill good">'+fmt(asset.rating)+'/5</span>' : "")+'</div>' +
+          '<div class="asset-meta">' +
+            '<span class="pill">'+esc(asset.media_role || asset.workflow || asset.category || "asset")+'</span>' +
+            (isApproved ? '<span class="pill good">★ Approved</span>' : '') +
+            (isRejected ? '<span class="pill bad">✕ Rejected</span>' : '') +
+            (!isApproved && !isRejected && asset.rating ? '<span class="pill good">★ '+fmt(asset.rating)+'/5</span>' : '') +
+            (hasPrompt ? '<span class="pill" style="border-color:rgba(124,183,255,.35);color:#7CB7FF" title="Prompt sidecar available">⚡ Prompt</span>' : '') +
+          '</div>' +
           (asset.color_label || asset.curation_status ? '<div class="asset-meta"><span class="pill">'+esc(asset.color_label || asset.curation_status)+'</span></div>' : "") +
         '</div>' +
       '</button>' +
@@ -1068,12 +1524,128 @@ function renderAll(){ renderMetrics(); renderRail(); renderGrid(); renderSide();
 function openAsset(assetId){
   const asset = DATA.assets.find(a => a.asset_id === assetId);
   if (!asset) return;
+  currentAssetId = assetId;
+
+  const currentList = filteredAssets();
+  currentAssetIndex = currentList.findIndex(a => a.asset_id === assetId);
+  if ($("drawerIndex")) $("drawerIndex").textContent = (currentAssetIndex >= 0 ? currentAssetIndex + 1 : 1) + " / " + fmt(currentList.length);
+  if ($("prevAssetBtn")) $("prevAssetBtn").disabled = currentAssetIndex <= 0;
+  if ($("nextAssetBtn")) $("nextAssetBtn").disabled = currentAssetIndex < 0 || currentAssetIndex >= currentList.length - 1;
+
+  currentRating = Number(asset.rating || 0);
+  currentDefects = new Set();
+  const existingTags = asset.tags || [];
+  existingTags.forEach(t => {
+    if (t.startsWith("defect:")) {
+      const d = t.slice("defect:".length).replace(/-/g, " ");
+      currentDefects.add(d);
+    }
+  });
+
   const packet = packetFor(asset);
   const score = assetScore(asset);
   const isMusic = isMusicAsset(asset);
+
   $("drawerTitle").textContent = asset.title || asset.asset_id;
+
+  let promptHtml = "";
+  if (asset.prompt_text) {
+    promptHtml = '<div class="prompt-box">' +
+      '<div class="prompt-header">' +
+        '<div class="prompt-badge"><span>⚡ Generation Prompt</span></div>' +
+        '<span class="mono" style="font-size:11px;color:var(--muted)">' + esc(asset.sidecar_path ? pathBasename(asset.sidecar_path) : "sidecar") + '</span>' +
+      '</div>' +
+      '<div class="prompt-content">' + esc(asset.prompt_text) + '</div>' +
+      (asset.negative_prompt ? (
+        '<div class="negative-prompt-box">' +
+          '<span class="negative-prompt-label">Negative Prompt</span>' +
+          '<div class="negative-prompt-content">' + esc(asset.negative_prompt) + '</div>' +
+        '</div>'
+      ) : '') +
+      '<div class="prompt-actions">' +
+        '<button type="button" class="copy-prompt-btn" id="copyPromptBtn">📋 Copy Prompt [C]</button>' +
+        (asset.negative_prompt ? '<button type="button" class="nav-btn" id="copyNegPromptBtn">Copy Neg Prompt</button>' : '') +
+        (asset.sidecar_path ? '<button type="button" class="nav-btn" id="copySidecarPathBtn">Copy Sidecar Path</button>' : '') +
+      '</div>' +
+    '</div>';
+  } else {
+    promptHtml = '<div class="prompt-box">' +
+      '<div class="prompt-header">' +
+        '<div class="prompt-badge"><span>⚡ Generation Prompt</span></div>' +
+      '</div>' +
+      '<div class="prompt-gap">⚠️ Zero-Orphan Alert: No prompt sidecar (.vis.provenance.json) found for this asset.</div>' +
+    '</div>';
+  }
+
+  const genSpecsHtml = '<div class="gen-grid">' +
+    '<div class="gen-card"><span>Model</span><strong title="' + esc(asset.gen_model || "unknown") + '">' + esc(asset.gen_model || "unknown") + '</strong></div>' +
+    '<div class="gen-card"><span>Provider</span><strong title="' + esc(asset.gen_provider || "local") + '">' + esc(asset.gen_provider || "local") + '</strong></div>' +
+    '<div class="gen-card"><span>Seed</span><strong title="' + esc(asset.gen_seed || "none") + '">' + esc(asset.gen_seed || "none") + '</strong></div>' +
+    '<div class="gen-card"><span>Dimensions</span><strong>' + esc(asset.width && asset.height ? asset.width + "×" + asset.height : "unknown") + '</strong></div>' +
+  '</div>';
+
+  const starsHtml = [1,2,3,4,5].map(star => (
+    '<button type="button" class="star-btn ' + (star <= currentRating ? "active" : "") + '" data-value="' + star + '" title="' + star + ' Stars">★</button>'
+  )).join("");
+
+  const defectChipsHtml = DEFECT_OPTIONS.map(opt => (
+    '<button type="button" class="chip ' + (currentDefects.has(opt.toLowerCase()) ? "active" : "") + '" data-defect="' + esc(opt.toLowerCase()) + '">' + esc(opt) + '</button>'
+  )).join("");
+
+  const curationHudHtml = '<div class="curation-card">' +
+    '<div class="curation-header">' +
+      '<span class="curation-title">⭐ Review & Taste Feedback</span>' +
+      '<div class="star-rating">' + starsHtml + '<span class="star-label" id="starLabel">' + (currentRating ? currentRating + "/5" : "Click to rate") + '</span></div>' +
+    '</div>' +
+    '<div class="verdict-row">' +
+      '<button type="button" class="btn-approve" id="btnApprove">✓ Approve [A]</button>' +
+      '<button type="button" class="btn-reject" id="btnReject">✕ Reject [X]</button>' +
+      '<button type="button" class="btn-undo" id="btnUndo" title="Undo feedback [Z]">↶ Undo</button>' +
+    '</div>' +
+    '<div class="defect-section">' +
+      '<span class="defect-label">Defect quick flags</span>' +
+      '<div class="defect-chips">' + defectChipsHtml + '</div>' +
+    '</div>' +
+    '<textarea class="note-input" id="curationNote" placeholder="Taste directive / reasoning (e.g. lighting too harsh, add cinematic rim light, hands warped)...">' + esc(asset.annotation_notes || "") + '</textarea>' +
+    '<div class="curation-footer">' +
+      '<select class="scope-select" id="curationScope" aria-label="Feedback scope">' +
+        '<option value="asset">Scope: Asset only</option>' +
+        '<option value="project">Scope: Project taste</option>' +
+        '<option value="brand">Scope: Brand standard</option>' +
+        '<option value="global">Scope: Global principle</option>' +
+      '</select>' +
+      '<button type="button" class="btn-save-feedback" id="btnSaveFeedback">Save Decision</button>' +
+    '</div>' +
+    '<div class="receipt-hud" id="receiptHud" style="' + (lastFeedbackReceipt ? 'display:flex' : 'display:none') + '">' +
+      '<span>✓</span><span>' + esc(lastFeedbackReceipt ? 'Last outbox: ' + lastFeedbackReceipt.outbox_id : '') + '</span>' +
+    '</div>' +
+  '</div>';
+
+  const usages = asset.usages || [];
+  let usagesHtml = "";
+  if (usages.length) {
+    usagesHtml = '<div class="usage-box">' +
+      '<div class="usage-header">🔗 Codebase references (' + usages.length + ')</div>' +
+      usages.slice(0, 8).map(u => (
+        '<div class="usage-item" data-file="' + esc(u.file || "") + '">' +
+          '<span>' + esc(u.file || "") + (u.route ? ' (' + esc(u.route) + ')' : '') + '</span>' +
+          (u.ref ? '<span class="usage-ref">' + esc(u.ref) + '</span>' : '') +
+        '</div>'
+      )).join("") +
+    '</div>';
+  } else {
+    usagesHtml = '<div class="usage-box">' +
+      '<div class="usage-header">🔗 Codebase references</div>' +
+      '<div style="font-size:12px;color:var(--muted)">No code occurrences detected (candidate or unlinked asset).</div>' +
+    '</div>';
+  }
+
   $("drawerBody").innerHTML = (
-    '<div class="preview">'+mediaPreview(asset, "detail")+'</div>' +
+    '<div class="preview">' + mediaPreview(asset, "detail") + '</div>' +
+    curationHudHtml +
+    promptHtml +
+    genSpecsHtml +
+    usagesHtml +
     '<div class="action-row">' +
       '<button data-copy="path">Copy local path</button>' +
       '<button data-copy="uri">Copy visual URI</button>' +
@@ -1082,32 +1654,50 @@ function openAsset(assetId){
       '<button data-copy="social">Prepare social post</button>' +
       (isMusic ? '<button data-copy="music">Music IS packet</button>' : '') +
     '</div>' +
-    '<div class="kv"><span>Visual URI</span><div class="mono">'+esc(asset.visual_uri)+'</div></div>' +
-    '<div class="kv"><span>Local path</span><div class="mono">'+esc(asset.absolute_path || "")+'</div></div>' +
-    '<div class="kv"><span>Source</span><div>'+esc(sourceLabel(asset))+'</div></div>' +
-    '<div class="kv"><span>Folder</span><div>'+esc(folderLabel(asset))+'</div></div>' +
-    '<div class="kv"><span>Category</span><div>'+esc(asset.category || "")+'</div></div>' +
-    '<div class="kv"><span>Media role</span><div>'+esc(asset.media_role || "")+'</div></div>' +
-    '<div class="kv"><span>Workflow</span><div>'+esc(asset.workflow || "")+'</div></div>' +
-    '<div class="kv"><span>Curation</span><div>'+esc(asset.curation_status || "uncurated")+'</div></div>' +
-    '<div class="kv"><span>Rating</span><div>'+esc(asset.rating ? asset.rating + " / 5" : "unrated")+'</div></div>' +
-    '<div class="kv"><span>Color label</span><div>'+esc(asset.color_label || "")+'</div></div>' +
-    '<div class="kv"><span>Palette</span><div>'+paletteSwatches(asset, 8)+esc(asset.dominant_color ? "Dominant " + asset.dominant_color : "not indexed")+'</div></div>' +
-    '<div class="kv"><span>Color families</span><div>'+esc((asset.color_families || []).join(", "))+'</div></div>' +
-    '<div class="kv"><span>Custom tags</span><div>'+esc((asset.custom_tags || []).join(", "))+'</div></div>' +
-    '<div class="kv"><span>Notes</span><div>'+esc(asset.annotation_notes || "")+'</div></div>' +
-    '<div class="kv"><span>Rights</span><div>'+esc(asset.rights_status || "unknown")+'</div></div>' +
-    '<div class="kv"><span>Approval</span><div>'+esc(asset.approval_status || "candidate")+'</div></div>' +
-    '<div class="kv"><span>Public-use gate</span><div>'+esc((asset.publish_gate?.status || "unknown") + " / " + (asset.publish_gate?.allowed ? "ready" : "review required"))+'</div></div>' +
-    (asset.publish_gate?.blockers?.length ? '<div class="kv"><span>Gate blockers</span><div>'+esc(asset.publish_gate.blockers.join("; "))+'</div></div>' : '') +
-    (asset.publish_gate?.warnings?.length ? '<div class="kv"><span>Gate warnings</span><div>'+esc(asset.publish_gate.warnings.join("; "))+'</div></div>' : '') +
-    '<div class="kv"><span>Dimensions</span><div>'+esc(asset.width && asset.height ? asset.width + "x" + asset.height : "unknown")+'</div></div>' +
-    '<div class="kv"><span>Duration</span><div>'+esc(asset.duration_seconds ? asset.duration_seconds + " sec" : "unknown")+'</div></div>' +
-    '<div class="kv"><span>Usage</span><div>'+fmt(asset.usage_count)+' edges</div></div>' +
-    '<div class="kv"><span>Prompt links</span><div>'+fmt(asset.prompt_count)+'</div></div>' +
-    '<div class="kv"><span>Score</span><div>'+esc(score ? score.score + " / " + score.verdict : "not scored")+'</div></div>' +
-    '<div class="kv"><span>Next action</span><div>'+esc(score?.nextAction || packet.next_recommended_action || "")+'</div></div>'
+    '<div class="kv"><span>Visual URI</span><div class="mono">' + esc(asset.visual_uri) + '</div></div>' +
+    '<div class="kv"><span>Local path</span><div class="mono">' + esc(asset.absolute_path || "") + '</div></div>' +
+    '<div class="kv"><span>Source</span><div>' + esc(sourceLabel(asset)) + '</div></div>' +
+    '<div class="kv"><span>Folder</span><div>' + esc(folderLabel(asset)) + '</div></div>' +
+    '<div class="kv"><span>Category</span><div>' + esc(asset.category || "") + '</div></div>' +
+    '<div class="kv"><span>Media role</span><div>' + esc(asset.media_role || "") + '</div></div>' +
+    '<div class="kv"><span>Workflow</span><div>' + esc(asset.workflow || "") + '</div></div>' +
+    '<div class="kv"><span>Curation</span><div>' + esc(asset.curation_status || "uncurated") + '</div></div>' +
+    '<div class="kv"><span>Rating</span><div>' + esc(asset.rating ? asset.rating + " / 5" : "unrated") + '</div></div>' +
+    '<div class="kv"><span>Palette</span><div>' + paletteSwatches(asset, 8) + esc(asset.dominant_color ? "Dominant " + asset.dominant_color : "not indexed") + '</div></div>' +
+    '<div class="kv"><span>Color families</span><div>' + esc((asset.color_families || []).join(", ")) + '</div></div>' +
+    '<div class="kv"><span>Rights</span><div>' + esc(asset.rights_status || "unknown") + '</div></div>' +
+    '<div class="kv"><span>Approval</span><div>' + esc(asset.approval_status || "candidate") + '</div></div>' +
+    '<div class="kv"><span>Public-use gate</span><div>' + esc((asset.publish_gate?.status || "unknown") + " / " + (asset.publish_gate?.allowed ? "ready" : "review required")) + '</div></div>' +
+    '<div class="kv"><span>Usage</span><div>' + fmt(asset.usage_count) + ' edges</div></div>' +
+    '<div class="kv"><span>Prompt links</span><div>' + fmt(asset.prompt_count) + '</div></div>' +
+    '<div class="kv"><span>Score</span><div>' + esc(score ? score.score + " / " + score.verdict : "not scored") + '</div></div>'
   );
+
+  for (const btn of $("drawerBody").querySelectorAll(".star-btn")) {
+    btn.addEventListener("click", () => setRating(Number(btn.dataset.value || 0)));
+  }
+
+  for (const chip of $("drawerBody").querySelectorAll(".chip")) {
+    chip.addEventListener("click", () => toggleDefectChip(chip.dataset.defect));
+  }
+
+  $("drawerBody").querySelector("#btnApprove")?.addEventListener("click", approveCurrentAsset);
+  $("drawerBody").querySelector("#btnReject")?.addEventListener("click", rejectCurrentAsset);
+  $("drawerBody").querySelector("#btnUndo")?.addEventListener("click", undoCurrentAsset);
+  $("drawerBody").querySelector("#btnSaveFeedback")?.addEventListener("click", () => submitFeedback("curate"));
+
+  $("drawerBody").querySelector("#copyPromptBtn")?.addEventListener("click", copyCurrentPrompt);
+  $("drawerBody").querySelector("#copyNegPromptBtn")?.addEventListener("click", () => {
+    if (asset.negative_prompt) copy(asset.negative_prompt);
+  });
+  $("drawerBody").querySelector("#copySidecarPathBtn")?.addEventListener("click", () => {
+    if (asset.sidecar_path) copy(asset.sidecar_path);
+  });
+
+  for (const item of $("drawerBody").querySelectorAll(".usage-item")) {
+    item.addEventListener("click", () => copy(item.dataset.file));
+  }
+
   for (const btn of $("drawerBody").querySelectorAll("button[data-copy]")) {
     btn.addEventListener("click", () => {
       const kind = btn.dataset.copy;
@@ -1119,8 +1709,9 @@ function openAsset(assetId){
       if (kind === "music") copy(JSON.stringify(musicPacketFor(asset), null, 2));
     });
   }
+
   $("drawer").classList.add("open");
-  $("drawer").setAttribute("aria-hidden","false");
+  $("drawer").setAttribute("aria-hidden", "false");
 }
 function copySelectedPackets(){
   const assets = selectedAssets();
@@ -1308,11 +1899,54 @@ $("copySelection").addEventListener("click", copySelectedPackets);
 $("copyCurationCommand").addEventListener("click", copyBatchCurationCommand);
 $("copyReviewCommand").addEventListener("click", copyReviewCommand);
 $("closeDrawer").addEventListener("click", () => { $("drawer").classList.remove("open"); $("drawer").setAttribute("aria-hidden","true"); });
+$("prevAssetBtn")?.addEventListener("click", prevAsset);
+$("nextAssetBtn")?.addEventListener("click", nextAsset);
+
 document.addEventListener("keydown", e => {
   const tag = String(e.target?.tagName || "").toLowerCase();
-  if (e.key === "Escape") $("closeDrawer").click();
-  if (e.key === "/" && tag !== "input" && tag !== "textarea" && tag !== "select") { e.preventDefault(); $("search").focus(); }
-  if (e.key.toLowerCase() === "c" && selectedIds.size && tag !== "input" && tag !== "textarea" && tag !== "select") copySelectedPackets();
+  const isInput = tag === "input" || tag === "textarea" || tag === "select";
+
+  if (e.key === "Escape") {
+    $("closeDrawer").click();
+    return;
+  }
+  if (isInput) return;
+
+  if (e.key === "/") {
+    e.preventDefault();
+    $("search").focus();
+    return;
+  }
+
+  const drawerOpen = $("drawer").classList.contains("open");
+  if (drawerOpen) {
+    if (e.key === "[" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      prevAsset();
+    } else if (e.key === "]" || e.key === "ArrowRight") {
+      e.preventDefault();
+      nextAsset();
+    } else if (e.key >= "1" && e.key <= "5") {
+      e.preventDefault();
+      setRating(Number(e.key));
+    } else if (e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      approveCurrentAsset();
+    } else if (e.key.toLowerCase() === "x") {
+      e.preventDefault();
+      rejectCurrentAsset();
+    } else if (e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      undoCurrentAsset();
+    } else if (e.key.toLowerCase() === "c") {
+      e.preventDefault();
+      copyCurrentPrompt();
+    }
+  } else {
+    if (e.key.toLowerCase() === "c" && selectedIds.size) {
+      copySelectedPackets();
+    }
+  }
 });
 populateFilters();
 renderAll();

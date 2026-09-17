@@ -24,6 +24,7 @@ import {
   findProjectRoot,
   getAsset,
   getSummary,
+  getTasteDirectives,
   indexProject,
   importEagleLibrary,
   listAssetActionRecipes,
@@ -37,6 +38,7 @@ import {
   initCreativeVault,
   planAssetDerivatives,
   planCreativeVault,
+  recordCurationFeedback,
   recordGenerationProvenance,
   recordPublication,
   renameAssets,
@@ -52,6 +54,12 @@ import {
   searchAssets,
   traceAsset,
   createMusicReleasePacket,
+  planStorageUpload,
+  executeStorageUpload,
+  getStorageStats,
+  routeAssetDestination,
+  undoCurationFeedback,
+  drainFeedbackOutbox,
 } from '../core/vis-core.mjs'
 import { generateDashboard, serveDashboard } from '../web/vis-dashboard.mjs'
 
@@ -92,6 +100,8 @@ const VALUE_FLAGS = new Set([
   '--vault-root', '--sample-limit',
   '--template', '--rename-template', '--name-template', '--start', '--pad',
   '--preset', '--target', '--intent', '--intended-use', '--output-root', '--target-root', '--derivatives-root',
+  '--brand', '--bucket', '--token', '--collection-name',
+  '--action', '--defects', '--scope',
 ])
 
 function positionalArgs() {
@@ -535,6 +545,49 @@ function cmdReviewAssets() {
     reason: getFlag('--reason') || getFlag('--note') || getFlag('--notes'),
     actor: 'vis-cli',
     execute: hasFlag('--execute'),
+  })
+  printJson(result)
+}
+
+function cmdFeedback() {
+  const root = projectRoot()
+  const ref = getFlag('--asset') || getFlag('--asset-id') || positionalArgs()[0]
+  if (!ref) throw new Error('Usage: vis feedback <asset> [--action approve|reject|rate] [--rating 1-5] [--defects d1,d2] [--notes "..."] [--scope asset|project|brand|global]')
+  const defects = getFlag('--defects') ? getFlag('--defects').split(',').map(s => s.trim()).filter(Boolean) : []
+  const result = recordCurationFeedback(root, {
+    assetId: ref,
+    action: getFlag('--action') || (getFlag('--rating') ? 'rate' : 'curate'),
+    rating: getFlag('--rating') ? Number(getFlag('--rating')) : null,
+    defects,
+    notes: getFlag('--notes') || getFlag('--note'),
+    scope: getFlag('--scope') || 'asset',
+    brand: getFlag('--brand'),
+    actor: 'vis-cli',
+  })
+  printJson(result)
+}
+
+function cmdUndoFeedback() {
+  const root = projectRoot()
+  const ref = getFlag('--asset') || getFlag('--asset-id') || positionalArgs()[0]
+  if (!ref) throw new Error('Usage: vis undo-feedback <asset>')
+  const result = undoCurationFeedback(root, ref)
+  printJson(result)
+}
+
+function cmdDrainOutbox() {
+  const root = projectRoot()
+  const result = drainFeedbackOutbox(root)
+  printJson(result)
+}
+
+function cmdTasteDirectives() {
+  const root = projectRoot()
+  const result = getTasteDirectives(root, {
+    brand: getFlag('--brand'),
+    category: getFlag('--category'),
+    polarity: getFlag('--polarity'),
+    limit: getFlag('--limit') ? Number(getFlag('--limit')) : 50,
   })
   printJson(result)
 }
@@ -1005,6 +1058,151 @@ function cmdVaultInit() {
   }
 }
 
+function cmdPlanUpload() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const result = planStorageUpload(db, {
+      target: getFlag('--target', 'auto'),
+      brand: getFlag('--brand'),
+      bucket: getFlag('--bucket'),
+      collection: getFlag('--collection'),
+      approvalStatus: getFlag('--approval-status'),
+      rightsStatus: getFlag('--rights-status'),
+      category: getFlag('--category'),
+      mediaType: getFlag('--media-type'),
+      limit: getFlag('--limit', 50),
+    })
+    printJson(result)
+  } finally {
+    db.close()
+  }
+}
+
+async function cmdUploadBlob() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const plan = planStorageUpload(db, {
+      target: 'vercel-blob',
+      brand: getFlag('--brand', 'frankx'),
+      collection: getFlag('--collection'),
+      approvalStatus: getFlag('--approval-status', 'approved'),
+      limit: getFlag('--limit', 100),
+    })
+    if (!hasFlag('--execute')) {
+      console.log('\n=== VERCEL BLOB UPLOAD PLAN (DRY-RUN) ===\n')
+      console.log(`Total Assets: ${plan.plan.total_assets}`)
+      console.log(`Total Size:   ${plan.plan.total_mb} MB`)
+      console.log('\nAsset Sample:')
+      for (const item of plan.plan.items.slice(0, 10)) {
+        console.log(`  [${item.approval_status}] ${item.pathname} -> ${item.target_url}`)
+      }
+      console.log('\nDry run only. Add --execute to upload to Vercel Blob using BLOB_READ_WRITE_TOKEN.')
+      return
+    }
+    const result = await executeStorageUpload(db, plan, {
+      target: 'vercel-blob',
+      token: getFlag('--token'),
+    })
+    console.log(`\n=== VERCEL BLOB UPLOAD COMPLETED ===\n`)
+    console.log(`Uploaded: ${result.uploaded_count}/${result.total}`)
+    console.log(`Failed:   ${result.failed_count}`)
+  } finally {
+    db.close()
+  }
+}
+
+async function cmdUploadR2() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const plan = planStorageUpload(db, {
+      target: 'cloudflare-r2',
+      brand: getFlag('--brand'),
+      bucket: getFlag('--bucket', 'media-masters'),
+      collection: getFlag('--collection'),
+      approvalStatus: getFlag('--approval-status'),
+      limit: getFlag('--limit', 100),
+    })
+    if (!hasFlag('--execute')) {
+      console.log(`\n=== CLOUDFLARE R2 UPLOAD PLAN [Bucket: ${plan.plan.bucket}] (DRY-RUN) ===\n`)
+      console.log(`Total Assets: ${plan.plan.total_assets}`)
+      console.log(`Total Size:   ${plan.plan.total_mb} MB`)
+      console.log('\nAsset Sample:')
+      for (const item of plan.plan.items.slice(0, 10)) {
+        console.log(`  [${item.approval_status}] ${item.key} -> ${item.target_url}`)
+      }
+      console.log('\nDry run only. Add --execute to upload to Cloudflare R2.')
+      return
+    }
+    const result = await executeStorageUpload(db, plan, {
+      target: 'cloudflare-r2',
+    })
+    console.log(`\n=== CLOUDFLARE R2 UPLOAD COMPLETED ===\n`)
+    console.log(`Uploaded: ${result.uploaded_count}/${result.total}`)
+    console.log(`Failed:   ${result.failed_count}`)
+  } finally {
+    db.close()
+  }
+}
+
+async function cmdUploadIpfs() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const plan = planStorageUpload(db, {
+      target: 'ipfs',
+      collection: getFlag('--collection', 'arcanea-guardians'),
+      approvalStatus: getFlag('--approval-status'),
+      limit: getFlag('--limit', 50),
+    })
+    if (!hasFlag('--execute')) {
+      console.log(`\n=== IPFS NFT BUNDLE PLAN [Collection: ${plan.plan.collection_name}] (DRY-RUN) ===\n`)
+      console.log(`Total Tokens: ${plan.plan.total_items}`)
+      console.log(`Total Size:   ${plan.plan.total_mb} MB`)
+      console.log('\nToken Sample:')
+      for (const item of plan.plan.items.slice(0, 10)) {
+        console.log(`  Token #${item.token_id}: "${item.title}" (${item.media_type})`)
+        console.log(`    Traits: ${item.metadata.attributes.map(a => `${a.trait_type}=${a.value}`).join(', ')}`)
+      }
+      console.log('\nDry run only. Add --execute to pin to IPFS via PINATA_JWT.')
+      return
+    }
+    const result = await executeStorageUpload(db, plan, {
+      target: 'ipfs',
+    })
+    console.log(`\n=== IPFS NFT PINNING COMPLETED ===\n`)
+    console.log(`Pinned: ${result.pinned_count}/${result.total}`)
+    console.log(`Failed: ${result.failed_count}`)
+  } finally {
+    db.close()
+  }
+}
+
+function cmdStorageStats() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const stats = getStorageStats(db)
+    if (hasFlag('--json')) {
+      printJson(stats)
+      return
+    }
+    console.log('\n=== VIS CLOUD STORAGE SYNC STATUS ===\n')
+    console.log(`Total Local Assets: ${stats.total_local_assets}`)
+    console.log('Cloud Sync Breakdown:')
+    for (const [provider, count] of Object.entries(stats.storage_breakdown)) {
+      console.log(`  - ${provider.padEnd(16)}: ${count} objects synced`)
+    }
+    if (Object.keys(stats.storage_breakdown).length === 0) {
+      console.log('  (No cloud objects recorded yet. Run upload-blob, upload-r2, or upload-ipfs to sync)')
+    }
+  } finally {
+    db.close()
+  }
+}
+
 const commands = {
   init: cmdInit,
   audit: cmdReport,
@@ -1039,6 +1237,13 @@ const commands = {
   rename: cmdBatchRename,
   'review-assets': cmdReviewAssets,
   'approve-assets': cmdReviewAssets,
+  feedback: cmdFeedback,
+  'curate-feedback': cmdFeedback,
+  'undo-feedback': cmdUndoFeedback,
+  'drain-outbox': cmdDrainOutbox,
+  taste: cmdTasteDirectives,
+  'taste-directives': cmdTasteDirectives,
+  directives: cmdTasteDirectives,
   'action-recipes': cmdActionRecipes,
   recipes: cmdActionRecipes,
   'action-recipe': cmdActionRecipe,
@@ -1063,6 +1268,13 @@ const commands = {
   'record-publication': cmdRecordPublication,
   'cloudinary-manifest': cmdCloudinaryManifest,
   'nft-report': cmdNftReport,
+  'plan-upload': cmdPlanUpload,
+  'upload-plan': cmdPlanUpload,
+  'upload-blob': cmdUploadBlob,
+  'upload-r2': cmdUploadR2,
+  'upload-ipfs': cmdUploadIpfs,
+  'storage-stats': cmdStorageStats,
+  'storage-status': cmdStorageStats,
   optimize: cmdOptimize,
   doctor: cmdDoctor,
   'mcp-info': cmdMcpInfo,
@@ -1101,6 +1313,10 @@ Commands:
   vis batch-annotate <asset...>     Dry-run or save curation metadata across assets
   vis batch-rename <asset...>       Dry-run or execute same-folder file renames from a template
   vis review-assets <asset...>      Dry-run or save rights and approval status
+  vis feedback <asset>             Record taste rating, approval/rejection, defects, notes, and sync to outbox
+  vis undo-feedback <asset>        Revert last feedback action and restore previous state
+  vis drain-outbox                 Drain pending feedback outbox rows into TASTE_FEEDBACK_LEDGER.jsonl
+  vis taste [--brand b] [--category c] Retrieve active taste doctrines and defects to avoid
   vis action-recipes                List dry-run asset action recipes
   vis action-recipe <recipe>         Dry-run or apply recipe curation across matching assets
   vis derivative-presets            List website/social/music/NFT/Cloudinary variant presets
@@ -1115,9 +1331,15 @@ Commands:
   vis record-publication --asset <id> --platform <x> [--url <url>] [--execute]
   vis cloudinary-manifest          Dry-run Cloudinary upload manifest; guarded assets excluded by default
   vis nft-report                   Dry-run NFT metadata readiness report
+  vis plan-upload                  Dry-run multi-cloud storage upload plan (Vercel, R2, IPFS)
+  vis upload-blob [--execute]      Upload approved website assets to Vercel Blob
+  vis upload-r2 [--execute]        Upload master/CDN media to Cloudflare R2
+  vis upload-ipfs [--execute]      Pin NFT collections and ERC-721 metadata to IPFS
+  vis storage-stats                Print multi-cloud sync status and breakdown
   vis optimize                     Dry-run oversized asset report
   vis doctor                       Check local install, graph, dashboard, MCP info
   vis mcp-info                     Print MCP install info
+
 
 Options:
   --root, -r <path>                Project root

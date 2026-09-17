@@ -409,6 +409,22 @@ CREATE TABLE IF NOT EXISTS provenance_event (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS feedback_outbox (
+  outbox_id TEXT PRIMARY KEY,
+  asset_id TEXT NOT NULL REFERENCES asset(asset_id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  rating INTEGER,
+  polarity TEXT NOT NULL DEFAULT 'neutral',
+  scope TEXT NOT NULL DEFAULT 'asset',
+  defects_json TEXT NOT NULL DEFAULT '[]',
+  notes TEXT,
+  previous_state_json TEXT NOT NULL DEFAULT '{}',
+  payload_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT NOT NULL,
+  drained_at TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_asset_version_asset ON asset_version(asset_id);
 CREATE INDEX IF NOT EXISTS idx_asset_location_asset ON asset_location(asset_id);
 CREATE INDEX IF NOT EXISTS idx_asset_location_path ON asset_location(absolute_path);
@@ -416,6 +432,7 @@ CREATE INDEX IF NOT EXISTS idx_asset_usage_asset ON asset_usage(asset_id);
 CREATE INDEX IF NOT EXISTS idx_asset_annotation_status ON asset_annotation(curation_status);
 CREATE INDEX IF NOT EXISTS idx_publication_asset ON publication(asset_id);
 CREATE INDEX IF NOT EXISTS idx_provenance_asset ON provenance_event(asset_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_outbox_status ON feedback_outbox(status);
 `)
   setMetadata(db, 'schema_version', '1')
   setMetadata(db, 'vis_version', VIS_VERSION)
@@ -988,8 +1005,14 @@ export function buildAssetEntry(root, mediaRoot, filePath, config = DEFAULT_CONF
   const mediaType = detectMediaType(ext, config)
   if (!mediaType) return null
 
-  const stats = fs.statSync(filePath)
-  const hashes = hashFileSync(filePath, mediaType)
+  let stats
+  let hashes
+  try {
+    stats = fs.statSync(filePath)
+    hashes = hashFileSync(filePath, mediaType)
+  } catch {
+    return null
+  }
   const sha256 = hashes.sha256
   const versionHash = hashes.versionHash
   const versionId = `ver_${versionHash.slice(0, 32)}`
@@ -2542,6 +2565,330 @@ export function reviewAssets(dbOrRoot, assetRefs = [], args = {}) {
     }
   } finally {
     if (close) db.close()
+  }
+}
+
+export function recordCurationFeedback(dbOrRoot, args = {}) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const assetId = resolveAssetId(db, args.assetId || args.asset_id || args.asset)
+    if (!assetId) throw new Error('Asset not found for curation feedback')
+
+    const action = args.action || (args.rating ? 'rate' : 'curate')
+    const rating = args.rating !== undefined && args.rating !== null ? normalizeRating(args.rating) : null
+    const defects = Array.isArray(args.defects) ? args.defects.filter(Boolean) : []
+    const notes = normalizeNullable(args.notes || args.note || null)
+    const scope = args.scope || 'asset'
+    const actor = args.actor || 'frank'
+    const brand = args.brand || 'estate'
+    const ts = nowIso()
+
+    const prevAnnotation = db.prepare('SELECT * FROM asset_annotation WHERE asset_id = ?').get(assetId) || null
+    const prevAsset = db.prepare('SELECT approval_status FROM asset WHERE asset_id = ?').get(assetId) || null
+    const previousState = {
+      annotation: prevAnnotation,
+      approval_status: prevAsset?.approval_status || 'candidate',
+    }
+
+    let approvalStatus = prevAsset?.approval_status || 'candidate'
+    let curationStatus = prevAnnotation?.curation_status || 'uncurated'
+    let polarity = 'neutral'
+
+    if (action === 'approve' || (rating !== null && rating >= 4)) {
+      approvalStatus = 'approved'
+      curationStatus = 'approved'
+      polarity = 'positive'
+    } else if (action === 'reject' || (rating !== null && rating <= 2) || defects.length > 0) {
+      approvalStatus = 'rejected'
+      curationStatus = 'rejected'
+      polarity = 'negative'
+    } else if (rating === 3) {
+      curationStatus = 'needs-review'
+      polarity = 'neutral'
+    }
+
+    const currentTags = parseJson(prevAnnotation?.custom_tags_json, [])
+    const defectTags = defects.map(d => `defect:${d.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`)
+    const customTags = uniq([...currentTags, ...defectTags])
+
+    db.exec('BEGIN')
+    try {
+      db.prepare(`
+        INSERT INTO asset_annotation (asset_id, rating, color_label, curation_status, notes, custom_tags_json, updated_by, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(asset_id) DO UPDATE SET
+          rating = COALESCE(excluded.rating, asset_annotation.rating),
+          curation_status = excluded.curation_status,
+          notes = COALESCE(excluded.notes, asset_annotation.notes),
+          custom_tags_json = excluded.custom_tags_json,
+          updated_by = excluded.updated_by,
+          updated_at = excluded.updated_at
+      `).run(
+        assetId,
+        rating,
+        polarity === 'positive' ? 'green' : polarity === 'negative' ? 'red' : 'yellow',
+        curationStatus,
+        notes,
+        JSON.stringify(customTags),
+        actor,
+        ts,
+      )
+
+      db.prepare('UPDATE asset SET approval_status = ?, last_seen_at = ? WHERE asset_id = ?')
+        .run(approvalStatus, ts, assetId)
+
+      recordProvenance(db, {
+        assetId,
+        eventType: 'curation_feedback',
+        actor,
+        source: 'vis-cockpit',
+        payload: { action, rating, defects, notes, scope, polarity, approvalStatus },
+      })
+
+      const outboxId = stableId('fbout', `${assetId}:${ts}:${crypto.randomUUID()}`)
+      const payload = {
+        asset_id: assetId,
+        action,
+        rating,
+        defects,
+        notes,
+        scope,
+        actor,
+        brand,
+        polarity,
+        approval_status: approvalStatus,
+        previous_state: previousState,
+      }
+
+      db.prepare(`
+        INSERT INTO feedback_outbox (outbox_id, asset_id, action, rating, polarity, scope, defects_json, notes, previous_state_json, payload_json, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+      `).run(
+        outboxId,
+        assetId,
+        action,
+        rating,
+        polarity,
+        scope,
+        JSON.stringify(defects),
+        notes,
+        JSON.stringify(previousState),
+        JSON.stringify(payload),
+        ts,
+      )
+
+      db.exec('COMMIT')
+
+      const drainResult = drainFeedbackOutbox(db, { outboxId })
+
+      return {
+        ok: true,
+        receipt: {
+          outbox_id: outboxId,
+          asset_id: assetId,
+          action,
+          rating,
+          approval_status: approvalStatus,
+          curation_status: curationStatus,
+          defects,
+          notes,
+          polarity,
+          ledger_synced: drainResult.syncedCount > 0,
+          timestamp: ts,
+        },
+        previous: previousState,
+      }
+    } catch (err) {
+      db.exec('ROLLBACK')
+      throw err
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
+export function undoCurationFeedback(dbOrRoot, assetRef) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const assetId = resolveAssetId(db, assetRef)
+    if (!assetId) throw new Error('Asset not found')
+
+    const lastOutbox = db.prepare(`
+      SELECT * FROM feedback_outbox
+      WHERE asset_id = ? AND action != 'undo'
+      ORDER BY created_at DESC LIMIT 1
+    `).get(assetId)
+
+    if (!lastOutbox) throw new Error('No feedback action found to undo for this asset')
+
+    const previousState = parseJson(lastOutbox.previous_state_json, null)
+    const ts = nowIso()
+
+    db.exec('BEGIN')
+    try {
+      if (previousState?.annotation) {
+        const a = previousState.annotation
+        db.prepare(`
+          UPDATE asset_annotation
+          SET rating = ?, color_label = ?, curation_status = ?, notes = ?, custom_tags_json = ?, updated_by = ?, updated_at = ?
+          WHERE asset_id = ?
+        `).run(a.rating, a.color_label, a.curation_status, a.notes, a.custom_tags_json, 'undo', ts, assetId)
+      } else {
+        db.prepare('DELETE FROM asset_annotation WHERE asset_id = ?').run(assetId)
+      }
+
+      const prevApproval = previousState?.approval_status || 'candidate'
+      db.prepare('UPDATE asset SET approval_status = ?, last_seen_at = ? WHERE asset_id = ?')
+        .run(prevApproval, ts, assetId)
+
+      const outboxId = stableId('fbout_undo', `${assetId}:${ts}`)
+      db.prepare(`
+        INSERT INTO feedback_outbox (outbox_id, asset_id, action, polarity, scope, notes, payload_json, status, created_at)
+        VALUES (?, ?, 'undo', 'neutral', 'asset', ?, ?, 'pending', ?)
+      `).run(outboxId, assetId, `Reverted feedback from ${lastOutbox.created_at}`, JSON.stringify({ reverted_outbox_id: lastOutbox.outbox_id }), ts)
+
+      db.exec('COMMIT')
+
+      drainFeedbackOutbox(db, { outboxId })
+
+      return {
+        ok: true,
+        message: `Reverted feedback on ${assetId}`,
+        reverted_action: lastOutbox.action,
+        approval_status: prevApproval,
+      }
+    } catch (err) {
+      db.exec('ROLLBACK')
+      throw err
+    }
+  } finally {
+    if (close) db.close()
+  }
+}
+
+export function drainFeedbackOutbox(dbOrRoot, options = {}) {
+  const { db, close } = resolveDbArgs(dbOrRoot)
+  try {
+    const ledgerPath = options.ledgerPath || 'C:/Users/frank/starlight/ops/TASTE_FEEDBACK_LEDGER.jsonl'
+    const rows = options.outboxId
+      ? db.prepare("SELECT * FROM feedback_outbox WHERE outbox_id = ? AND status = 'pending'").all(options.outboxId)
+      : db.prepare("SELECT * FROM feedback_outbox WHERE status = 'pending' ORDER BY created_at ASC LIMIT 100").all()
+
+    if (!rows.length) return { syncedCount: 0, drainedIds: [] }
+
+    fs.mkdirSync(path.dirname(ledgerPath), { recursive: true })
+    const ledgerLines = []
+    const drainedIds = []
+    const ts = nowIso()
+
+    for (const row of rows) {
+      const payload = parseJson(row.payload_json, {})
+      const asset = db.prepare('SELECT title, primary_path, repo FROM asset WHERE asset_id = ?').get(row.asset_id)
+      const assetTitle = asset?.title || asset?.primary_path || row.asset_id
+      const defects = parseJson(row.defects_json, [])
+      
+      const ledgerEntry = {
+        id: `taste-vis-${Date.now()}-${row.asset_id.slice(0, 8)}`,
+        timestamp: row.created_at,
+        brand: payload.brand || (asset?.repo?.includes('frankx') ? 'frankx' : asset?.repo?.includes('arcanea') ? 'arcanea' : 'estate'),
+        category: 'visual',
+        polarity: row.polarity,
+        subject: `${row.action === 'approve' ? 'Approved' : row.action === 'reject' ? 'Rejected' : (row.rating ? `Rated ${row.rating}/5` : 'Curated')}: ${assetTitle}`,
+        doctrine: row.notes || (defects.length ? `Flagged defects: ${defects.join(', ')}` : (row.rating ? `${row.rating}/5 star rating in VIS` : 'Curated in VIS')),
+        source_ref: `vis:asset:${row.asset_id}`,
+        asset_id: row.asset_id,
+        rating: row.rating,
+        defects,
+        scope: row.scope || 'asset',
+        tags: ['curation', row.action, ...(defects.map(d => `defect:${d}`)), ...(payload.brand ? [payload.brand] : [])],
+      }
+      ledgerLines.push(JSON.stringify(ledgerEntry))
+      drainedIds.push(row.outbox_id)
+    }
+
+    if (ledgerLines.length) {
+      fs.appendFileSync(ledgerPath, ledgerLines.join('\n') + '\n', 'utf-8')
+      for (const id of drainedIds) {
+        db.prepare("UPDATE feedback_outbox SET status = 'drained', drained_at = ? WHERE outbox_id = ?").run(ts, id)
+      }
+    }
+
+    return { syncedCount: drainedIds.length, drainedIds }
+  } finally {
+    if (close) db.close()
+  }
+}
+
+export function getTasteDirectives(dbOrRoot, options = {}) {
+  const ledgerPath = options.ledgerPath || 'C:/Users/frank/starlight/ops/TASTE_FEEDBACK_LEDGER.jsonl'
+  const brand = (options.brand || '').toLowerCase()
+  const category = (options.category || '').toLowerCase()
+  const polarity = (options.polarity || '').toLowerCase()
+  const limit = Number(options.limit || 50)
+
+  const entries = []
+  if (fs.existsSync(ledgerPath)) {
+    try {
+      const raw = fs.readFileSync(ledgerPath, 'utf-8')
+      const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
+      for (const line of lines) {
+        try {
+          const item = JSON.parse(line)
+          if (brand && item.brand && item.brand.toLowerCase() !== brand && item.brand.toLowerCase() !== 'estate') continue
+          if (category && item.category && item.category.toLowerCase() !== category) continue
+          if (polarity && item.polarity && item.polarity.toLowerCase() !== polarity) continue
+          entries.push(item)
+        } catch {}
+      }
+    } catch {}
+  }
+
+  let sqliteFeedback = []
+  try {
+    const { db, close } = resolveDbArgs(dbOrRoot)
+    try {
+      const rows = db.prepare(`
+        SELECT a.asset_id, a.title, a.primary_path, a.approval_status,
+               an.rating, an.curation_status, an.notes, an.custom_tags_json, an.updated_at
+        FROM asset_annotation an
+        JOIN asset a ON a.asset_id = an.asset_id
+        WHERE an.curation_status IN ('approved', 'rejected', 'favorite')
+           OR an.rating IS NOT NULL
+        ORDER BY an.updated_at DESC
+        LIMIT 20
+      `).all()
+      sqliteFeedback = rows.map(r => ({
+        asset_id: r.asset_id,
+        title: r.title || r.primary_path,
+        rating: r.rating,
+        approval_status: r.approval_status,
+        curation_status: r.curation_status,
+        notes: r.notes,
+        custom_tags: parseJson(r.custom_tags_json, []),
+        updated_at: r.updated_at,
+      }))
+    } finally {
+      if (close) db.close()
+    }
+  } catch {}
+
+  const positive = entries.filter(e => e.polarity === 'positive')
+  const negative = entries.filter(e => e.polarity === 'negative')
+  const commonDefects = new Set()
+  for (const e of entries) {
+    if (Array.isArray(e.defects)) {
+      for (const d of e.defects) commonDefects.add(d)
+    }
+  }
+
+  return {
+    brand: brand || 'all',
+    total_entries: entries.length,
+    positive_doctrines: positive.map(e => ({ subject: e.subject, doctrine: e.doctrine, tags: e.tags })),
+    negative_doctrines: negative.map(e => ({ subject: e.subject, doctrine: e.doctrine, tags: e.tags })),
+    flagged_defects_to_avoid: Array.from(commonDefects),
+    recent_sqlite_feedback: sqliteFeedback,
+    entries: entries.slice(0, limit),
   }
 }
 
@@ -5520,3 +5867,9 @@ function normalizeNullable(value) {
 function slugify(value) {
   return String(value || 'asset').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'asset'
 }
+
+export * from './adapters/vercel-blob-adapter.mjs'
+export * from './adapters/cloudflare-r2-adapter.mjs'
+export * from './adapters/ipfs-nft-adapter.mjs'
+export * from './adapters/upload-router.mjs'
+export * from './storage-sync-engine.mjs'

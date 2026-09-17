@@ -20,11 +20,15 @@ import {
   findProjectRoot,
   getAsset,
   getSummary,
+  getTasteDirectives,
   importEagleLibrary,
   initCreativeVault,
   listAssetActionRecipes,
   listDerivativePresets,
   createMusicReleasePacket,
+  drainFeedbackOutbox,
+  recordCurationFeedback,
+  undoCurationFeedback,
   evaluateSmartCollection,
   listSavedSearches,
   listSmartCollections,
@@ -45,6 +49,10 @@ import {
   scoreCollection,
   searchAssets,
   traceAsset,
+  planStorageUpload,
+  executeStorageUpload,
+  getStorageStats,
+  routeAssetDestination,
 } from '../core/vis-core.mjs'
 
 const ROOT = path.resolve(process.env.VIS_ROOT || findProjectRoot(process.cwd()))
@@ -239,6 +247,114 @@ function toolReviewAssets(args = {}) {
     reason: args.reason || args.note || args.notes,
     actor: 'vis-mcp',
     execute: args.execute === true && WRITE_ENABLED,
+  }))
+}
+
+function toolRecordCurationFeedback(args = {}) {
+  const assetRef = args.asset_id || args.assetId || args.uri || args.path || args.asset
+  if (!assetRef) throw new Error('Missing asset_id, uri, or path')
+
+  const action = args.action || (args.rating ? 'rate' : 'curate')
+  const rating = args.rating !== undefined && args.rating !== null ? Number(args.rating) : null
+  const defects = Array.isArray(args.defects)
+    ? args.defects
+    : (args.defects ? String(args.defects).split(',').map(s => s.trim()).filter(Boolean) : [])
+  const notes = args.notes || args.note || null
+  const brand = args.brand || 'estate'
+  const scope = args.scope || 'asset'
+  const actor = args.actor || 'vis-mcp'
+
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => {
+      const asset = getAsset(db, assetRef)
+      return {
+        blocked: true,
+        reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+        dryRun: {
+          asset_id: asset?.asset_id || assetRef,
+          action,
+          rating,
+          defects,
+          notes,
+          brand,
+          scope,
+          actor,
+        },
+      }
+    })
+  }
+
+  return withDb(db => {
+    if (args.execute !== true) {
+      const asset = getAsset(db, assetRef)
+      return {
+        dryRun: true,
+        preview: {
+          asset_id: asset?.asset_id || assetRef,
+          action,
+          rating,
+          defects,
+          notes,
+          brand,
+          scope,
+          actor,
+          would_drain_to: 'C:/Users/frank/starlight/ops/TASTE_FEEDBACK_LEDGER.jsonl',
+        },
+      }
+    }
+    return recordCurationFeedback(db, {
+      assetId: assetRef,
+      action,
+      rating,
+      defects,
+      notes,
+      brand,
+      scope,
+      actor,
+    })
+  })
+}
+
+function toolUndoCurationFeedback(args = {}) {
+  const assetRef = args.asset_id || args.assetId || args.uri || args.path || args.asset
+  if (!assetRef) throw new Error('Missing asset_id, uri, or path')
+
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: { asset_id: assetRef, action: 'undo' },
+    }))
+  }
+
+  return withDb(db => {
+    if (args.execute !== true) {
+      return {
+        dryRun: true,
+        preview: { asset_id: assetRef, would_undo: true },
+      }
+    }
+    return undoCurationFeedback(db, assetRef)
+  })
+}
+
+function toolDrainFeedbackOutbox(args = {}) {
+  if (args.execute === true && !WRITE_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.',
+      dryRun: { would_drain: true },
+    }))
+  }
+  return withDb(db => drainFeedbackOutbox(db))
+}
+
+function toolGetTasteDirectives(args = {}) {
+  return withDb(db => getTasteDirectives(db, {
+    brand: args.brand,
+    category: args.category,
+    polarity: args.polarity,
+    limit: args.limit || 50,
   }))
 }
 
@@ -477,6 +593,32 @@ function toolNftMetadataReport(args = {}) {
   return withDb(db => exportNftMetadataReport(db, args))
 }
 
+function toolPlanStorageUpload(args = {}) {
+  return withDb(db => planStorageUpload(db, {
+    target: args.target || 'auto',
+    brand: args.brand,
+    bucket: args.bucket,
+    collection: args.collection,
+    approvalStatus: args.approval_status || args.approvalStatus,
+    rightsStatus: args.rights_status || args.rightsStatus,
+    category: args.category,
+    mediaType: args.media_type || args.mediaType,
+    limit: args.limit || 50,
+  }))
+}
+
+function toolRouteAssetDestination(args = {}) {
+  return withDb(db => {
+    const asset = getAsset(db, args.asset_id || args.assetId || args.uri || args.path)
+    if (!asset) throw new Error('Asset not found')
+    return routeAssetDestination(asset)
+  })
+}
+
+function toolGetStorageStatus(args = {}) {
+  return withDb(db => getStorageStats(db))
+}
+
 function toolReport() {
   return withDb(db => getSummary(db))
 }
@@ -517,6 +659,13 @@ const TOOL_HANDLERS = {
   record_publication: toolRecordPublication,
   export_cloudinary_manifest: toolCloudinaryManifest,
   export_nft_metadata_report: toolNftMetadataReport,
+  plan_storage_upload: toolPlanStorageUpload,
+  route_asset_destination: toolRouteAssetDestination,
+  get_storage_status: toolGetStorageStatus,
+  record_curation_feedback: toolRecordCurationFeedback,
+  undo_curation_feedback: toolUndoCurationFeedback,
+  drain_feedback_outbox: toolDrainFeedbackOutbox,
+  get_taste_directives: toolGetTasteDirectives,
 
   // Backward-compatible legacy VIS tools.
   vis_search: toolSearchAssets,
@@ -776,6 +925,48 @@ const TOOLS = [
     category: stringProp('Optional category'),
     collection: stringProp('Collection id/name'),
     limit: numberProp('Maximum assets'),
+  }),
+  tool('plan_storage_upload', 'Create a dry-run upload plan to Vercel Blob, Cloudflare R2, or IPFS.', {
+    target: stringProp('Upload target: vercel-blob, cloudflare-r2, ipfs, or auto'),
+    brand: stringProp('Brand filter: frankx, arcanea, starlight, music, animelegends'),
+    bucket: stringProp('Cloudflare R2 bucket: media-masters, public-cdn, music-releases'),
+    collection: stringProp('Collection name or ID filter'),
+    approval_status: stringProp('Approval status filter (e.g. approved, candidate)'),
+    rights_status: stringProp('Rights status filter (e.g. generated-owned, owned)'),
+    limit: numberProp('Maximum assets to plan'),
+  }),
+  tool('route_asset_destination', 'Determine optimal multi-cloud storage destination(s) for an asset based on brand and role.', {
+    asset_id: stringProp('VIS asset_id'),
+    uri: stringProp('visual://asset/{asset_id}'),
+    path: stringProp('Local or relative path'),
+  }),
+  tool('get_storage_status', 'Get multi-cloud storage sync status and breakdown across Vercel Blob, Cloudflare R2, and IPFS.', {}),
+  tool('record_curation_feedback', 'Record human curation feedback, rating (1-5), defect tags, and approve/reject decision with atomic ledger synchronization. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
+    asset_id: stringProp('VIS asset_id'),
+    uri: stringProp('visual://asset/{asset_id}'),
+    path: stringProp('Local or relative path'),
+    action: stringProp('approve, reject, rate, or curate'),
+    rating: numberProp('Rating 1-5'),
+    defects: { type: 'array', items: { type: 'string' }, description: 'Defect tags, e.g. ["plastic-skin", "blurry", "hallucinated-text"]' },
+    notes: stringProp('Curation feedback note or directive'),
+    brand: stringProp('Brand namespace, e.g. frankx, arcanea, starlight, estate'),
+    scope: stringProp('asset, brand, cross_brand, or foundation'),
+    execute: booleanProp('Persist curation and drain to taste ledger when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('undo_curation_feedback', 'Revert the most recent curation feedback action on an asset. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
+    asset_id: stringProp('VIS asset_id'),
+    uri: stringProp('visual://asset/{asset_id}'),
+    path: stringProp('Local or relative path'),
+    execute: booleanProp('Revert curation when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('drain_feedback_outbox', 'Drain pending curation feedback events to C:/Users/frank/starlight/ops/TASTE_FEEDBACK_LEDGER.jsonl.', {
+    execute: booleanProp('Drain outbox when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('get_taste_directives', 'Retrieve active taste doctrines, approved visual patterns, and defect tags to avoid before generating visuals.', {
+    brand: stringProp('Optional brand filter, e.g. frankx, arcanea, estate'),
+    category: stringProp('Optional category filter, e.g. visual, typography, copy'),
+    polarity: stringProp('Optional polarity filter: positive, negative, or neutral'),
+    limit: numberProp('Maximum doctrines to retrieve (default 50)'),
   }),
   tool('vis_search', 'Legacy alias for search_assets.', {
     query: stringProp('Search query'),
