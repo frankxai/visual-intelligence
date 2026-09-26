@@ -22,6 +22,10 @@ import {
   findOrphans,
   buildDamKeepReport,
   openVisDatabaseReadOnly,
+  planStalePrimaryRepairs,
+  applyStalePrimaryRepairs,
+  linkPublicAssetUsage,
+  openVisDatabaseFile,
   findSimilarAssets,
   findProjectRoot,
   getAsset,
@@ -403,6 +407,31 @@ async function cmdServeDashboard() {
   console.log(`VIS dashboard server: ${served.url}`)
   console.log(`Serving: ${served.outputPath}`)
   console.log('Press Ctrl+C to stop.')
+}
+
+function cmdTruth() {
+  const indexPath = getFlag('--index')
+  const execute = hasFlag('--execute')
+  const db = indexPath ? openVisDatabaseFile(indexPath) : openVisDatabase(projectRoot())
+  try {
+    const repairs = planStalePrimaryRepairs(db)
+    const usageRoot = getFlag('--usage-root')
+    let linked = 0
+    if (execute) {
+      applyStalePrimaryRepairs(db, repairs)
+      if (usageRoot) linked = linkPublicAssetUsage(db, usageRoot)
+    }
+    printJson({
+      schema: 'vis.truth.v1',
+      execute,
+      stale_primaries: repairs.length,
+      sample: repairs.slice(0, 8),
+      usage_root: usageRoot,
+      usage_edges_linked: execute ? linked : 0,
+    })
+  } finally {
+    db.close()
+  }
 }
 
 function cmdKeep() {
@@ -1050,6 +1079,7 @@ const commands = {
   atlas: cmdDashboard,
   duplicates: cmdDuplicates,
   keep: cmdKeep,
+  truth: cmdTruth,
   orphans: cmdOrphans,
   similar: cmdSimilar,
   'find-similar': cmdSimilar,
@@ -1117,6 +1147,7 @@ Commands:
   vis packet <asset|path|uri>       Print Codex-ready curation packet
   vis duplicates                   List duplicate content groups
   vis keep                         Read the index and write a decision queue. Refuses upload, delete, approve, and publish.
+  vis truth                       Show stale primary paths. --execute rewrites only an unambiguous live path and can link one site's /assets references.
   vis orphans                      List assets with no detected usage
   vis similar [asset|query]         Find visually adjacent assets and review groups
   vis score [asset]                Score asset or collection readiness

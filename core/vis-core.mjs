@@ -191,6 +191,13 @@ export function openVisDatabaseReadOnly(indexPath) {
   return new DatabaseSync(indexPath, { readOnly: true })
 }
 
+export function openVisDatabaseFile(indexPath) {
+  const db = new DatabaseSync(indexPath)
+  db.exec('PRAGMA busy_timeout = 10000')
+  db.exec('PRAGMA foreign_keys = ON')
+  return db
+}
+
 export function createSchema(db) {
   db.exec(`
 CREATE TABLE IF NOT EXISTS metadata (
@@ -1555,6 +1562,112 @@ function chooseCanonical(paths, category) {
   const tiedPublic = existing.filter(filePath => pathScore(filePath, category) === top && isPublicPath(filePath))
   if (tiedPublic.length >= 2) return { canonical: null, keep_all_public: true }
   return { canonical: existing[0] || null, keep_all_public: false }
+}
+
+function toIndexRelative(absolutePath) {
+  const norm = slash(absolutePath)
+  const marker = '/starlight/repos/'
+  const at = norm.toLowerCase().indexOf(marker)
+  if (at >= 0) return '../' + norm.slice(at + marker.length)
+  return norm
+}
+
+export function planStalePrimaryRepairs(db) {
+  const rows = db.prepare(`
+    SELECT asset_id, primary_path, category
+    FROM asset
+    WHERE primary_path IS NOT NULL`).all()
+  const liveStmt = db.prepare(`
+    SELECT absolute_path FROM asset_location
+    WHERE asset_id = ? AND exists_now = 1 AND absolute_path IS NOT NULL`)
+  const repairs = []
+  for (const row of rows) {
+    const live = liveStmt.all(row.asset_id).map(item => item.absolute_path)
+    if (!live.length) continue
+    const primary = slash(row.primary_path).replace(/^\.\.\//, '')
+    const primaryAlive = live.some(filePath => slash(filePath).endsWith(primary))
+    if (primaryAlive) continue
+    const choice = chooseCanonical(live, row.category)
+    if (!choice.canonical || choice.keep_all_public) continue
+    repairs.push({
+      asset_id: row.asset_id,
+      from: row.primary_path,
+      to: toIndexRelative(choice.canonical),
+    })
+  }
+  return repairs
+}
+
+export function applyStalePrimaryRepairs(db, repairs, repairedAt = nowIso()) {
+  const update = db.prepare('UPDATE asset SET primary_path = ?, last_seen_at = ? WHERE asset_id = ?')
+  db.exec('BEGIN')
+  try {
+    for (const repair of repairs) update.run(repair.to, repairedAt, repair.asset_id)
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  }
+  return repairs.length
+}
+
+export function linkPublicAssetUsage(db, repoRoot, detectedAt = nowIso()) {
+  const repo = path.resolve(repoRoot)
+  const repoName = path.basename(repo).toLowerCase()
+  const locations = db.prepare(`
+    SELECT asset_id, version_id, absolute_path
+    FROM asset_location
+    WHERE exists_now = 1 AND absolute_path IS NOT NULL`).all()
+  const byUrl = new Map()
+  for (const loc of locations) {
+    const norm = slash(loc.absolute_path)
+    const lower = norm.toLowerCase()
+    const marker = '/public/'
+    const at = lower.indexOf(marker)
+    if (at < 0 || !lower.includes(`/${repoName}/`)) continue
+    const url = '/' + norm.slice(at + marker.length)
+    if (!byUrl.has(url)) byUrl.set(url, [])
+    byUrl.get(url).push(loc)
+  }
+  const skip = new Set(['node_modules', '.next', '.git', 'dist', 'coverage'])
+  const files = []
+  function walk(dir) {
+    let entries = []
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return }
+    for (const entry of entries) {
+      if (skip.has(entry.name)) continue
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else if (/\.(tsx|ts|jsx|js|mdx|md|html|css)$/i.test(entry.name)) files.push(full)
+    }
+  }
+  walk(repo)
+  const pattern = /["'`](\/assets\/[^"'`\s?#]+)["'`]/g
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO asset_usage (usage_id, asset_id, version_id, source_file, route, usage_context, reference_text, detected_at)
+    VALUES (?, ?, ?, ?, ?, 'reference', ?, ?)`)
+  let linked = 0
+  db.exec('BEGIN')
+  try {
+    for (const filePath of files) {
+      let content = ''
+      try { content = fs.readFileSync(filePath, 'utf8') } catch { continue }
+      for (const match of content.matchAll(pattern)) {
+        const refs = byUrl.get(match[1]) || []
+        if (refs.length !== 1) continue
+        const asset = refs[0]
+        const sourceFile = slash(path.relative(repo, filePath))
+        const usageId = stableId('usage', `${asset.asset_id}:${repoName}:${sourceFile}:${match[1]}`)
+        const result = insert.run(usageId, asset.asset_id, asset.version_id, sourceFile, inferRouteFromSource(sourceFile), match[1], detectedAt)
+        linked += Number(result.changes || 0)
+      }
+    }
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  }
+  return linked
 }
 
 export function buildDamKeepReport(db, options = {}) {
