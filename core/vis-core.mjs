@@ -1642,7 +1642,7 @@ export function linkPublicAssetUsage(db, repoRoot, detectedAt = nowIso()) {
     }
   }
   walk(repo)
-  const pattern = /["'`](\/assets\/[^"'`\s?#]+)["'`]/g
+  const pattern = /["'`](\/(?:assets|images)\/[^"'`\s?#]+)["'`]/g
   const insert = db.prepare(`
     INSERT OR IGNORE INTO asset_usage (usage_id, asset_id, version_id, source_file, route, usage_context, reference_text, detected_at)
     VALUES (?, ?, ?, ?, ?, 'reference', ?, ?)`)
