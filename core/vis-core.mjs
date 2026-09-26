@@ -1507,6 +1507,7 @@ export function findDuplicates(dbOrRoot, options = {}) {
     const groups = db.prepare(`
 SELECT sha256, COUNT(DISTINCT asset_id) AS asset_count, COUNT(*) AS version_count
 FROM asset_version
+WHERE byte_size > 0
 GROUP BY sha256
 HAVING COUNT(DISTINCT asset_id) > 1 OR COUNT(*) > 1
 ORDER BY asset_count DESC, version_count DESC
