@@ -20,6 +20,8 @@ import {
   evaluateSmartCollection,
   findDuplicates,
   findOrphans,
+  buildDamKeepReport,
+  openVisDatabaseReadOnly,
   findSimilarAssets,
   findProjectRoot,
   getAsset,
@@ -401,6 +403,25 @@ async function cmdServeDashboard() {
   console.log(`VIS dashboard server: ${served.url}`)
   console.log(`Serving: ${served.outputPath}`)
   console.log('Press Ctrl+C to stop.')
+}
+
+function cmdKeep() {
+  if (hasFlag('--execute')) {
+    console.error('vis keep has no --execute. It reads the index and writes a queue.')
+    process.exitCode = 2
+    return
+  }
+  const indexPath = getFlag('--index')
+  const db = indexPath ? openVisDatabaseReadOnly(indexPath) : openVisDatabase(projectRoot())
+  try {
+    const report = buildDamKeepReport(db, { duplicateLimit: Number(getFlag('--limit', 8)) })
+    const json = JSON.stringify(report, null, 2)
+    const out = getFlag('--out')
+    if (out) fs.writeFileSync(out, json)
+    console.log(json)
+  } finally {
+    db.close()
+  }
 }
 
 function cmdDuplicates() {
@@ -1028,6 +1049,7 @@ const commands = {
   cockpit: cmdServeDashboard,
   atlas: cmdDashboard,
   duplicates: cmdDuplicates,
+  keep: cmdKeep,
   orphans: cmdOrphans,
   similar: cmdSimilar,
   'find-similar': cmdSimilar,
@@ -1094,6 +1116,7 @@ Commands:
   vis trace <asset|path|uri>        Print full provenance and usage trace
   vis packet <asset|path|uri>       Print Codex-ready curation packet
   vis duplicates                   List duplicate content groups
+  vis keep                         Read the index and write a decision queue. Refuses upload, delete, approve, and publish.
   vis orphans                      List assets with no detected usage
   vis similar [asset|query]         Find visually adjacent assets and review groups
   vis score [asset]                Score asset or collection readiness

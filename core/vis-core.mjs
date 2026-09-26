@@ -187,6 +187,10 @@ export function openVisDatabase(root, config = loadConfig(root)) {
   return db
 }
 
+export function openVisDatabaseReadOnly(indexPath) {
+  return new DatabaseSync(indexPath, { readOnly: true })
+}
+
 export function createSchema(db) {
   db.exec(`
 CREATE TABLE IF NOT EXISTS metadata (
@@ -1524,6 +1528,110 @@ ORDER BY l.relative_path`).all(group.sha256),
     }))
   } finally {
     if (close) db.close()
+  }
+}
+
+export const EMPTY_FILE_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+
+function preferCanonicalPath(paths) {
+  const existing = paths.filter(Boolean)
+  const ranked = [...existing].sort((a, b) => {
+    const aCopy = a.includes('.worktrees') || a.includes('.hermes-worktrees')
+    const bCopy = b.includes('.worktrees') || b.includes('.hermes-worktrees')
+    if (aCopy !== bCopy) return aCopy ? 1 : -1
+    return a.length - b.length
+  })
+  return ranked[0] || null
+}
+
+export function buildDamKeepReport(db, options = {}) {
+  const duplicateLimit = Number(options.duplicateLimit || 8)
+  const rights = db.prepare(`
+    SELECT approval_status, rights_status, COUNT(*) AS n
+    FROM asset GROUP BY 1, 2`).all()
+  const media = db.prepare(`SELECT media_type, COUNT(*) AS n FROM asset GROUP BY 1`).all()
+  const locations = db.prepare(`
+    SELECT
+      SUM(CASE WHEN exists_now = 1 THEN 1 ELSE 0 END) AS on_disk,
+      SUM(CASE WHEN exists_now = 0 THEN 1 ELSE 0 END) AS missing,
+      SUM(CASE WHEN exists_now = 0 AND (absolute_path LIKE '%\\.worktrees\\%' OR absolute_path LIKE '%\\.hermes-worktrees\\%') THEN 1 ELSE 0 END) AS missing_worktrees
+    FROM asset_location`).get()
+  const approved = db.prepare(`
+    SELECT asset_id, title, primary_path, media_type, category
+    FROM asset WHERE approval_status = 'approved'
+    ORDER BY primary_path`).all()
+  const unknownRights = rights
+    .filter(row => row.rights_status === 'unknown')
+    .reduce((sum, row) => sum + row.n, 0)
+  const groups = db.prepare(`
+    SELECT sha256, COUNT(DISTINCT asset_id) AS asset_count, MIN(byte_size) AS byte_size
+    FROM asset_version
+    WHERE byte_size > 0 AND sha256 != ?
+    GROUP BY sha256
+    HAVING COUNT(DISTINCT asset_id) > 1
+    ORDER BY asset_count DESC
+    LIMIT ?`).all(EMPTY_FILE_SHA256, duplicateLimit)
+  const pathStmt = db.prepare(`
+    SELECT l.absolute_path
+    FROM asset_location l
+    JOIN asset_version v ON v.version_id = l.version_id
+    WHERE v.sha256 = ? AND l.exists_now = 1 AND l.absolute_path IS NOT NULL
+    LIMIT 6`)
+  const duplicates = []
+  for (const group of groups) {
+    const paths = pathStmt.all(group.sha256).map(row => row.absolute_path)
+    if (paths.length < 2) continue
+    duplicates.push({
+      sha256: group.sha256,
+      asset_count: group.asset_count,
+      byte_size: group.byte_size,
+      canonical: preferCanonicalPath(paths),
+      copies: paths,
+      may_delete: false,
+    })
+  }
+  const queue = []
+  if (unknownRights > 0) {
+    queue.push({
+      id: 'rights-hold',
+      decision: 'hold',
+      count: unknownRights,
+      reason: 'Rights are unknown. The keeper does not upload, approve, or publish these files.',
+    })
+  }
+  for (const group of duplicates) {
+    queue.push({
+      id: `canonical:${group.sha256.slice(0, 12)}`,
+      decision: 'propose-canonical',
+      canonical: group.canonical,
+      copies: group.copies,
+      may_delete: false,
+      reason: 'More than one live file shares this hash. The canonical path is a proposal.',
+    })
+  }
+  if (approved.length) {
+    queue.push({
+      id: 'approved-ready',
+      decision: 'inform',
+      count: approved.length,
+      paths: approved.map(asset => asset.primary_path),
+      reason: 'These files already have rights and approval. A CDN copy still waits for a named need.',
+    })
+  }
+  return {
+    schema: 'vis.dam-keep.v1',
+    generated_at: options.now || new Date().toISOString(),
+    autonomous_actions_taken: ['read-index'],
+    refused: ['upload', 'delete', 'approve', 'publish'],
+    library: {
+      assets: media.reduce((sum, row) => sum + row.n, 0),
+      media,
+      rights,
+      locations,
+    },
+    approved,
+    duplicates,
+    queue,
   }
 }
 
