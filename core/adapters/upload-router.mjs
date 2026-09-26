@@ -46,6 +46,16 @@ export const BRAND_CONFIGS = {
 
 export function routeAssetDestination(asset) {
   const brand = detectAssetBrand(asset)
+  if (brand === 'unassigned') {
+    return {
+      asset_id: asset.asset_id,
+      brand,
+      primary: 'local',
+      destinations: [],
+      target_bucket: null,
+      reasons: ['Unclassified asset stays on the machine until a brand is set'],
+    }
+  }
   const explicitNftIntent = asset.workflow === 'nft-mint' || (asset.tags || []).includes('nft-mint-ready') || asset.category === 'nft-collection' || asset.target_storage === 'ipfs-nft'
   const isNft = explicitNftIntent && (asset.approval_status === 'approved' || asset.category?.includes('nft'))
   const isMusic = asset.workflow === 'music-release' || asset.media_type === 'audio' || ['cover-art', 'music-canvas', 'music-stem'].includes(asset.media_role) || asset.category === 'music-releases'
@@ -105,9 +115,9 @@ export function detectAssetBrand(asset) {
   if (cat.includes('arcanea') || relPath.includes('arcanea') || tags.includes('arcanea') || pathText.includes('arcanea')) return 'arcanea'
   if (cat.includes('anime') || relPath.includes('animelegends') || tags.includes('animelegends') || pathText.includes('animelegends')) return 'animelegends'
   if (cat.includes('music') || relPath.includes('music') || tags.includes('music') || pathText.includes('music-releases') || pathText.includes('suno')) return 'music'
-  if (cat.includes('sis') || relPath.includes('starlight-') || tags.includes('starlight') || pathText.includes('starlight-intelligence-academy')) return 'starlight'
+  if (cat.includes('starlight') || relPath.includes('starlight-') || tags.includes('starlight') || pathText.includes('starlight-intelligence') || pathText.includes('starlightintelligence')) return 'starlight'
 
-  return 'frankx'
+  return 'unassigned'
 }
 
 export function routeAndPlanBatch(assets, options = {}) {
