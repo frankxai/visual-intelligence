@@ -1533,15 +1533,28 @@ ORDER BY l.relative_path`).all(group.sha256),
 
 export const EMPTY_FILE_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
 
-function preferCanonicalPath(paths) {
+function pathScore(filePath, category) {
+  const value = String(filePath || '')
+  const lower = value.toLowerCase()
+  let score = 0
+  if (lower.includes('.worktrees') || lower.includes('.hermes-worktrees')) score -= 10
+  if (lower.includes('/public/') || lower.includes('\\public\\')) score += 2
+  if (category && lower.includes(String(category).toLowerCase())) score += 3
+  return score
+}
+
+function isPublicPath(filePath) {
+  const lower = String(filePath || '').toLowerCase()
+  return lower.includes('/public/') || lower.includes('\\public\\')
+}
+
+function chooseCanonical(paths, category) {
   const existing = paths.filter(Boolean)
-  const ranked = [...existing].sort((a, b) => {
-    const aCopy = a.includes('.worktrees') || a.includes('.hermes-worktrees')
-    const bCopy = b.includes('.worktrees') || b.includes('.hermes-worktrees')
-    if (aCopy !== bCopy) return aCopy ? 1 : -1
-    return a.length - b.length
-  })
-  return ranked[0] || null
+  existing.sort((a, b) => pathScore(b, category) - pathScore(a, category) || a.length - b.length)
+  const top = existing.length ? pathScore(existing[0], category) : 0
+  const tiedPublic = existing.filter(filePath => pathScore(filePath, category) === top && isPublicPath(filePath))
+  if (tiedPublic.length >= 2) return { canonical: null, keep_all_public: true }
+  return { canonical: existing[0] || null, keep_all_public: false }
 }
 
 export function buildDamKeepReport(db, options = {}) {
@@ -1557,9 +1570,47 @@ export function buildDamKeepReport(db, options = {}) {
       SUM(CASE WHEN exists_now = 0 AND (absolute_path LIKE '%\\.worktrees\\%' OR absolute_path LIKE '%\\.hermes-worktrees\\%') THEN 1 ELSE 0 END) AS missing_worktrees
     FROM asset_location`).get()
   const approved = db.prepare(`
-    SELECT asset_id, title, primary_path, media_type, category
-    FROM asset WHERE approval_status = 'approved'
-    ORDER BY primary_path`).all()
+    SELECT a.asset_id, a.title, a.primary_path, a.media_type, a.category,
+           COUNT(u.usage_id) AS uses
+    FROM asset a
+    LEFT JOIN asset_usage u ON u.asset_id = a.asset_id
+    WHERE a.approval_status = 'approved'
+    GROUP BY a.asset_id
+    ORDER BY a.primary_path`).all()
+  const liveCopyCount = db.prepare(`
+    SELECT COUNT(*) AS n FROM (
+      SELECT l.asset_id FROM asset_location l
+      JOIN asset_version v ON v.version_id = l.version_id AND v.byte_size > 0
+      WHERE l.exists_now = 1 AND l.absolute_path IS NOT NULL
+      GROUP BY l.asset_id
+      HAVING COUNT(*) > 1
+    )`).get()
+  const liveCopyRows = db.prepare(`
+    SELECT a.asset_id, a.title, a.category, COUNT(l.location_id) AS copies
+    FROM asset a
+    JOIN asset_location l ON l.asset_id = a.asset_id AND l.exists_now = 1 AND l.absolute_path IS NOT NULL
+    JOIN asset_version v ON v.version_id = l.version_id AND v.byte_size > 0
+    GROUP BY a.asset_id
+    HAVING copies > 1
+    ORDER BY copies DESC
+    LIMIT ?`).all(duplicateLimit)
+  const livePathStmt = db.prepare(`
+    SELECT l.absolute_path FROM asset_location l
+    JOIN asset_version v ON v.version_id = l.version_id AND v.byte_size > 0
+    WHERE l.asset_id = ? AND l.exists_now = 1 AND l.absolute_path IS NOT NULL
+    LIMIT 6`)
+  const liveCopies = liveCopyRows.map(row => {
+    const paths = livePathStmt.all(row.asset_id).map(item => item.absolute_path)
+    const choice = chooseCanonical(paths, row.category)
+    return {
+      asset_id: row.asset_id,
+      title: row.title,
+      copies: paths,
+      canonical: choice.canonical,
+      keep_all_public: choice.keep_all_public,
+      may_delete: false,
+    }
+  })
   const unknownRights = rights
     .filter(row => row.rights_status === 'unknown')
     .reduce((sum, row) => sum + row.n, 0)
@@ -1581,11 +1632,13 @@ export function buildDamKeepReport(db, options = {}) {
   for (const group of groups) {
     const paths = pathStmt.all(group.sha256).map(row => row.absolute_path)
     if (paths.length < 2) continue
+    const choice = chooseCanonical(paths)
     duplicates.push({
       sha256: group.sha256,
       asset_count: group.asset_count,
       byte_size: group.byte_size,
-      canonical: preferCanonicalPath(paths),
+      canonical: choice.canonical,
+      keep_all_public: choice.keep_all_public,
       copies: paths,
       may_delete: false,
     })
@@ -1606,16 +1659,31 @@ export function buildDamKeepReport(db, options = {}) {
       canonical: group.canonical,
       copies: group.copies,
       may_delete: false,
-      reason: 'More than one live file shares this hash. The canonical path is a proposal.',
+      reason: group.keep_all_public
+        ? 'The same bytes are published under more than one name. Keep every public path.'
+        : 'More than one live file shares this hash. The canonical path is a proposal. Nothing is deleted.',
     })
   }
-  if (approved.length) {
+  for (const copy of liveCopies) {
     queue.push({
-      id: 'approved-ready',
-      decision: 'inform',
-      count: approved.length,
-      paths: approved.map(asset => asset.primary_path),
-      reason: 'These files already have rights and approval. A CDN copy still waits for a named need.',
+      id: `copies:${copy.asset_id}`,
+      decision: 'propose-canonical',
+      canonical: copy.canonical,
+      copies: copy.copies,
+      may_delete: false,
+      reason: copy.keep_all_public
+        ? 'The same bytes are published under more than one name. Keep every public path.'
+        : 'One asset has more than one live file. The canonical path is a proposal. Nothing is deleted.',
+    })
+  }
+  const unusedApproved = approved.filter(asset => Number(asset.uses) === 0)
+  if (unusedApproved.length) {
+    queue.push({
+      id: 'approved-unused',
+      decision: 'hold',
+      count: unusedApproved.length,
+      paths: unusedApproved.map(asset => asset.primary_path),
+      reason: 'Approved, and the index shows no page usage. No CDN copy.',
     })
   }
   return {
@@ -1628,9 +1696,11 @@ export function buildDamKeepReport(db, options = {}) {
       media,
       rights,
       locations,
+      live_copy_assets: liveCopyCount.n,
     },
     approved,
     duplicates,
+    live_copies: liveCopies,
     queue,
   }
 }
