@@ -187,6 +187,17 @@ export function openVisDatabase(root, config = loadConfig(root)) {
   return db
 }
 
+export function openVisDatabaseReadOnly(indexPath) {
+  return new DatabaseSync(indexPath, { readOnly: true })
+}
+
+export function openVisDatabaseFile(indexPath) {
+  const db = new DatabaseSync(indexPath)
+  db.exec('PRAGMA busy_timeout = 10000')
+  db.exec('PRAGMA foreign_keys = ON')
+  return db
+}
+
 export function createSchema(db) {
   db.exec(`
 CREATE TABLE IF NOT EXISTS metadata (
@@ -1507,6 +1518,7 @@ export function findDuplicates(dbOrRoot, options = {}) {
     const groups = db.prepare(`
 SELECT sha256, COUNT(DISTINCT asset_id) AS asset_count, COUNT(*) AS version_count
 FROM asset_version
+WHERE byte_size > 0
 GROUP BY sha256
 HAVING COUNT(DISTINCT asset_id) > 1 OR COUNT(*) > 1
 ORDER BY asset_count DESC, version_count DESC
@@ -1523,6 +1535,286 @@ ORDER BY l.relative_path`).all(group.sha256),
     }))
   } finally {
     if (close) db.close()
+  }
+}
+
+export const EMPTY_FILE_SHA256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+
+function pathScore(filePath, category) {
+  const value = String(filePath || '')
+  const lower = value.toLowerCase()
+  let score = 0
+  if (lower.includes('.worktrees') || lower.includes('.hermes-worktrees')) score -= 10
+  if (lower.includes('/public/') || lower.includes('\\public\\')) score += 2
+  if (category && lower.includes(String(category).toLowerCase())) score += 3
+  return score
+}
+
+function isPublicPath(filePath) {
+  const lower = String(filePath || '').toLowerCase()
+  return lower.includes('/public/') || lower.includes('\\public\\')
+}
+
+function chooseCanonical(paths, category) {
+  const existing = paths.filter(Boolean)
+  existing.sort((a, b) => pathScore(b, category) - pathScore(a, category) || a.length - b.length)
+  const top = existing.length ? pathScore(existing[0], category) : 0
+  const tiedPublic = existing.filter(filePath => pathScore(filePath, category) === top && isPublicPath(filePath))
+  if (tiedPublic.length >= 2) return { canonical: null, keep_all_public: true }
+  return { canonical: existing[0] || null, keep_all_public: false }
+}
+
+function toIndexRelative(absolutePath) {
+  const norm = slash(absolutePath)
+  const marker = '/starlight/repos/'
+  const at = norm.toLowerCase().indexOf(marker)
+  if (at >= 0) return '../' + norm.slice(at + marker.length)
+  return norm
+}
+
+export function planStalePrimaryRepairs(db) {
+  const rows = db.prepare(`
+    SELECT asset_id, primary_path, category
+    FROM asset
+    WHERE primary_path IS NOT NULL`).all()
+  const liveStmt = db.prepare(`
+    SELECT absolute_path FROM asset_location
+    WHERE asset_id = ? AND exists_now = 1 AND absolute_path IS NOT NULL`)
+  const repairs = []
+  for (const row of rows) {
+    const live = liveStmt.all(row.asset_id).map(item => item.absolute_path)
+    if (!live.length) continue
+    const primary = slash(row.primary_path).replace(/^\.\.\//, '')
+    const primaryAlive = live.some(filePath => slash(filePath).endsWith(primary))
+    if (primaryAlive) continue
+    const choice = chooseCanonical(live, row.category)
+    if (!choice.canonical || choice.keep_all_public) continue
+    repairs.push({
+      asset_id: row.asset_id,
+      from: row.primary_path,
+      to: toIndexRelative(choice.canonical),
+    })
+  }
+  return repairs
+}
+
+export function applyStalePrimaryRepairs(db, repairs, repairedAt = nowIso()) {
+  const update = db.prepare('UPDATE asset SET primary_path = ?, last_seen_at = ? WHERE asset_id = ?')
+  db.exec('BEGIN')
+  try {
+    for (const repair of repairs) update.run(repair.to, repairedAt, repair.asset_id)
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  }
+  return repairs.length
+}
+
+export function linkPublicAssetUsage(db, repoRoot, detectedAt = nowIso()) {
+  const repo = path.resolve(repoRoot)
+  const repoName = path.basename(repo).toLowerCase()
+  const locations = db.prepare(`
+    SELECT asset_id, version_id, absolute_path
+    FROM asset_location
+    WHERE exists_now = 1 AND absolute_path IS NOT NULL`).all()
+  const byUrl = new Map()
+  for (const loc of locations) {
+    const norm = slash(loc.absolute_path)
+    const lower = norm.toLowerCase()
+    const marker = '/public/'
+    const at = lower.indexOf(marker)
+    if (at < 0 || !lower.includes(`/${repoName}/`)) continue
+    const url = '/' + norm.slice(at + marker.length)
+    if (!byUrl.has(url)) byUrl.set(url, [])
+    byUrl.get(url).push(loc)
+  }
+  const skip = new Set(['node_modules', '.next', '.git', 'dist', 'coverage'])
+  const files = []
+  function walk(dir) {
+    let entries = []
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return }
+    for (const entry of entries) {
+      if (skip.has(entry.name)) continue
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else if (/\.(tsx|ts|jsx|js|mdx|md|html|css)$/i.test(entry.name)) files.push(full)
+    }
+  }
+  walk(repo)
+  const pattern = /["'`](\/(?:assets|images)\/[^"'`\s?#]+)["'`]/g
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO asset_usage (usage_id, asset_id, version_id, source_file, route, usage_context, reference_text, detected_at)
+    VALUES (?, ?, ?, ?, ?, 'reference', ?, ?)`)
+  let linked = 0
+  db.exec('BEGIN')
+  try {
+    for (const filePath of files) {
+      let content = ''
+      try { content = fs.readFileSync(filePath, 'utf8') } catch { continue }
+      for (const match of content.matchAll(pattern)) {
+        const refs = byUrl.get(match[1]) || []
+        if (refs.length !== 1) continue
+        const asset = refs[0]
+        const sourceFile = slash(path.relative(repo, filePath))
+        const usageId = stableId('usage', `${asset.asset_id}:${repoName}:${sourceFile}:${match[1]}`)
+        const result = insert.run(usageId, asset.asset_id, asset.version_id, sourceFile, inferRouteFromSource(sourceFile), match[1], detectedAt)
+        linked += Number(result.changes || 0)
+      }
+    }
+    db.exec('COMMIT')
+  } catch (error) {
+    db.exec('ROLLBACK')
+    throw error
+  }
+  return linked
+}
+
+export function buildDamKeepReport(db, options = {}) {
+  const duplicateLimit = Number(options.duplicateLimit || 8)
+  const rights = db.prepare(`
+    SELECT approval_status, rights_status, COUNT(*) AS n
+    FROM asset GROUP BY 1, 2`).all()
+  const media = db.prepare(`SELECT media_type, COUNT(*) AS n FROM asset GROUP BY 1`).all()
+  const locations = db.prepare(`
+    SELECT
+      SUM(CASE WHEN exists_now = 1 THEN 1 ELSE 0 END) AS on_disk,
+      SUM(CASE WHEN exists_now = 0 THEN 1 ELSE 0 END) AS missing,
+      SUM(CASE WHEN exists_now = 0 AND (absolute_path LIKE '%\\.worktrees\\%' OR absolute_path LIKE '%\\.hermes-worktrees\\%') THEN 1 ELSE 0 END) AS missing_worktrees
+    FROM asset_location`).get()
+  const approved = db.prepare(`
+    SELECT a.asset_id, a.title, a.primary_path, a.media_type, a.category,
+           COUNT(u.usage_id) AS uses
+    FROM asset a
+    LEFT JOIN asset_usage u ON u.asset_id = a.asset_id
+    WHERE a.approval_status = 'approved'
+    GROUP BY a.asset_id
+    ORDER BY a.primary_path`).all()
+  const liveCopyCount = db.prepare(`
+    SELECT COUNT(*) AS n FROM (
+      SELECT l.asset_id FROM asset_location l
+      JOIN asset_version v ON v.version_id = l.version_id AND v.byte_size > 0
+      WHERE l.exists_now = 1 AND l.absolute_path IS NOT NULL
+      GROUP BY l.asset_id
+      HAVING COUNT(*) > 1
+    )`).get()
+  const liveCopyRows = db.prepare(`
+    SELECT a.asset_id, a.title, a.category, COUNT(l.location_id) AS copies
+    FROM asset a
+    JOIN asset_location l ON l.asset_id = a.asset_id AND l.exists_now = 1 AND l.absolute_path IS NOT NULL
+    JOIN asset_version v ON v.version_id = l.version_id AND v.byte_size > 0
+    GROUP BY a.asset_id
+    HAVING copies > 1
+    ORDER BY copies DESC
+    LIMIT ?`).all(duplicateLimit)
+  const livePathStmt = db.prepare(`
+    SELECT l.absolute_path FROM asset_location l
+    JOIN asset_version v ON v.version_id = l.version_id AND v.byte_size > 0
+    WHERE l.asset_id = ? AND l.exists_now = 1 AND l.absolute_path IS NOT NULL
+    LIMIT 6`)
+  const liveCopies = liveCopyRows.map(row => {
+    const paths = livePathStmt.all(row.asset_id).map(item => item.absolute_path)
+    const choice = chooseCanonical(paths, row.category)
+    return {
+      asset_id: row.asset_id,
+      title: row.title,
+      copies: paths,
+      canonical: choice.canonical,
+      keep_all_public: choice.keep_all_public,
+      may_delete: false,
+    }
+  })
+  const unknownRights = rights
+    .filter(row => row.rights_status === 'unknown')
+    .reduce((sum, row) => sum + row.n, 0)
+  const groups = db.prepare(`
+    SELECT sha256, COUNT(DISTINCT asset_id) AS asset_count, MIN(byte_size) AS byte_size
+    FROM asset_version
+    WHERE byte_size > 0 AND sha256 != ?
+    GROUP BY sha256
+    HAVING COUNT(DISTINCT asset_id) > 1
+    ORDER BY asset_count DESC
+    LIMIT ?`).all(EMPTY_FILE_SHA256, duplicateLimit)
+  const pathStmt = db.prepare(`
+    SELECT l.absolute_path
+    FROM asset_location l
+    JOIN asset_version v ON v.version_id = l.version_id
+    WHERE v.sha256 = ? AND l.exists_now = 1 AND l.absolute_path IS NOT NULL
+    LIMIT 6`)
+  const duplicates = []
+  for (const group of groups) {
+    const paths = pathStmt.all(group.sha256).map(row => row.absolute_path)
+    if (paths.length < 2) continue
+    const choice = chooseCanonical(paths)
+    duplicates.push({
+      sha256: group.sha256,
+      asset_count: group.asset_count,
+      byte_size: group.byte_size,
+      canonical: choice.canonical,
+      keep_all_public: choice.keep_all_public,
+      copies: paths,
+      may_delete: false,
+    })
+  }
+  const queue = []
+  if (unknownRights > 0) {
+    queue.push({
+      id: 'rights-hold',
+      decision: 'hold',
+      count: unknownRights,
+      reason: 'Rights are unknown. The keeper does not upload, approve, or publish these files.',
+    })
+  }
+  for (const group of duplicates) {
+    queue.push({
+      id: `canonical:${group.sha256.slice(0, 12)}`,
+      decision: 'propose-canonical',
+      canonical: group.canonical,
+      copies: group.copies,
+      may_delete: false,
+      reason: group.keep_all_public
+        ? 'The same bytes are published under more than one name. Keep every public path.'
+        : 'More than one live file shares this hash. The canonical path is a proposal. Nothing is deleted.',
+    })
+  }
+  for (const copy of liveCopies) {
+    queue.push({
+      id: `copies:${copy.asset_id}`,
+      decision: 'propose-canonical',
+      canonical: copy.canonical,
+      copies: copy.copies,
+      may_delete: false,
+      reason: copy.keep_all_public
+        ? 'The same bytes are published under more than one name. Keep every public path.'
+        : 'One asset has more than one live file. The canonical path is a proposal. Nothing is deleted.',
+    })
+  }
+  const unusedApproved = approved.filter(asset => Number(asset.uses) === 0)
+  if (unusedApproved.length) {
+    queue.push({
+      id: 'approved-unused',
+      decision: 'hold',
+      count: unusedApproved.length,
+      paths: unusedApproved.map(asset => asset.primary_path),
+      reason: 'Approved, and the index shows no page usage. No CDN copy.',
+    })
+  }
+  return {
+    schema: 'vis.dam-keep.v1',
+    generated_at: options.now || new Date().toISOString(),
+    autonomous_actions_taken: ['read-index'],
+    refused: ['upload', 'delete', 'approve', 'publish'],
+    library: {
+      assets: media.reduce((sum, row) => sum + row.n, 0),
+      media,
+      rights,
+      locations,
+      live_copy_assets: liveCopyCount.n,
+    },
+    approved,
+    duplicates,
+    live_copies: liveCopies,
+    queue,
   }
 }
 
