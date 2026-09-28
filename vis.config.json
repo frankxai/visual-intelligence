@@ -4,6 +4,19 @@
   "indexPath": "data/vis.sqlite",
   "registryPath": "data/visual-registry.json",
   "atlasPath": "data/vis-atlas.json",
+  "library": {
+    "roots": [
+      { "label": "brand-assets", "path": "%USERPROFILE%/brand-assets", "exclude": ["receipts"] },
+      { "label": "inbox", "path": "%USERPROFILE%/_inbox" }
+    ],
+    "renditionsDir": "data/renditions",
+    "receiptsDir": "%USERPROFILE%/brand-assets/receipts/library",
+    "limit": 50,
+    "thumbWidth": 320,
+    "previewWidth": 1600,
+    "maxNewRenditionBytes": 314572800,
+    "minFreeDiskGB": 35
+  },
   "dashboardPath": "data/vis-dashboard.html",
   "brandDnaPath": "data/brand-visual-dna.json",
   "sitemapMapPath": "data/sitemap-image-map.json",
