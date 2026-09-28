@@ -444,6 +444,25 @@ function cmdTruth() {
   }
 }
 
+function writeHouseCameraStatus(report) {
+  const home = process.env.USERPROFILE || process.env.HOME
+  if (!home) return
+  const dir = path.join(home, '.starlight', 'observatory', 'sources')
+  fs.mkdirSync(dir, { recursive: true })
+  const hold = (report.queue || []).find((item) => item.id === 'rights-hold')
+  const body = {
+    schema: 'observatory.house-camera.v1',
+    generated_at: report.generated_at,
+    issue_url: 'https://github.com/frankxai/content-os/issues/4',
+    inbox: 'OneDrive/Starlight Creative Vault/00_INBOX_MOBILE',
+    hold: hold && typeof hold.count === 'number' ? hold.count : null,
+    live_copies: report.library && typeof report.library.live_copy_assets === 'number' ? report.library.live_copy_assets : null,
+    refused: report.refused || [],
+    your_move: 'Sign OneDrive on the P30 Pro, then shoot one test frame in plate, proof, and voice.',
+  }
+  fs.writeFileSync(path.join(dir, 'house-camera.json'), JSON.stringify(body, null, 2))
+}
+
 function cmdKeep() {
   if (hasFlag('--execute')) {
     console.error('vis keep has no --execute. It reads the index and writes a queue.')
@@ -457,6 +476,7 @@ function cmdKeep() {
     const json = JSON.stringify(report, null, 2)
     const out = getFlag('--out')
     if (out) fs.writeFileSync(out, json)
+    writeHouseCameraStatus(report)
     console.log(json)
   } finally {
     db.close()
