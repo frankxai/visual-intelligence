@@ -172,7 +172,7 @@ test('proposer learns: a rule dismissed 5 of 5 times is muted', async () => {
   try {
     const first = suggestProposals(db, { roots, execute: true })
     assert.ok(first.proposed.length >= 5)
-    assert.ok(first.proposed.every(p => p.proposal.payload.name.startsWith('brand-assets/') || p.proposal.payload.name.startsWith('inbox/')))
+    assert.ok(first.proposed.every(p => /^(brand-assets|inbox)\/[^/]+(\/[^/]+)?$/.test(p.proposal.payload.name)))
     for (const p of listProposals(db)) decideProposal(db, { proposalId: p.proposal_id, decision: 'dismissed', execute: true })
     const stat = proposalStats(db).find(s => s.rule === 'folder-set')
     assert.equal(stat.muted, true)
