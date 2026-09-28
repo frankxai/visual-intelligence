@@ -4,6 +4,9 @@
  *
  * Read-only by default. Write-like actions return dry-run manifests unless
  * VIS_ENABLE_WRITES=1 and the tool arguments include execute: true.
+ * Rights changes additionally need VIS_ENABLE_RIGHTS=1, and publication
+ * records need VIS_ENABLE_PUBLISH=1. Both are human gates: a person turns
+ * them on for a session and off again.
  */
 
 import { createInterface } from 'readline'
@@ -46,15 +49,30 @@ import {
   searchAssets,
   traceAsset,
 } from '../core/vis-core.mjs'
+import {
+  decideProposal,
+  getLibraryAsset,
+  ingestLibrary,
+  listLibrary,
+  listProposals,
+  openLibraryDatabase,
+  proposalStats,
+  proposeForAsset,
+  resolveLibraryRoots,
+} from '../core/vis-library.mjs'
 
 const ROOT = path.resolve(process.env.VIS_ROOT || findProjectRoot(process.cwd()))
 const CONFIG = loadConfig(ROOT)
 const WRITE_ENABLED = process.env.VIS_ENABLE_WRITES === '1'
+const RIGHTS_ENABLED = process.env.VIS_ENABLE_RIGHTS === '1'
+const PUBLISH_ENABLED = process.env.VIS_ENABLE_PUBLISH === '1'
+const LIBRARY_ROOTS = resolveLibraryRoots(ROOT, CONFIG).map(r => r.path)
 const MCP_PROTOCOL_VERSION = process.env.VIS_MCP_PROTOCOL_VERSION || '2025-06-18'
 const ALLOWED_ROOTS = [
   ROOT,
   ...(process.env.VIS_ALLOWED_ROOTS || '').split(path.delimiter).filter(Boolean),
   ...(CONFIG.allowedRoots || []),
+  ...LIBRARY_ROOTS,
 ].filter(Boolean).map(resolveAllowedRoot)
 
 function withDb(fn) {
@@ -214,6 +232,10 @@ function toolBatchRenameAssets(args = {}) {
 }
 
 function toolReviewAssets(args = {}) {
+  const rightsChange = args.rights_status || args.rightsStatus || args.rights
+  if (args.execute === true && rightsChange && !RIGHTS_ENABLED) {
+    return { blocked: true, dryRun: true, reason: 'Rights changes need a person. Restart this MCP server with VIS_ENABLE_RIGHTS=1 for that session, or set rights in the library screen.' }
+  }
   const assetRefs = [
     ...(Array.isArray(args.asset_ids) ? args.asset_ids : []),
     ...(Array.isArray(args.assetIds) ? args.assetIds : []),
@@ -413,6 +435,13 @@ function toolInitCreativeVault(args = {}) {
 }
 
 function toolRecordPublication(args = {}) {
+  if (args.execute === true && !PUBLISH_ENABLED) {
+    return withDb(db => ({
+      blocked: true,
+      reason: 'Publication records need a person. Restart this MCP server with VIS_ENABLE_PUBLISH=1 for that session.',
+      dryRun: recordPublication(db, { ...args, assetId: args.asset_id || args.assetId || args.uri || args.path, execute: false }),
+    }))
+  }
   if (args.execute === true && !WRITE_ENABLED) {
     return withDb(db => ({
       blocked: true,
@@ -481,7 +510,75 @@ function toolReport() {
   return withDb(db => getSummary(db))
 }
 
+function withLibraryDb(fn) {
+  const db = openLibraryDatabase(ROOT, CONFIG)
+  try {
+    return redactOutsideAllowlist(fn(db))
+  } finally {
+    db.close()
+  }
+}
+
+const WRITES_OFF = 'VIS MCP writes are disabled. Restart this MCP server with VIS_ENABLE_WRITES=1 after human approval.'
+
+function toolLibrarySearch(args = {}) {
+  return withLibraryDb(db => listLibrary(db, {
+    query: args.query, rights: args.rights, sort: args.sort, root: args.root,
+    minRating: args.min_rating, limit: args.limit || 50, offset: args.offset || 0,
+  }))
+}
+
+function toolLibraryGetAsset(args = {}) {
+  return withLibraryDb(db => getLibraryAsset(db, args.asset_id || args.assetId || args.uri || args.path))
+}
+
+function toolLibraryListProposals(args = {}) {
+  return withLibraryDb(db => ({ proposals: listProposals(db, { status: args.status || 'open', limit: args.limit || 100 }), stats: proposalStats(db) }))
+}
+
+async function toolLibraryIngest(args = {}) {
+  const execute = args.execute === true && WRITE_ENABLED
+  const result = await ingestLibrary({ root: ROOT, limit: args.limit, execute })
+  return redactOutsideAllowlist(args.execute === true && !WRITE_ENABLED ? { blocked: true, reason: WRITES_OFF, ...result } : result)
+}
+
+function toolLibraryPropose(args = {}) {
+  const execute = args.execute === true && WRITE_ENABLED
+  return withLibraryDb(db => {
+    const result = proposeForAsset(db, {
+      assetId: args.asset_id || args.assetId || args.uri || args.path,
+      kind: args.kind,
+      payload: { rating: args.rating, name: args.name, tags: args.tags, rights: args.rights },
+      rule: args.rule || 'mcp',
+      rationale: args.rationale,
+      proposedBy: args.proposed_by || 'mcp-agent',
+      execute,
+    })
+    return args.execute === true && !WRITE_ENABLED ? { blocked: true, reason: WRITES_OFF, ...result } : result
+  })
+}
+
+function toolLibraryDecideProposal(args = {}) {
+  const execute = args.execute === true && WRITE_ENABLED
+  return withLibraryDb(db => {
+    const result = decideProposal(db, {
+      proposalId: args.proposal_id || args.proposalId,
+      decision: args.decision,
+      decidedBy: args.decided_by || 'mcp-agent',
+      allowRights: RIGHTS_ENABLED,
+      execute,
+    })
+    return args.execute === true && !WRITE_ENABLED ? { blocked: true, reason: WRITES_OFF, ...result } : result
+  })
+}
+
 const TOOL_HANDLERS = {
+  library_search: toolLibrarySearch,
+  library_get_asset: toolLibraryGetAsset,
+  library_list_proposals: toolLibraryListProposals,
+  library_ingest: toolLibraryIngest,
+  library_propose: toolLibraryPropose,
+  library_decide_proposal: toolLibraryDecideProposal,
   search_assets: toolSearchAssets,
   get_asset: toolGetAsset,
   trace_asset: toolTraceAsset,
@@ -527,6 +624,44 @@ const TOOL_HANDLERS = {
 }
 
 const TOOLS = [
+  tool('library_search', 'Search the watched library (declared roots only). Returns hash, rights, rank, ThumbHash, location count, and open proposals. Read-only.', {
+    query: stringProp('Match title, path, or tag'),
+    rights: stringProp('unknown, needs-review, owned, generated-owned, licensed, blocked'),
+    root: stringProp('Library root label, for example brand-assets or inbox'),
+    sort: stringProp('newest (default) or rank'),
+    min_rating: numberProp('Minimum rank 0-5'),
+    limit: numberProp('Page size, default 50'),
+    offset: numberProp('Page offset'),
+  }),
+  tool('library_get_asset', 'One library asset: renditions, every file location, proposals, recent events, and the publish gate. Read-only. Never returns master bytes.', {
+    asset_id: stringProp('VIS asset_id'),
+    uri: stringProp('visual://asset/{asset_id}'),
+    path: stringProp('Local path'),
+  }),
+  tool('library_list_proposals', 'Open (or all) proposals plus accept/dismiss history per rule. Read-only.', {
+    status: stringProp('open (default), accepted, dismissed, or all'),
+    limit: numberProp('Result limit'),
+  }),
+  tool('library_ingest', 'Plan, or with execute:true and VIS_ENABLE_WRITES=1, file new files under the declared library roots: hash, thumb, preview, ThumbHash, rights unknown. Never uploads or deletes.', {
+    limit: numberProp('Maximum files this run, default from config (50)'),
+    execute: booleanProp('File the planned items when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('library_propose', 'Propose rank, set, tags, or rights for an asset. A proposal changes nothing until a person accepts it. Needs VIS_ENABLE_WRITES=1 and execute:true to persist.', {
+    asset_id: stringProp('VIS asset_id'),
+    kind: stringProp('rank, set, tags, or rights'),
+    rating: numberProp('For rank: 0-5'),
+    name: stringProp('For set: set name'),
+    tags: { type: 'array', items: { type: 'string' }, description: 'For tags' },
+    rights: stringProp('For rights: owned, generated-owned, licensed, needs-review, blocked'),
+    rule: stringProp('Name of the rule that produced this proposal; used to learn from dismissals'),
+    rationale: stringProp('One line: why'),
+    execute: booleanProp('Persist when VIS_ENABLE_WRITES=1'),
+  }),
+  tool('library_decide_proposal', 'Accept or dismiss a proposal. Accept applies rank, set, or tags and never publishes. Accepting a rights proposal also needs VIS_ENABLE_RIGHTS=1.', {
+    proposal_id: stringProp('Proposal id'),
+    decision: stringProp('accepted or dismissed'),
+    execute: booleanProp('Persist when VIS_ENABLE_WRITES=1'),
+  }),
   tool('search_assets', 'Search VIS assets by query, tag, mood, category, media type, or extracted color palette.', {
     query: stringProp('Search query'),
     tag: stringProp('Tag filter'),
@@ -961,7 +1096,7 @@ function sendErr(id, code, message) {
 }
 
 const rl = createInterface({ input: process.stdin, terminal: false })
-rl.on('line', (line) => {
+rl.on('line', async (line) => {
   if (!line.trim()) return
   let msg
   try {
@@ -975,7 +1110,7 @@ rl.on('line', (line) => {
       send(id, {
         protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: { tools: {}, resources: {} },
-        serverInfo: { name: 'vis-mcp', version: '2.0.0', root: ROOT, readOnlyDefault: !WRITE_ENABLED },
+        serverInfo: { name: 'vis-mcp', version: '2.0.0', root: ROOT, readOnlyDefault: !WRITE_ENABLED, rightsEnabled: RIGHTS_ENABLED, publishEnabled: PUBLISH_ENABLED },
       })
       return
     }
@@ -991,7 +1126,7 @@ rl.on('line', (line) => {
         send(id, { content: [{ type: 'text', text: `Unknown tool: ${name}` }], isError: true })
         return
       }
-      const result = handler(toolArgs || {})
+      const result = await handler(toolArgs || {})
       send(id, { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] })
       return
     }
