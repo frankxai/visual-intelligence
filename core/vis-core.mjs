@@ -473,6 +473,8 @@ export function indexProject(options = {}) {
   try {
     if (options.reset !== false) {
       db.exec('UPDATE asset_location SET exists_now = 0')
+    }
+    if (options.replaceUsage === true) {
       db.exec('DELETE FROM asset_usage')
     }
     for (const mediaRoot of mediaRoots) {
@@ -519,6 +521,9 @@ export function indexProject(options = {}) {
 }
 
 export function scanUsageOnly(options = {}) {
+  if (options.replaceUsage !== true) {
+    throw new Error('Refusing to delete usage edges. Pass replaceUsage: true to replace them.')
+  }
   const root = path.resolve(options.root || findProjectRoot())
   const config = normalizeConfig({ ...loadConfig(root), ...(options.config || {}) })
   const db = openVisDatabase(root, config)
@@ -1713,6 +1718,27 @@ export function buildDamKeepReport(db, options = {}) {
     WHERE a.approval_status = 'approved'
     GROUP BY a.asset_id
     ORDER BY a.primary_path`).all()
+  const liveCopySplit = db.prepare(`
+    SELECT
+      SUM(CASE WHEN public_paths >= 2 THEN 1 ELSE 0 END) AS keep_public,
+      SUM(CASE WHEN public_paths < 2 THEN 1 ELSE 0 END) AS ask_ingest
+    FROM (
+      SELECT l.asset_id,
+        SUM(CASE WHEN l.absolute_path LIKE '%\\public\\%' OR l.absolute_path LIKE '%/public/%' THEN 1 ELSE 0 END) AS public_paths
+      FROM asset_location l
+      JOIN asset_version v ON v.version_id = l.version_id AND v.byte_size > 0
+      WHERE l.exists_now = 1 AND l.absolute_path IS NOT NULL
+      GROUP BY l.asset_id
+      HAVING COUNT(*) > 1
+    )`).get()
+  const usedUnapproved = db.prepare(`
+    SELECT COUNT(*) AS n FROM (
+      SELECT a.asset_id
+      FROM asset a
+      JOIN asset_usage u ON u.asset_id = a.asset_id
+      WHERE a.approval_status != 'approved'
+      GROUP BY a.asset_id
+    )`).get()
   const liveCopyCount = db.prepare(`
     SELECT COUNT(*) AS n FROM (
       SELECT l.asset_id FROM asset_location l
@@ -1780,6 +1806,14 @@ export function buildDamKeepReport(db, options = {}) {
     })
   }
   const queue = []
+  if (usedUnapproved.n > 0) {
+    queue.push({
+      id: 'used-unapproved',
+      decision: 'hold',
+      count: usedUnapproved.n,
+      reason: 'A page already uses these files and they are not approved. Name this set before any upload.',
+    })
+  }
   if (unknownRights > 0) {
     queue.push({
       id: 'rights-hold',
@@ -1833,6 +1867,9 @@ export function buildDamKeepReport(db, options = {}) {
       rights,
       locations,
       live_copy_assets: liveCopyCount.n,
+      live_copy_keep_public: Number(liveCopySplit.keep_public || 0),
+      live_copy_ask: Number(liveCopySplit.ask_ingest || 0),
+      used_unapproved: usedUnapproved.n,
     },
     approved,
     duplicates,

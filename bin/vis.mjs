@@ -236,11 +236,17 @@ function cmdReport() {
 }
 
 function cmdUsage() {
+  if (!hasFlag('--replace-usage')) {
+    console.error('vis usage refuses to delete existing page links. Pass --replace-usage to replace them.')
+    process.exitCode = 2
+    return
+  }
   const root = projectRoot()
   const usage = usageRoots()
   const result = scanUsageOnly({
     root,
     config: usage.length ? { usageRoots: usage } : null,
+    replaceUsage: true,
   })
   if (hasFlag('--json')) {
     printJson(result)
@@ -456,7 +462,10 @@ function writeHouseCameraStatus(report) {
     issue_url: 'https://github.com/frankxai/content-os/issues/4',
     inbox: 'OneDrive/Starlight Creative Vault/00_INBOX_MOBILE',
     hold: hold && typeof hold.count === 'number' ? hold.count : null,
+    used_unapproved: report.library && typeof report.library.used_unapproved === 'number' ? report.library.used_unapproved : null,
     live_copies: report.library && typeof report.library.live_copy_assets === 'number' ? report.library.live_copy_assets : null,
+    live_copy_keep_public: report.library && typeof report.library.live_copy_keep_public === 'number' ? report.library.live_copy_keep_public : null,
+    live_copy_ask: report.library && typeof report.library.live_copy_ask === 'number' ? report.library.live_copy_ask : null,
     refused: report.refused || [],
     your_move: 'Sign OneDrive on the P30 Pro, then shoot one test frame in plate, proof, and voice.',
   }
@@ -1371,7 +1380,7 @@ Commands:
   vis audit                        Alias for report summary
   vis report                       Print graph summary
   vis report --html                Generate dashboard HTML
-  vis usage --usage-root <path>     Re-scan usage edges without rehashing media
+  vis usage --usage-root <path>     Re-scan usage edges without rehashing media. Refuses to delete links unless --replace-usage is passed.
   vis dashboard                    Generate dashboard HTML and PWA shell
   vis serve-dashboard              Serve dashboard locally with media preview proxy
   vis search <query>               Search assets by path, tag, mood, category, color
