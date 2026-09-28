@@ -54,6 +54,19 @@ import {
   createMusicReleasePacket,
 } from '../core/vis-core.mjs'
 import { generateDashboard, serveDashboard } from '../web/vis-dashboard.mjs'
+import {
+  decideProposal,
+  getLibraryAsset,
+  ingestLibrary,
+  listLibrary,
+  listProposals,
+  openLibraryDatabase,
+  proposalStats,
+  proposeForAsset,
+  resolveLibraryRoots,
+  suggestProposals,
+  watchLibrary,
+} from '../core/vis-library.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const args = process.argv.slice(2)
@@ -92,6 +105,7 @@ const VALUE_FLAGS = new Set([
   '--vault-root', '--sample-limit',
   '--template', '--rename-template', '--name-template', '--start', '--pad',
   '--preset', '--target', '--intent', '--intended-use', '--output-root', '--target-root', '--derivatives-root',
+  '--kind', '--tags', '--rights', '--offset', '--sort', '--rule', '--by', '--debounce',
 ])
 
 function positionalArgs() {
@@ -1005,7 +1019,96 @@ function cmdVaultInit() {
   }
 }
 
+
+async function cmdLibrary() {
+  const sub = positionalArgs()[0] || 'help'
+  const rest = positionalArgs().slice(1)
+  const root = projectRoot()
+  const config = loadConfig(root)
+  const execute = hasFlag('--execute')
+  const limit = getFlag('--limit')
+
+  if (sub === 'ingest') {
+    const result = await ingestLibrary({ root, execute, limit: limit ? Number(limit) : undefined })
+    if (hasFlag('--json')) return printJson(result)
+    console.log(`Roots: ${result.roots.map(r => `${r.label}${r.exists ? '' : ' (missing)'}`).join(', ')}`)
+    console.log(`Considered ${result.considered}, unchanged ${result.unchanged}, planned ${result.planned}${result.truncated ? ` (capped at ${result.limit})` : ''}`)
+    if (result.dryRun) {
+      for (const item of result.plan.slice(0, 20)) console.log(`  + ${item.root}  ${item.path}`)
+      console.log(`
+${result.note}`)
+    } else {
+      console.log(`Filed ${result.filed}: ${result.newAssets} new, ${result.duplicatesOfKnownHash} duplicate hash. Rendition bytes ${result.renditionBytes}.`)
+      if (result.stopped) console.log(`Stopped: ${result.stopped}`)
+      console.log(`Receipt: ${result.receiptPath}`)
+    }
+    return
+  }
+  if (sub === 'watch') {
+    if (!execute) {
+      console.log('watch files new images as they land. Re-run with --execute to start it.')
+      return
+    }
+    const watcher = watchLibrary({
+      root,
+      debounceMs: Number(getFlag('--debounce', 2000)),
+      limit: limit ? Number(limit) : undefined,
+      log: r => console.log(r.error ? `error: ${r.error}` : `${new Date().toISOString()} filed ${r.filed} (unchanged ${r.unchanged})${r.stopped ? ` stopped: ${r.stopped}` : ''}`),
+    })
+    console.log(`Watching ${watcher.roots.map(r => r.path).join(', ')}. Ctrl+C to stop.`)
+    process.on('SIGINT', () => { watcher.close(); process.exit(0) })
+    return new Promise(() => {})
+  }
+  if (sub === 'serve') {
+    const { serveLibrary } = await import('../web/vis-library-server.mjs')
+    const server = await serveLibrary(root, { port: Number(getFlag('--port', 4323)), host: getFlag('--host', '127.0.0.1') })
+    console.log(`VIS library on ${server.url}`)
+    return new Promise(() => {})
+  }
+
+  const db = openLibraryDatabase(root, config)
+  try {
+    if (sub === 'list') {
+      const result = listLibrary(db, { rights: getFlag('--rights'), query: getFlag('--query'), sort: getFlag('--sort'), limit: limit || 50, offset: getFlag('--offset') })
+      if (hasFlag('--json')) return printJson(result)
+      console.log(`${result.total} assets`)
+      for (const a of result.assets) console.log(`${a.asset_id}  ${a.rights_status.padEnd(12)} r${a.rating ?? '-'}  x${a.location_count}  ${a.primary_path}`)
+      return
+    }
+    if (sub === 'show') return printJson(getLibraryAsset(db, rest[0] || getFlag('--asset')))
+    if (sub === 'proposals') return printJson(listProposals(db, { status: getFlag('--status') || 'open', limit }))
+    if (sub === 'stats') return printJson(proposalStats(db))
+    if (sub === 'propose') {
+      const kind = getFlag('--kind')
+      const payload = kind === 'rank' ? { rating: Number(getFlag('--rating')) }
+        : kind === 'set' ? { name: getFlag('--name') }
+        : kind === 'tags' ? { tags: String(getFlag('--tags') || '').split(',') }
+        : { rights: getFlag('--rights') }
+      return printJson(proposeForAsset(db, { assetId: rest[0] || getFlag('--asset'), kind, payload, rule: getFlag('--rule') || 'cli', proposedBy: getFlag('--by') || 'cli', execute }))
+    }
+    if (sub === 'decide') {
+      const decision = rest[1] === 'accept' ? 'accepted' : rest[1] === 'dismiss' ? 'dismissed' : rest[1]
+      // The CLI is a person at a terminal, so it may apply a rights proposal.
+      return printJson(decideProposal(db, { proposalId: rest[0], decision, decidedBy: getFlag('--by') || 'cli-operator', allowRights: true, execute }))
+    }
+    if (sub === 'suggest') return printJson(suggestProposals(db, { roots: resolveLibraryRoots(root, config), limit, execute }))
+  } finally {
+    db.close()
+  }
+  console.log(`vis library <command>
+  ingest [--execute] [--limit n]     Plan, then file new images under library.roots (dry run by default)
+  watch --execute                    Keep filing new files as they land
+  list [--rights x] [--query q]      Library assets, newest first (--sort rank)
+  show <asset>                       Renditions, files, proposals, events, publish gate
+  propose <asset> --kind rank|set|tags|rights [...] [--execute]
+  decide <proposal> accept|dismiss [--execute]
+  suggest [--execute]                Built-in proposer; muted rules are skipped
+  proposals | stats                  Open proposals; accept and dismiss history per rule
+  serve [--port 4323]                Operator screen on 127.0.0.1 (thumbs and previews only)`)
+}
+
 const commands = {
+  library: cmdLibrary,
   init: cmdInit,
   audit: cmdReport,
   scan: cmdScan,
@@ -1116,6 +1219,7 @@ Commands:
   vis cloudinary-manifest          Dry-run Cloudinary upload manifest; guarded assets excluded by default
   vis nft-report                   Dry-run NFT metadata readiness report
   vis optimize                     Dry-run oversized asset report
+  vis library <command>            Watched library: ingest, watch, list, propose, decide, serve
   vis doctor                       Check local install, graph, dashboard, MCP info
   vis mcp-info                     Print MCP install info
 

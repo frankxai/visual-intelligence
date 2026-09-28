@@ -10,6 +10,8 @@ data/vis-icon.svg
 data/vis-atlas.json
 data/visual-registry.json
 data/brand-visual-dna.json
+data/renditions/
+data/receipts/
 *.log
 .env
 .DS_Store
