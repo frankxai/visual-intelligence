@@ -31,3 +31,5 @@ link-checker-report.txt
 
 # Asset OS Phase-0 raw data (local paths; public repo)
 data/phase0/
+.dev.vars
+.wrangler/
