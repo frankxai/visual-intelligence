@@ -615,9 +615,10 @@ ORDER BY f.seen_at DESC LIMIT ?`).all(rule, Math.min(Number(options.limit || 50)
 function setNameFor(filePath, rootLabel, roots) {
   const root = roots.find(r => r.label === rootLabel)
   const rel = root ? path.relative(root.path, filePath) : null
-  const first = rel ? rel.split(path.sep)[0] : null
-  if (!first || first === path.basename(filePath)) return null
-  return `${rootLabel}/${first}`
+  // Two folders deep: "animelegends/character-lab-2026-09-01" separates a shoot from its brand.
+  const dirs = rel ? rel.split(path.sep).slice(0, -1) : []
+  if (!dirs.length) return null
+  return `${rootLabel}/${dirs.slice(0, 2).join('/')}`
 }
 
 // ---------------------------------------------------------------------------
