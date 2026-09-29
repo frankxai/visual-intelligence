@@ -226,11 +226,17 @@ function cmdReport() {
 }
 
 function cmdUsage() {
+  if (!hasFlag('--replace-usage')) {
+    console.error('vis usage refuses to delete existing page links. Pass --replace-usage to replace them.')
+    process.exitCode = 2
+    return
+  }
   const root = projectRoot()
   const usage = usageRoots()
   const result = scanUsageOnly({
     root,
     config: usage.length ? { usageRoots: usage } : null,
+    replaceUsage: true,
   })
   if (hasFlag('--json')) {
     printJson(result)
@@ -434,6 +440,29 @@ function cmdTruth() {
   }
 }
 
+function writeHouseCameraStatus(report) {
+  const home = process.env.USERPROFILE || process.env.HOME
+  if (!home) return
+  const dir = path.join(home, '.starlight', 'observatory', 'sources')
+  fs.mkdirSync(dir, { recursive: true })
+  const hold = (report.queue || []).find((item) => item.id === 'rights-hold')
+  const library = report.library || {}
+  const body = {
+    schema: 'observatory.house-camera.v1',
+    generated_at: report.generated_at,
+    issue_url: 'https://github.com/frankxai/content-os/issues/4',
+    inbox: 'OneDrive/Starlight Creative Vault/00_INBOX_MOBILE',
+    hold: hold && typeof hold.count === 'number' ? hold.count : null,
+    used_unapproved: typeof library.used_unapproved === 'number' ? library.used_unapproved : null,
+    live_copies: typeof library.live_copy_assets === 'number' ? library.live_copy_assets : null,
+    live_copy_keep_public: typeof library.live_copy_keep_public === 'number' ? library.live_copy_keep_public : null,
+    live_copy_ask: typeof library.live_copy_ask === 'number' ? library.live_copy_ask : null,
+    refused: report.refused || [],
+    your_move: 'Sign OneDrive on the P30 Pro, then shoot one test frame in plate, proof, and voice.',
+  }
+  fs.writeFileSync(path.join(dir, 'house-camera.json'), JSON.stringify(body, null, 2))
+}
+
 function cmdKeep() {
   if (hasFlag('--execute')) {
     console.error('vis keep has no --execute. It reads the index and writes a queue.')
@@ -447,6 +476,7 @@ function cmdKeep() {
     const json = JSON.stringify(report, null, 2)
     const out = getFlag('--out')
     if (out) fs.writeFileSync(out, json)
+    writeHouseCameraStatus(report)
     console.log(json)
   } finally {
     db.close()
@@ -1139,7 +1169,7 @@ Commands:
   vis audit                        Alias for report summary
   vis report                       Print graph summary
   vis report --html                Generate dashboard HTML
-  vis usage --usage-root <path>     Re-scan usage edges without rehashing media
+  vis usage --usage-root <path>     Re-scan usage edges without rehashing media. Refuses to delete links unless --replace-usage is passed.
   vis dashboard                    Generate dashboard HTML and PWA shell
   vis serve-dashboard              Serve dashboard locally with media preview proxy
   vis search <query>               Search assets by path, tag, mood, category, color

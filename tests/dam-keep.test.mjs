@@ -33,6 +33,13 @@ test('dam keep proposes a canonical file and refuses mutation', () => {
     insertLocation.run('l-b', 'real-b', 'vr-b', 'C:/repos/site/.worktrees/old/hero.jpg', 'hero.jpg', now)
     insertLocation.run('l-web', 'ready', 'vr-ready', 'C:/repos/starlight-intelligence-web/public/assets/orb.png', 'orb.png', now)
     insertLocation.run('l-academy', 'ready', 'vr-ready', 'C:/repos/starlight-intelligence-academy/public/assets/orb-renamed.png', 'orb-renamed.png', now)
+    insertAsset.run('ingest', 'ingest', 'repos/site/inbox/frame.jpg', 'ghi', null, 'unknown', 'candidate', now, now)
+    insertVersion.run('vr-ingest', 'ingest', 'ghi789', 400, now)
+    insertLocation.run('l-ingest-a', 'ingest', 'vr-ingest', 'C:/repos/site/inbox/frame.jpg', 'frame.jpg', now)
+    insertLocation.run('l-ingest-b', 'ingest', 'vr-ingest', 'C:/repos/site/mirror/frame.jpg', 'frame.jpg', now)
+    db.prepare(`
+      INSERT INTO asset_usage (usage_id, asset_id, version_id, source_file, route, usage_context, reference_text, detected_at)
+      VALUES ('u-real', 'real-a', 'vr-a', 'site/pages/home.tsx', '/home', 'page', '/images/hero.jpg', ?)`).run(now)
 
     const report = buildDamKeepReport(db, { now, duplicateLimit: 8 })
     assert.deepEqual(report.refused, ['upload', 'delete', 'approve', 'publish'])
@@ -49,6 +56,12 @@ test('dam keep proposes a canonical file and refuses mutation', () => {
     assert.equal(copy.canonical, 'C:/repos/starlight-intelligence-web/public/assets/orb.png')
     assert.equal(copy.may_delete, false)
     assert.equal(report.queue.some(item => item.id === 'approved-unused' && item.decision === 'hold'), true)
+    assert.equal(report.library.live_copy_assets, 2)
+    assert.equal(report.library.live_copy_keep_public, 1)
+    assert.equal(report.library.live_copy_ask, 1)
+    assert.equal(report.library.used_unapproved, 1)
+    assert.equal(report.queue[0].id, 'used-unapproved')
+    assert.equal(report.queue[0].count, 1)
   } finally {
     db.close()
     fs.rmSync(root, { recursive: true, force: true })
