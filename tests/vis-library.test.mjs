@@ -259,3 +259,15 @@ test('a closed watcher never starts another run', async () => {
   await new Promise(resolve => setTimeout(resolve, 200))
   assert.equal(runs.length, 0)
 })
+
+test('a root inside a folder named like a private pattern (tmp, build) is still walked', async () => {
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-private-ancestor-'))
+  const project = path.join(base, 'project')
+  const assets = path.join(base, 'tmp', 'build', 'assets')
+  fs.mkdirSync(project, { recursive: true })
+  await png(path.join(assets, 'shoot', 'a.png'))
+  await png(path.join(assets, 'node_modules', 'hidden.png'), { color: { r: 1, g: 1, b: 1 } })
+  fs.writeFileSync(path.join(project, 'vis.config.json'), JSON.stringify({ library: { roots: [{ label: 'a', path: assets }], minFreeDiskGB: 0 } }))
+  const plan = await ingestLibrary({ root: project })
+  assert.deepEqual(plan.plan.map(p => path.basename(p.path)), ['a.png'], 'ancestors do not hide the root; private folders inside it stay skipped')
+})

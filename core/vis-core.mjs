@@ -5373,12 +5373,14 @@ function toPublicPath(root, filePath) {
   return null
 }
 
+// Match the directory's own name only. Walks check every directory as they enter it,
+// so ancestors *above* the scan root (e.g. /tmp, a folder named build) never hide it.
 function shouldSkipDir(name, fullPath, config) {
-  const normalized = slash(fullPath).toLowerCase()
+  const lower = name.toLowerCase()
   return (config.privateDirPatterns || []).some(pattern => {
     const p = String(pattern).toLowerCase()
-    if (p.endsWith('*')) return name.toLowerCase().startsWith(p.slice(0, -1))
-    return name.toLowerCase() === p || normalized.includes(`/${p}/`) || normalized.endsWith(`/${p}`)
+    if (p.endsWith('*')) return lower.startsWith(p.slice(0, -1))
+    return lower === p
   })
 }
 
