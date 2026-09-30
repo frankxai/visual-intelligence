@@ -31,6 +31,17 @@ test('routes asset destinations based on brand, category, and media role', () =>
   assert.equal(route1.destinations.includes('ipfs-nft'), false)
   assert.ok(route1.destinations.includes('cloudflare-r2'))
 
+  const nftCategoryUnknownRights = {
+    asset_id: 'arcanea-2',
+    primary_path: 'public/images/guardians/lyssa.webp',
+    category: 'nft-collection',
+    media_type: 'image',
+    tags: ['arcanea', 'nft-mint-ready'],
+    approval_status: 'candidate',
+    rights_status: 'unknown',
+  }
+  assert.ok(!routeAssetDestination(nftCategoryUnknownRights).destinations.includes('ipfs-nft'), 'a category name is not approval')
+
   const musicAsset = {
     asset_id: 'music-1',
     primary_path: 'tracks/song-canvas.mp4',

@@ -57,7 +57,8 @@ export function routeAssetDestination(asset) {
     }
   }
   const explicitNftIntent = asset.workflow === 'nft-mint' || (asset.tags || []).includes('nft-mint-ready') || asset.category === 'nft-collection' || asset.target_storage === 'ipfs-nft'
-  const isNft = explicitNftIntent && (asset.approval_status === 'approved' || asset.category?.includes('nft'))
+  // NFT routing needs explicit intent AND a publishable record; a category name is not approval.
+  const isNft = explicitNftIntent && asset.approval_status === 'approved' && ['owned', 'generated-owned', 'licensed'].includes(asset.rights_status)
   const isMusic = asset.workflow === 'music-release' || asset.media_type === 'audio' || ['cover-art', 'music-canvas', 'music-stem'].includes(asset.media_role) || asset.category === 'music-releases'
   const isWebHero = (asset.tags || []).includes('hero') || asset.workflow === 'website' || (asset.usage_count && Number(asset.usage_count) > 0)
   const isVideo = asset.media_type === 'video'
