@@ -8,6 +8,7 @@
  *        Serves the stored rendition; if none exists and an IMAGES binding is
  *        configured, resizes the master (up to 20 MB) at the edge.
  *   PUT  /o/<key>     Bearer ADMIN_TOKEN. Stores masters/ or renditions/ objects.
+ *                     Never overwrites them (409), and a master key must name its own hash.
  *   GET  /o/<key>     Bearer ADMIN_TOKEN. Streams one object (masters included).
  *   HEAD /o/<key>     Bearer ADMIN_TOKEN. Existence and checksum.
  *   DELETE /o/test/…  Bearer ADMIN_TOKEN. Only keys under test/ can be deleted.
@@ -66,6 +67,9 @@ async function objectRoute(request, key, env) {
   if (request.method === 'PUT') {
     const sha = request.headers.get('x-content-sha256')
     if (!sha || !SHA.test(sha)) return error(400, 'x-content-sha256 header required')
+    if (key.startsWith('masters/') && key !== masterKey(sha)) return error(400, 'master key must match its sha256')
+    // Content-addressed objects are immutable: replacing one would be a silent delete.
+    if (!key.startsWith('test/') && (await env.MEDIA.head(key))) return error(409, 'object exists and is immutable')
     const put = await env.MEDIA.put(key, request.body, {
       sha256: sha,
       httpMetadata: { contentType: request.headers.get('content-type') || 'application/octet-stream' },

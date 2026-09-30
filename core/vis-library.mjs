@@ -123,7 +123,8 @@ export function isInsideRoot(filePath, rootPath) {
 
 function isExcluded(filePath, libRoot) {
   const segments = path.relative(libRoot.path, filePath).split(path.sep)
-  return libRoot.exclude.some(ex => segments.includes(ex))
+  const lower = segments.map(seg => seg.toLowerCase())
+  return libRoot.exclude.some(ex => lower.includes(String(ex).toLowerCase()))
 }
 
 /** Walk one declared root. Excluded directories are pruned before descent. */
@@ -160,8 +161,9 @@ export async function ingestLibrary(options = {}) {
     let truncated = false
     outer: for (const libRoot of roots) {
       for (const file of walkLibraryRoot(libRoot, config)) {
+        let stats
+        try { stats = fs.statSync(file) } catch { continue }
         considered.push(file)
-        const stats = fs.statSync(file)
         const state = db.prepare('SELECT byte_size, mtime_ms FROM library_file_state WHERE absolute_path = ?').get(file)
         if (state && state.byte_size === stats.size && state.mtime_ms === Math.trunc(stats.mtimeMs)) {
           unchanged++
@@ -175,9 +177,13 @@ export async function ingestLibrary(options = {}) {
       }
     }
 
+    const missing = truncated ? [] : findMissingFiles(db, roots, considered)
+    if (execute) pruneMissingFiles(db, missing)
+
     const summary = {
       runId,
       dryRun: !execute,
+      missing: missing.length,
       roots: roots.map(({ label, path: p, exclude, exists }) => ({ label, path: p, exclude, exists })),
       considered: considered.length,
       unchanged,
@@ -207,10 +213,16 @@ export async function ingestLibrary(options = {}) {
         stopped = `new rendition bytes reached ${renditionBytes} (cap ${maxBytes})`
         break
       }
-      const row = await ingestOne(db, { root, config, lib, item, renditionsDir, runId })
-      renditionBytes += row.renditionBytes
-      rows.push(row)
+      try {
+        const row = await ingestOne(db, { root, config, lib, item, renditionsDir, runId })
+        renditionBytes += row.renditionBytes
+        rows.push(row)
+      } catch (error) {
+        recordFailedFile(db, item)
+        rows.push({ path: item.file, root: item.root.label, status: 'failed', error: error.message })
+      }
     }
+    const filedRows = rows.filter(r => r.status !== 'failed')
 
     const receipt = {
       schema: 'vis.library-ingest-receipt.v1',
@@ -218,9 +230,10 @@ export async function ingestLibrary(options = {}) {
       startedAt,
       completedAt: nowIso(),
       stopped,
-      filed: rows.length,
-      newAssets: rows.filter(r => r.newAsset).length,
-      duplicatesOfKnownHash: rows.filter(r => !r.newAsset).length,
+      filed: filedRows.length,
+      failed: rows.length - filedRows.length,
+      newAssets: filedRows.filter(r => r.newAsset).length,
+      duplicatesOfKnownHash: filedRows.filter(r => !r.newAsset).length,
       renditionBytes,
       uploaded: false,
       visionModel: false,
@@ -235,8 +248,39 @@ export async function ingestLibrary(options = {}) {
   }
 }
 
+function recordFailedFile(db, item) {
+  // Empty sha/asset marks a file that could not be read. Unchanged size and mtime skip it next run.
+  db.prepare(`
+INSERT INTO library_file_state (absolute_path, root_label, byte_size, mtime_ms, sha256, asset_id, seen_at)
+VALUES (?, ?, ?, ?, '', '', ?)
+ON CONFLICT(absolute_path) DO UPDATE SET byte_size = excluded.byte_size, mtime_ms = excluded.mtime_ms,
+  sha256 = '', asset_id = '', seen_at = excluded.seen_at`).run(item.file, item.root.label, item.byteSize, item.mtimeMs, nowIso())
+}
+
+function findMissingFiles(db, roots, considered) {
+  const seen = new Set(considered)
+  const missing = []
+  for (const r of roots.filter(r => r.exists)) {
+    const rows = db.prepare('SELECT absolute_path, asset_id FROM library_file_state WHERE root_label = ?').all(r.label)
+    for (const row of rows) {
+      if (!seen.has(row.absolute_path) && !fs.existsSync(row.absolute_path)) missing.push(row)
+    }
+  }
+  return missing
+}
+
+function pruneMissingFiles(db, missing) {
+  for (const row of missing) {
+    db.prepare('DELETE FROM library_file_state WHERE absolute_path = ?').run(row.absolute_path)
+    if (row.asset_id) {
+      recordProvenance(db, { assetId: row.asset_id, eventType: 'library-file-missing', actor: 'vis-library', source: row.absolute_path, payload: {} })
+    }
+  }
+}
+
 async function ingestOne(db, { root, config, lib, item, renditionsDir, runId }) {
   const entry = buildAssetEntry(item.root.path, item.root.path, item.file, config)
+  if (!entry) throw new Error('not a supported media file')
   const known = db.prepare('SELECT asset_id FROM asset WHERE asset_id = ?').get(entry.assetId)
   const renditions = RENDERABLE.has(entry.extension) && !hasRenditions(db, entry.sha256)
     ? await renderLadder(item.file, entry.sha256, renditionsDir, lib)
@@ -330,31 +374,44 @@ export function watchLibrary(options = {}) {
   let timer = null
   let running = false
   let pending = false
+  let closed = false
 
   const run = async () => {
+    if (closed) return
     if (running) { pending = true; return }
     running = true
     try {
       const result = await ingestLibrary({ ...options, root, execute: true })
       log(result)
+      // A capped run leaves files behind; keep going without waiting for a new event.
+      if (result.truncated && !result.stopped) pending = true
     } catch (error) {
       log({ error: error.message })
     } finally {
       running = false
-      if (pending) { pending = false; schedule() }
+      if (pending && !closed) { pending = false; schedule() }
     }
   }
-  const schedule = () => { clearTimeout(timer); timer = setTimeout(run, debounceMs) }
-  const watchers = roots.map(r => fs.watch(r.path, { recursive: true }, (_event, name) => {
-    if (!name) return schedule()
-    const full = path.join(r.path, String(name))
-    if (isExcluded(full, r)) return
-    schedule()
-  }))
+  const schedule = () => {
+    if (closed) return
+    clearTimeout(timer)
+    timer = setTimeout(run, debounceMs)
+  }
+  const watchers = roots.map(r => {
+    const w = fs.watch(r.path, { recursive: true }, (_event, name) => {
+      if (!name) return schedule()
+      const full = path.join(r.path, String(name))
+      if (isExcluded(full, r)) return
+      schedule()
+    })
+    w.on('error', error => log({ error: `watch ${r.label}: ${error.message}` }))
+    return w
+  })
   if (options.initial !== false) schedule()
   return {
     roots,
     close() {
+      closed = true
       clearTimeout(timer)
       for (const w of watchers) w.close()
     },
@@ -554,6 +611,17 @@ ON CONFLICT(collection_id) DO UPDATE SET updated_at = excluded.updated_at`).run(
   }
 }
 
+/** Direct rank change by a person (the operator screen). Records an event. */
+export function setRating(db, { assetId, rating, decidedBy = 'person' }) {
+  if (!Number.isInteger(rating) || rating < 0 || rating > 5) throw new Error('rating must be an integer 0-5')
+  const ts = nowIso()
+  db.prepare(`
+INSERT INTO asset_annotation (asset_id, rating, updated_by, updated_at) VALUES (?, ?, ?, ?)
+ON CONFLICT(asset_id) DO UPDATE SET rating = excluded.rating, updated_by = excluded.updated_by, updated_at = excluded.updated_at`).run(assetId, rating, decidedBy, ts)
+  recordProvenance(db, { assetId, eventType: 'rank-set', actor: decidedBy, source: 'vis-library', payload: { rating }, eventId: stableId('prov', `${assetId}:rank-set:${rating}:${ts}`) })
+  return rating
+}
+
 /** Direct rights change by a person. Callers outside the operator screen must gate this. */
 export function setRights(db, { assetId, rights, decidedBy = 'person', notes = null, ts = nowIso(), inTransaction = false }) {
   if (!RIGHTS_VALUES.has(rights)) throw new Error(`Unknown rights value: ${rights}`)
@@ -598,7 +666,7 @@ export function suggestProposals(db, options = {}) {
   if (stats.get(`${rule}:set`)?.muted) return { rule, muted: true, proposed: [] }
   const rows = db.prepare(`
 SELECT f.asset_id, f.absolute_path, f.root_label FROM library_file_state f
-WHERE NOT EXISTS (SELECT 1 FROM asset_proposal p WHERE p.asset_id = f.asset_id AND p.rule = ?)
+WHERE f.asset_id <> '' AND NOT EXISTS (SELECT 1 FROM asset_proposal p WHERE p.asset_id = f.asset_id AND p.rule = ?)
 ORDER BY f.seen_at DESC LIMIT ?`).all(rule, Math.min(Number(options.limit || 50), 500))
   const proposed = []
   const seen = new Set()

@@ -81,8 +81,17 @@ const ALLOWED_ROOTS = [
   ROOT,
   ...(process.env.VIS_ALLOWED_ROOTS || '').split(path.delimiter).filter(Boolean),
   ...(CONFIG.allowedRoots || []),
-  ...LIBRARY_ROOTS,
 ].filter(Boolean).map(resolveAllowedRoot)
+// Library roots may be shown in results, but they are not rename or write roots.
+const READABLE_ROOTS = [...ALLOWED_ROOTS, ...LIBRARY_ROOTS.map(resolveAllowedRoot)]
+
+const RIGHTS_OFF = 'Rights changes need a person. Restart this MCP server with VIS_ENABLE_RIGHTS=1 for that session, or set rights in the library screen.'
+
+// One gate for every tool that can forward a rights change.
+function rightsChangeBlocked(args = {}) {
+  const change = args.rights_status || args.rightsStatus || args.rights
+  return Boolean(args.execute === true && change && !RIGHTS_ENABLED)
+}
 
 function withDb(fn) {
   const db = openVisDatabase(ROOT, CONFIG)
@@ -241,10 +250,7 @@ function toolBatchRenameAssets(args = {}) {
 }
 
 function toolReviewAssets(args = {}) {
-  const rightsChange = args.rights_status || args.rightsStatus || args.rights
-  if (args.execute === true && rightsChange && !RIGHTS_ENABLED) {
-    return { blocked: true, dryRun: true, reason: 'Rights changes need a person. Restart this MCP server with VIS_ENABLE_RIGHTS=1 for that session, or set rights in the library screen.' }
-  }
+  if (rightsChangeBlocked(args)) return { blocked: true, dryRun: true, reason: RIGHTS_OFF }
   const assetRefs = [
     ...(Array.isArray(args.asset_ids) ? args.asset_ids : []),
     ...(Array.isArray(args.assetIds) ? args.assetIds : []),
@@ -397,6 +403,13 @@ function toolRunAssetActionRecipe(args = {}) {
     args.uri,
     args.path,
   ].filter(Boolean)
+  if (rightsChangeBlocked(args)) {
+    return withDb(db => ({
+      blocked: true,
+      reason: RIGHTS_OFF,
+      dryRun: runAssetActionRecipe(db, { ...args, assetRefs, execute: false }),
+    }))
+  }
   if (args.execute === true && !WRITE_ENABLED) {
     return withDb(db => ({
       blocked: true,
@@ -1251,7 +1264,7 @@ function isAllowedPath(value) {
   if (!value || typeof value !== 'string') return true
   if (!path.isAbsolute(value)) return true
   const normalized = normalizePathForAllowlist(value)
-  return ALLOWED_ROOTS.some(root => normalized === root || normalized.startsWith(root + path.sep))
+  return READABLE_ROOTS.some(root => normalized === root || normalized.startsWith(root + path.sep))
 }
 
 function resolveAllowedRoot(value) {

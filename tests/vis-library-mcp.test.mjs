@@ -90,6 +90,11 @@ test('MCP: read tools are open, writes need the flag, rights and publish need a 
 
   const review = await writer.call('review_assets', { asset_id: assetId, rights_status: 'owned', execute: true })
   assert.equal(review.blocked, true, 'review_assets cannot set rights without VIS_ENABLE_RIGHTS')
+  const recipe = await writer.call('run_asset_action_recipe', { recipe: 'designer-inbox', asset_ids: [assetId], rights_status: 'owned', execute: true })
+  assert.equal(recipe.blocked, true, 'recipes cannot set rights without VIS_ENABLE_RIGHTS')
+  assert.equal((await writer.call('library_get_asset', { asset_id: assetId })).rights_status, 'unknown')
+  const rename = await writer.call('batch_rename_assets', { asset_ids: [assetId], template: 'renamed-{index}', execute: true })
+  assert.ok(!fs.existsSync(path.join(assets, 'shoot', 'renamed-1.png')), 'library roots are not rename roots')
 
   const publish = await writer.call('record_publication', { asset_id: assetId, platform: 'website', url: 'https://example.com', execute: true })
   assert.equal(publish.blocked, true, 'publish without VIS_ENABLE_PUBLISH fails')

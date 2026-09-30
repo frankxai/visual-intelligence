@@ -11,6 +11,7 @@ import fs from 'fs'
 import http from 'http'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { pipeline } from 'stream/promises'
 import { expandPathTokens, findProjectRoot, loadConfig } from '../core/vis-core.mjs'
 import {
   decideProposal,
@@ -20,8 +21,8 @@ import {
   listProposals,
   openLibraryDatabase,
   proposalStats,
-  proposeForAsset,
   renditionPath,
+  setRating,
   setRights,
 } from '../core/vis-library.mjs'
 
@@ -43,6 +44,7 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
 
       if (req.method === 'GET' && url.pathname === '/') return send(res, 200, renderHtml(), 'text/html; charset=utf-8')
       if (req.method === 'GET' && url.pathname === '/vendor/thumbhash.js') {
+        if (!fs.existsSync(THUMBHASH_JS)) return json(res, 404, { error: 'thumbhash not installed' })
         return sendFile(res, THUMBHASH_JS, 'text/javascript; charset=utf-8', 'public, max-age=86400')
       }
       if (req.method === 'GET' && parts[0] === 'r' && parts.length === 3) {
@@ -74,9 +76,8 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
           return json(res, 200, decideProposal(db, { proposalId: parts[2], decision: body.decision, decidedBy: operator, allowRights: true, execute: true }))
         }
         if (parts[0] === 'api' && parts[1] === 'asset' && parts[3] === 'rank') {
-          const opened = proposeForAsset(db, { assetId: parts[2], kind: 'rank', rule: 'operator', payload: { rating: Number(body.rating) }, proposedBy: operator, execute: true })
-          if (opened.status === 'open') decideProposal(db, { proposalId: opened.proposal.proposalId, decision: 'accepted', decidedBy: operator, execute: true })
-          return json(res, 200, { ok: true, rating: Number(body.rating) })
+          const rating = setRating(db, { assetId: parts[2], rating: Number(body.rating), decidedBy: operator })
+          return json(res, 200, { ok: true, rating })
         }
         if (parts[0] === 'api' && parts[1] === 'asset' && parts[3] === 'rights') {
           if (!RIGHTS.includes(body.rights)) return json(res, 400, { error: `rights must be one of ${RIGHTS.join(', ')}` })
@@ -149,8 +150,12 @@ function send(res, status, body, type) {
 }
 
 function sendFile(res, file, type, cache) {
-  res.writeHead(200, { 'content-type': type, 'cache-control': cache, 'x-content-type-options': 'nosniff' })
-  fs.createReadStream(file).pipe(res)
+  const stream = fs.createReadStream(file)
+  stream.once('open', () => res.writeHead(200, { 'content-type': type, 'cache-control': cache, 'x-content-type-options': 'nosniff' }))
+  pipeline(stream, res).catch(() => {
+    if (!res.headersSent) json(res, 500, { error: 'could not read file' })
+    else res.destroy()
+  })
 }
 
 function renderHtml() {
@@ -243,14 +248,15 @@ ul.events{list-style:none;padding:0;margin:0;font-size:12px;color:var(--soft)}
 <aside id="panel" hidden aria-modal="true" role="dialog" aria-labelledby="panel-title"></aside>
 <div id="toast" role="status" aria-live="polite"></div>
 <script type="module">
-import { thumbHashToDataURL } from '/vendor/thumbhash.js'
+let thumbHashToDataURL = null
+try { ({ thumbHashToDataURL } = await import('/vendor/thumbhash.js')) } catch {}
 const $ = s => document.querySelector(s)
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 const rightsClass = r => ['owned','generated-owned','licensed'].includes(r) ? 'ok' : r === 'blocked' ? 'stop' : ''
 let assets = [], lastFocus = null
 const placeholders = new Map()
 function placeholder(a){
-  if (!a.thumbhash) return ''
+  if (!a.thumbhash || !thumbHashToDataURL) return ''
   if (!placeholders.has(a.asset_id)) {
     try { placeholders.set(a.asset_id, thumbHashToDataURL(Uint8Array.from(atob(a.thumbhash), c => c.charCodeAt(0)))) } catch { placeholders.set(a.asset_id, '') }
   }

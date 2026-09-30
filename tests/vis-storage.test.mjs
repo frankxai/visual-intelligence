@@ -109,3 +109,27 @@ test('local adapter keeps the same key layout', async () => {
   const back = await local.getMaster(sha, path.join(dir, 'back.bin'))
   assert.equal(sha256File(back), sha)
 })
+
+test('masters are immutable and must be stored under their own hash', async () => {
+  const { storage, master, sha, fetchImpl, base, env } = setup()
+  await storage.putMaster(sha, master)
+  const again = await storage.putMaster(sha, master)
+  assert.equal(again.existing, true, 'second put is a no-op, not an overwrite')
+  const auth = { authorization: `Bearer ${env.ADMIN_TOKEN}`, 'x-content-sha256': sha }
+  const other = 'a'.repeat(64)
+  const wrongKey = await fetchImpl(`${base}/o/${masterKey(other)}`, { method: 'PUT', headers: auth, body: 'x' })
+  assert.equal(wrongKey.status, 400)
+  const overwrite = await fetchImpl(`${base}/o/${masterKey(sha)}`, { method: 'PUT', headers: auth, body: fs.readFileSync(master) })
+  assert.equal(overwrite.status, 409)
+})
+
+test('a corrupted master is never written to the destination', async () => {
+  const { master, sha, dir } = setup()
+  const local = createLocalStorage({ dir: path.join(dir, 'store') })
+  await local.putMaster(sha, master)
+  fs.writeFileSync(path.join(dir, 'store', ...masterKey(sha).split('/')), 'tampered')
+  const dest = path.join(dir, 'out', 'master.png')
+  await assert.rejects(local.getMaster(sha, dest), /do not match/)
+  assert.equal(fs.existsSync(dest), false)
+  assert.deepEqual(fs.readdirSync(path.join(dir, 'out')), [], 'no partial file left behind')
+})

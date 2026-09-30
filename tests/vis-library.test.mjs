@@ -17,6 +17,7 @@ import {
   resolveLibraryRoots,
   setRights,
   suggestProposals,
+  watchLibrary,
 } from '../core/vis-library.mjs'
 import { loadConfig } from '../core/vis-core.mjs'
 
@@ -218,4 +219,43 @@ test('setRights rejects unknown values', async () => {
     const [asset] = listLibrary(db).assets
     assert.throws(() => setRights(db, { assetId: asset.asset_id, rights: 'public-domain-probably' }), /Unknown rights value/)
   } finally { db.close() }
+})
+
+test('an unreadable file is recorded as failed and does not stop the run', async () => {
+  const fx = await fixture()
+  fs.writeFileSync(path.join(fx.assets, 'aaa-broken.png'), Buffer.from('not really a png'))
+  const first = await ingestLibrary({ root: fx.project, execute: true })
+  assert.equal(first.failed, 1)
+  assert.equal(first.filed, 4)
+  assert.ok(first.rows.some(r => r.status === 'failed' && r.path.endsWith('aaa-broken.png')))
+  const second = await ingestLibrary({ root: fx.project, execute: true })
+  assert.equal(second.filed + second.failed, 0, 'an unchanged broken file is skipped, not retried every run')
+  const db = openLibraryDatabase(fx.project, loadConfig(fx.project))
+  try {
+    const roots = resolveLibraryRoots(fx.project, loadConfig(fx.project))
+    assert.doesNotThrow(() => suggestProposals(db, { roots, execute: true }), 'the proposer skips failed rows')
+  } finally { db.close() }
+})
+
+test('files deleted from a root are pruned from the index after a full walk', async () => {
+  const fx = await fixture()
+  await ingestLibrary({ root: fx.project, execute: true })
+  fs.rmSync(path.join(fx.assets, 'gencreator', 'hero-copy.png'))
+  const run = await ingestLibrary({ root: fx.project, execute: true })
+  assert.equal(run.missing, 1)
+  const db = openLibraryDatabase(fx.project, loadConfig(fx.project))
+  try {
+    const hero = listLibrary(db).assets.find(a => a.title === 'hero' || a.title === 'hero-copy')
+    assert.equal(hero.location_count, 1)
+    assert.ok(getLibraryAsset(db, hero.asset_id).events.some(e => e.event_type === 'library-file-missing'))
+  } finally { db.close() }
+})
+
+test('a closed watcher never starts another run', async () => {
+  const fx = await fixture()
+  const runs = []
+  const w = watchLibrary({ root: fx.project, debounceMs: 30, log: r => runs.push(r) })
+  w.close()
+  await new Promise(resolve => setTimeout(resolve, 200))
+  assert.equal(runs.length, 0)
 })

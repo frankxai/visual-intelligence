@@ -1314,7 +1314,8 @@ async function cmdLibrary() {
       console.log(`
 ${result.note}`)
     } else {
-      console.log(`Filed ${result.filed}: ${result.newAssets} new, ${result.duplicatesOfKnownHash} duplicate hash. Rendition bytes ${result.renditionBytes}.`)
+      console.log(`Filed ${result.filed}: ${result.newAssets} new, ${result.duplicatesOfKnownHash} duplicate hash, ${result.failed} failed. Rendition bytes ${result.renditionBytes}.`)
+      if (result.missing) console.log(`Pruned ${result.missing} index rows for files that no longer exist.`)
       if (result.stopped) console.log(`Stopped: ${result.stopped}`)
       console.log(`Receipt: ${result.receiptPath}`)
     }

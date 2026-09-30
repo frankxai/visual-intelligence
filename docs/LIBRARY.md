@@ -2,7 +2,7 @@
 
 A local library over folders you declare once. It files new images, makes a thumb and a preview, and keeps rights at `unknown` until a person changes them. Agents can search it and propose changes. A person accepts proposals, sets rights, and publishes.
 
-Plan and gates: `C:\Users\frank\.agent-harness\plans\library-and-storage-2026-09\`.
+Plan and gates: the operator's `library-and-storage-2026-09` plan pack (kept outside this public repo). Human gates are tracked in issue #41.
 
 ## Declare the roots
 
@@ -68,12 +68,12 @@ Register it once per assistant, read-only:
 
 ```bash
 # Claude Code
-claude mcp add vis --scope user -e VIS_ROOT=C:/Users/frank/visual-intelligence -- node C:/Users/frank/visual-intelligence/mcp/vis-mcp-server.mjs
+claude mcp add vis --scope user -e VIS_ROOT=<repo> -- node <repo>/mcp/vis-mcp-server.mjs
 # Codex (~/.codex/config.toml)
 # [mcp_servers.vis]
 # command = "node"
-# args = ["C:/Users/frank/visual-intelligence/mcp/vis-mcp-server.mjs"]
-# env = { VIS_ROOT = "C:/Users/frank/visual-intelligence" }
+# args = ["<repo>/mcp/vis-mcp-server.mjs"]
+# env = { VIS_ROOT = "<repo>" }
 ```
 
 Grok uses the same command and environment in `~/.grok/config.toml`. ChatGPT needs a hosted HTTPS MCP with OAuth. That is a later step, and this server is not that host.

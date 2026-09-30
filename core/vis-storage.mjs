@@ -14,6 +14,7 @@ import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 import { Readable } from 'stream'
+import { pipeline } from 'stream/promises'
 
 const SHA = /^[a-f0-9]{64}$/
 const KINDS = new Set(['thumb', 'preview'])
@@ -35,6 +36,20 @@ export function sha256File(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')
 }
 
+// Write to a temp file, verify the hash, then rename. A mismatch never leaves a file at destPath.
+async function writeVerified(destPath, sha, write) {
+  fs.mkdirSync(path.dirname(destPath), { recursive: true })
+  const tmp = `${destPath}.partial-${process.pid}-${Date.now()}`
+  try {
+    await write(tmp)
+    if (sha256File(tmp) !== sha) throw new Error('master bytes do not match sha256')
+    fs.renameSync(tmp, destPath)
+    return destPath
+  } finally {
+    fs.rmSync(tmp, { force: true })
+  }
+}
+
 export function createLocalStorage({ dir, urlBase = '/r' }) {
   const target = key => path.join(dir, ...key.split('/'))
   const copy = (from, key) => {
@@ -52,9 +67,7 @@ export function createLocalStorage({ dir, urlBase = '/r' }) {
     },
     async getMaster(sha, destPath) {
       check(sha)
-      fs.mkdirSync(path.dirname(destPath), { recursive: true })
-      fs.copyFileSync(target(masterKey(sha)), destPath)
-      return destPath
+      return writeVerified(destPath, sha, async tmp => fs.copyFileSync(target(masterKey(sha)), tmp))
     },
     async putRendition(sha, kind, filePath) {
       check(sha, kind)
@@ -77,6 +90,7 @@ export function createWorkerStorage({ baseUrl, adminToken, signingKey, ttlSecond
       headers: { ...auth, 'content-type': contentType, 'x-content-sha256': sha },
       body: fs.readFileSync(filePath),
     })
+    if (res.status === 409) return { key, existing: true }
     if (res.status !== 201) throw new Error(`PUT ${key} failed: ${res.status} ${await res.text()}`)
     return res.json()
   }
@@ -91,10 +105,7 @@ export function createWorkerStorage({ baseUrl, adminToken, signingKey, ttlSecond
       check(sha)
       const res = await fetchImpl(`${base}/o/${masterKey(sha)}`, { headers: auth })
       if (!res.ok) throw new Error(`GET master failed: ${res.status}`)
-      fs.mkdirSync(path.dirname(destPath), { recursive: true })
-      await new Promise((resolve, reject) => Readable.fromWeb(res.body).pipe(fs.createWriteStream(destPath)).on('finish', resolve).on('error', reject))
-      if (sha256File(destPath) !== sha) throw new Error('downloaded master does not match sha256')
-      return destPath
+      return writeVerified(destPath, sha, tmp => pipeline(Readable.fromWeb(res.body), fs.createWriteStream(tmp)))
     },
     async putRendition(sha, kind, filePath) {
       check(sha, kind)

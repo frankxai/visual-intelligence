@@ -67,6 +67,8 @@ test('operator screen: renditions only, guarded writes, closed publish gate', as
   assert.equal(blocked.status, 409, 'unknown rights cannot publish')
   assert.match((await blocked.json()).gate.blockers.join(' '), /rights/)
 
+  for (const rating of [3, 4, 3]) assert.equal((await post(`${url}api/asset/${id}/rank`, { rating })).status, 200)
+  assert.equal((await (await fetch(`${url}api/asset/${id}`)).json()).annotation.rating, 3, 're-ranking to an earlier value sticks')
   assert.equal((await post(`${url}api/asset/${id}/rank`, { rating: 5 })).status, 200)
   const db = openLibraryDatabase(project, loadConfig(project))
   try {
