@@ -642,6 +642,15 @@ test('reviews asset rights and approval with dry-run and provenance gates', () =
       })
       assert.equal(unsafePublication.publish_gate.allowed, false)
       assert.match(unsafePublication.note, /public use remains blocked/)
+      const forcedPublication = recordPublication(db, {
+        assetId: asset.asset_id,
+        platform: 'website',
+        route: '/release',
+        status: 'published',
+        execute: true,
+      })
+      assert.equal(forcedPublication.refused, true)
+      assert.equal(db.prepare('SELECT COUNT(*) AS count FROM publication').get().count, 0)
 
       const guardedManifest = exportCloudinaryManifest(db, { query: 'release cover' })
       assert.equal(guardedManifest.assets.length, 0)

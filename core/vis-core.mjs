@@ -991,6 +991,20 @@ function pruneNestedPaths(values = []) {
 export function walkMediaFiles(startDir, config = DEFAULT_CONFIG) {
   const mediaExts = mediaExtensions(config)
   const files = []
+  let realStart = null
+  if (config.containWithin) {
+    try { realStart = fs.realpathSync(startDir) } catch { return [] }
+  }
+  function contained(full) {
+    if (!realStart) return true
+    try {
+      const rel = path.relative(realStart, fs.realpathSync(full))
+      if (rel === '' || path.isAbsolute(rel)) return rel === ''
+      return rel.split(path.sep)[0] !== '..'
+    } catch {
+      return false
+    }
+  }
   function walk(dir) {
     let entries = []
     try {
@@ -1002,6 +1016,7 @@ export function walkMediaFiles(startDir, config = DEFAULT_CONFIG) {
       const full = path.join(dir, entry.name)
       if (entry.isDirectory()) {
         if (shouldSkipDir(entry.name, full, config)) continue
+        if (!contained(full)) continue
         walk(full)
         continue
       }
@@ -1009,6 +1024,7 @@ export function walkMediaFiles(startDir, config = DEFAULT_CONFIG) {
       const ext = path.extname(entry.name).toLowerCase()
       if (!mediaExts.has(ext)) continue
       if ((config.skipSuffixes || []).some(suffix => entry.name.endsWith(suffix))) continue
+      if (!contained(full)) continue
       files.push(full)
     }
   }
@@ -3805,6 +3821,15 @@ export function recordPublication(dbOrRoot, args = {}) {
         note: publishGate.allowed
           ? 'Pass execute: true to persist this publication record.'
           : 'Publication can be recorded for traceability, but public use remains blocked until the gate is resolved.',
+      }
+    }
+    if (String(payload.status) === 'published' && !publishGate.allowed) {
+      return {
+        dryRun: true,
+        refused: true,
+        wouldRecord: payload,
+        publish_gate: publishGate,
+        note: 'A published placement needs the public-use gate open. Rights stay unresolved until a person sets them.',
       }
     }
     db.prepare(`

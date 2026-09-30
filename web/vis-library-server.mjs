@@ -2,19 +2,20 @@
  * VIS library operator screen. Local only (127.0.0.1).
  *
  * Serves renditions (thumb, preview) and the library record. It never serves a
- * master file. Writes need the X-VIS-Operator header and a same-origin request,
- * so a web page elsewhere cannot drive it. Publishing is refused while the
- * publish gate is closed; placements are recorded through the CLI (Phase 5).
+ * master file. Every request must name a loopback Host. Writes also need the
+ * X-VIS-Operator header and a same-origin request. Publishing is refused while
+ * the publish gate is closed; placements are recorded through the CLI (Phase 5).
  */
 
 import fs from 'fs'
 import http from 'http'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { findProjectRoot, loadConfig } from '../core/vis-core.mjs'
+import { expandPathTokens, findProjectRoot, loadConfig } from '../core/vis-core.mjs'
 import {
   decideProposal,
   getLibraryAsset,
+  libraryConfig,
   listLibrary,
   listProposals,
   openLibraryDatabase,
@@ -32,9 +33,11 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
   const config = loadConfig(root)
   const db = openLibraryDatabase(root, config)
   const operator = options.operator || 'operator-screen'
+  const renditionsDir = expandPathTokens(libraryConfig(config).renditionsDir)
 
   const server = http.createServer(async (req, res) => {
     try {
+      if (!loopbackHost(req)) return json(res, 403, { error: 'host not allowed' })
       const url = new URL(req.url, 'http://local')
       const parts = url.pathname.split('/').filter(Boolean)
 
@@ -43,7 +46,7 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
         return sendFile(res, THUMBHASH_JS, 'text/javascript; charset=utf-8', 'public, max-age=86400')
       }
       if (req.method === 'GET' && parts[0] === 'r' && parts.length === 3) {
-        const file = renditionPath(root, db, parts[1], parts[2])
+        const file = renditionPath(root, db, parts[1], parts[2], renditionsDir)
         if (!file || !fs.existsSync(file)) return json(res, 404, { error: 'rendition not found' })
         return sendFile(res, file, 'image/webp', 'private, max-age=31536000, immutable')
       }
@@ -111,6 +114,12 @@ function redactAsset(asset) {
     ...asset,
     renditions: asset.renditions.map(({ path: _p, ...rest }) => rest),
   }
+}
+
+function loopbackHost(req) {
+  const raw = String(req.headers.host || '')
+  const name = raw.replace(/:\d+$/, '').replace(/^\[|\]$/g, '').toLowerCase()
+  return name === '127.0.0.1' || name === 'localhost' || name === '::1'
 }
 
 function sameOrigin(req) {

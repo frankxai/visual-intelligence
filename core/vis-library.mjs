@@ -132,6 +132,7 @@ export function walkLibraryRoot(libRoot, config) {
   const excluded = new Set(libRoot.exclude)
   const walkConfig = {
     ...config,
+    containWithin: true,
     privateDirPatterns: [...(config.privateDirPatterns || []), ...excluded],
   }
   return walkMediaFiles(libRoot.path, walkConfig).filter(file => isInsideRoot(file, libRoot.path) && !isExcluded(file, libRoot))
@@ -418,11 +419,14 @@ export function getLibraryAsset(db, assetRef) {
   }
 }
 
-export function renditionPath(root, db, assetId, kind) {
+export function renditionPath(root, db, assetId, kind, renditionsDir = null) {
   if (!['thumb', 'preview'].includes(kind)) return null
   const row = db.prepare("SELECT path FROM asset_rendition WHERE asset_id = ? AND kind = ? AND storage = 'local'").get(assetId, kind)
   if (!row?.path) return null
-  return path.resolve(root, row.path)
+  const base = path.resolve(root, renditionsDir || libraryConfig(loadConfig(root)).renditionsDir)
+  const resolved = path.resolve(root, row.path)
+  if (!isInsideRoot(resolved, base)) return null
+  return resolved
 }
 
 // ---------------------------------------------------------------------------

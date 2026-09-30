@@ -56,6 +56,34 @@ async function fixture() {
   return { base, project, assets, inbox, outside }
 }
 
+test('a junction inside a declared root does not import the outside folder', async () => {
+  const fx = await fixture()
+  const link = path.join(fx.assets, 'linked-outside')
+  try {
+    fs.symlinkSync(fx.outside, link, 'junction')
+  } catch {
+    return
+  }
+  const result = await ingestLibrary({ root: fx.project, execute: true, limit: 20 })
+  assert.ok(result.rows.every(row => !String(row.path || row.file || '').includes('secret.png')))
+  const db = openLibraryDatabase(fx.project, loadConfig(fx.project))
+  try {
+    const hit = db.prepare('SELECT absolute_path FROM library_file_state WHERE absolute_path LIKE ?').get('%secret.png')
+    assert.equal(hit, undefined)
+  } finally { db.close() }
+})
+
+test('a rendition path outside the rendition directory is not served', async () => {
+  const fx = await fixture()
+  await ingestLibrary({ root: fx.project, execute: true })
+  const db = openLibraryDatabase(fx.project, loadConfig(fx.project))
+  try {
+    const row = db.prepare("SELECT asset_id FROM asset_rendition WHERE kind = 'thumb' LIMIT 1").get()
+    db.prepare("UPDATE asset_rendition SET path = ? WHERE asset_id = ? AND kind = 'thumb'").run('../../outside/secret.png', row.asset_id)
+    assert.equal(renditionPath(fx.project, db, row.asset_id, 'thumb', 'data/renditions'), null)
+  } finally { db.close() }
+})
+
 test('dry run plans declared roots only and writes nothing', async () => {
   const fx = await fixture()
   const result = await ingestLibrary({ root: fx.project })

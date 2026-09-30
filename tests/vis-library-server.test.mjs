@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'fs'
+import http from 'http'
 import os from 'os'
 import path from 'path'
 import sharp from 'sharp'
@@ -33,6 +34,15 @@ test('operator screen: renditions only, guarded writes, closed publish gate', as
 
   const page = await fetch(url)
   assert.equal(page.status, 200)
+  const rebound = await new Promise((resolve, reject) => {
+    const u = new URL(url)
+    const req = http.get({ hostname: '127.0.0.1', port: u.port, path: '/', headers: { host: 'evil.example' } }, res => {
+      res.resume()
+      resolve(res.statusCode)
+    })
+    req.on('error', reject)
+  })
+  assert.equal(rebound, 403, 'a rebinding Host cannot read the library')
   assert.match(await page.text(), /VIS Library/)
   assert.equal((await fetch(url + 'vendor/thumbhash.js')).status, 200)
 
