@@ -197,6 +197,7 @@ main{padding:12px 16px}
 .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--wait)}
 .dot.ok{background:var(--ok)} .dot.stop{background:var(--stop)}
 .badge{margin-left:auto;color:var(--accent)}
+.live{color:var(--ok)}
 .state{padding:48px 16px;text-align:center;color:var(--muted)}
 .state code{color:var(--soft)}
 aside{position:fixed;inset:0 0 0 auto;width:min(560px,100vw);background:var(--surface);border-left:1px solid var(--border);overflow:auto;padding:16px;z-index:3}
@@ -292,7 +293,7 @@ function renderGrid(){
       + ' aria-label="' + esc(a.title) + ', rights ' + esc(a.rights_status) + (a.rating ? ', rated ' + a.rating : '') + (a.open_proposals ? ', ' + a.open_proposals + ' open proposals' : '') + '">'
       + '<span class="img" style="background-image:url(' + placeholder(a) + ')"><img loading="lazy" alt="" src="/r/' + a.asset_id + '/thumb" onerror="this.remove()"></span>'
       + '<span class="meta"><span class="dot ' + rightsClass(a.rights_status) + '" aria-hidden="true"></span>' + esc(a.title)
-      + (a.location_count > 1 ? ' ×' + a.location_count : '') + (a.open_proposals ? '<span class="badge">' + a.open_proposals + ' open</span>' : '') + '</span></button>')
+      + (a.location_count > 1 ? ' ×' + a.location_count : '') + (a.live_placements ? '<span class="badge live">live</span>' : '') + (a.open_proposals ? '<span class="badge">' + a.open_proposals + ' open</span>' : '') + '</span></button>')
   }
   spacer.innerHTML = html.join('')
 }
@@ -343,6 +344,9 @@ async function openAsset(id){
       + '<section><h3>Rank</h3><div class="row stars" role="group" aria-label="Rank">' + [0,1,2,3,4,5].map(n => '<button data-rate="' + n + '" aria-pressed="' + (n === rating) + '">' + (n ? n + '★' : 'none') + '</button>').join('') + '</div></section>'
       + '<section><h3>Publish</h3><div class="row"><button id="publish" ' + (a.publish_gate.allowed ? '' : 'disabled aria-describedby="gate"') + '>Publish</button>'
       + '<span class="gate" id="gate">' + esc(a.publish_gate.allowed ? 'Gate open. Placement is recorded in Phase 5.' : a.publish_gate.blockers.join('; ')) + '</span></div></section>'
+      + '<section><h3>Live on</h3>' + (a.placements.filter(p => p.status === 'live').length
+          ? '<ul class="events">' + a.placements.filter(p => p.status === 'live').map(p => '<li><a href="' + esc(p.url) + '" target="_blank" rel="noopener">' + esc(p.url) + '</a> · ' + esc(p.commit_sha.slice(0, 9)) + '</li>').join('') + '</ul>'
+          : '<p class="state" style="padding:8px 0;text-align:left">Not live anywhere VIS observes.</p>') + '</section>'
       + '<section><h3>Proposals</h3>' + (open.length ? open.map(proposalRow).join('') : '<p class="state" style="padding:8px 0;text-align:left">No open proposals.</p>') + '</section>'
       + '<section><h3>Record</h3><dl><dt>Hash</dt><dd>' + esc(a.source_hash) + '</dd><dt>Type</dt><dd>' + esc(a.media_type) + '</dd>'
       + a.files.map(f => '<dt>' + esc(f.root_label) + '</dt><dd>' + esc(f.absolute_path) + '</dd>').join('')

@@ -84,6 +84,31 @@ CREATE TABLE IF NOT EXISTS asset_proposal (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS placement_blob (
+  blob_id TEXT PRIMARY KEY,
+  sha256 TEXT NOT NULL,
+  byte_size INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS asset_placement (
+  placement_id TEXT PRIMARY KEY,
+  site TEXT NOT NULL,
+  url TEXT NOT NULL,
+  repo_path TEXT NOT NULL,
+  blob_id TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  ref TEXT NOT NULL,
+  commit_sha TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'observed',
+  status TEXT NOT NULL DEFAULT 'live',
+  first_seen_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  gone_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_placement_sha ON asset_placement(sha256);
+CREATE INDEX IF NOT EXISTS idx_placement_site ON asset_placement(site, status);
+
 CREATE INDEX IF NOT EXISTS idx_rendition_asset ON asset_rendition(asset_id);
 CREATE INDEX IF NOT EXISTS idx_proposal_status ON asset_proposal(status);
 CREATE INDEX IF NOT EXISTS idx_proposal_asset ON asset_proposal(asset_id);
@@ -442,7 +467,8 @@ SELECT a.asset_id, a.title, a.primary_path, a.media_type, a.rights_status, a.app
   (SELECT width FROM asset_rendition r WHERE r.asset_id = a.asset_id AND r.kind = 'thumb' LIMIT 1) AS thumb_width,
   (SELECT height FROM asset_rendition r WHERE r.asset_id = a.asset_id AND r.kind = 'thumb' LIMIT 1) AS thumb_height,
   (SELECT COUNT(*) FROM library_file_state f WHERE f.asset_id = a.asset_id) AS location_count,
-  (SELECT COUNT(*) FROM asset_proposal p WHERE p.asset_id = a.asset_id AND p.status = 'open') AS open_proposals
+  (SELECT COUNT(*) FROM asset_proposal p WHERE p.asset_id = a.asset_id AND p.status = 'open') AS open_proposals,
+  (SELECT COUNT(*) FROM asset_placement l WHERE l.sha256 = a.source_hash AND l.status = 'live') AS live_placements
 FROM asset a LEFT JOIN asset_annotation n ON n.asset_id = a.asset_id
 WHERE ${where.join(' AND ')}
 ORDER BY ${order}
@@ -464,6 +490,9 @@ export function getLibraryAsset(db, assetRef) {
   const renditions = db.prepare('SELECT kind, storage, path, data_text, mime_type, width, height, byte_size FROM asset_rendition WHERE asset_id = ? ORDER BY kind').all(assetId)
   const files = db.prepare('SELECT absolute_path, root_label, byte_size, seen_at FROM library_file_state WHERE asset_id = ? ORDER BY absolute_path').all(assetId)
   const proposals = listProposals(db, { assetId, status: 'all' })
+  const placements = db.prepare(`
+SELECT site, url, repo_path, commit_sha, source, status, first_seen_at, last_seen_at, gone_at
+FROM asset_placement WHERE sha256 = (SELECT source_hash FROM asset WHERE asset_id = ?) ORDER BY status, site, url`).all(assetId)
   const events = db.prepare('SELECT event_type, actor, source, payload_json, created_at FROM provenance_event WHERE asset_id = ? ORDER BY created_at DESC LIMIT 50').all(assetId)
     .map(e => ({ ...e, payload: safeJson(e.payload_json, {}), payload_json: undefined }))
   return {
@@ -471,6 +500,7 @@ export function getLibraryAsset(db, assetRef) {
     renditions,
     files,
     proposals,
+    placements,
     events,
     publish_gate: assetPublishGate(asset, { intendedUse: 'website publication' }),
   }

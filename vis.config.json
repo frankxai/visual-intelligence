@@ -17,6 +17,11 @@
     "maxNewRenditionBytes": 314572800,
     "minFreeDiskGB": 35
   },
+  "placements": {
+    "sites": [
+      { "label": "frankx.ai", "repo": "%USERPROFILE%/frankx-prod-sync", "ref": "origin/main", "webRoot": "public", "publicBase": "https://www.frankx.ai" }
+    ]
+  },
   "dashboardPath": "data/vis-dashboard.html",
   "brandDnaPath": "data/brand-visual-dna.json",
   "sitemapMapPath": "data/sitemap-image-map.json",

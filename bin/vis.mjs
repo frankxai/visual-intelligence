@@ -1336,6 +1336,18 @@ ${result.note}`)
     process.on('SIGINT', () => { watcher.close(); process.exit(0) })
     return new Promise(() => {})
   }
+  if (sub === 'observe') {
+    const { observePlacements } = await import('../core/vis-placements.mjs')
+    const result = await observePlacements({ root, site: getFlag('--site'), execute })
+    if (hasFlag('--json')) return printJson(result)
+    for (const s of result.sites) {
+      if (s.error) { console.log(`${s.site}: ${s.error}`); continue }
+      console.log(`${s.site} @ ${s.ref} ${s.commit.slice(0, 9)}: ${s.mediaFiles} media files, ${s.blobsToHash} new blobs (${Math.round(s.bytesToHash / 1048576)} MB) to hash`)
+      if (!result.dryRun) console.log(`  live ${s.live}, added ${s.added}, changed ${s.changed}, gone ${s.gone}; library assets live: ${s.libraryAssetsLive}`)
+    }
+    console.log(result.dryRun ? '\nDry run. Add --execute to record placements.' : `Receipt: ${result.receiptPath}`)
+    return
+  }
   if (sub === 'serve') {
     const { serveLibrary } = await import('../web/vis-library-server.mjs')
     const server = await serveLibrary(root, { port: Number(getFlag('--port', 4323)), host: getFlag('--host', '127.0.0.1') })
@@ -1355,6 +1367,10 @@ ${result.note}`)
     if (sub === 'show') return printJson(getLibraryAsset(db, rest[0] || getFlag('--asset')))
     if (sub === 'proposals') return printJson(listProposals(db, { status: getFlag('--status') || 'open', limit }))
     if (sub === 'stats') return printJson(proposalStats(db))
+    if (sub === 'placements') {
+      const { listPlacements } = await import('../core/vis-placements.mjs')
+      return printJson(listPlacements(db, { assetId: rest[0] || getFlag('--asset'), url: getFlag('--url'), site: getFlag('--site'), status: getFlag('--status'), limit }))
+    }
     if (sub === 'propose') {
       const kind = getFlag('--kind')
       const payload = kind === 'rank' ? { rating: Number(getFlag('--rating')) }
@@ -1380,6 +1396,8 @@ ${result.note}`)
   propose <asset> --kind rank|set|tags|rights [...] [--execute]
   decide <proposal> accept|dismiss [--execute]
   suggest [--execute]                Built-in proposer; muted rules are skipped
+  observe [--execute] [--site s]     Record what each site's deploy ref serves (read from git, not the working copy)
+  placements [asset] [--url u]       Where an asset is live, or what is at a URL
   proposals | stats                  Open proposals; accept and dismiss history per rule
   serve [--port 4323]                Operator screen on 127.0.0.1 (thumbs and previews only)`)
 }

@@ -688,6 +688,13 @@ function toolLibraryGetAsset(args = {}) {
   return withLibraryDb(db => getLibraryAsset(db, args.asset_id || args.assetId || args.uri || args.path))
 }
 
+async function toolLibraryFindPlacements(args = {}) {
+  const { listPlacements } = await import('../core/vis-placements.mjs')
+  return withLibraryDb(db => listPlacements(db, {
+    assetId: args.asset_id || args.assetId, sha256: args.sha256, url: args.url, site: args.site, status: args.status, limit: args.limit || 100,
+  }))
+}
+
 function toolLibraryListProposals(args = {}) {
   return withLibraryDb(db => ({ proposals: listProposals(db, { status: args.status || 'open', limit: args.limit || 100 }), stats: proposalStats(db) }))
 }
@@ -732,6 +739,7 @@ const TOOL_HANDLERS = {
   library_search: toolLibrarySearch,
   library_get_asset: toolLibraryGetAsset,
   library_list_proposals: toolLibraryListProposals,
+  library_find_placements: toolLibraryFindPlacements,
   library_ingest: toolLibraryIngest,
   library_propose: toolLibraryPropose,
   library_decide_proposal: toolLibraryDecideProposal,
@@ -800,6 +808,14 @@ const TOOLS = [
     asset_id: stringProp('VIS asset_id'),
     uri: stringProp('visual://asset/{asset_id}'),
     path: stringProp('Local path'),
+  }),
+  tool('library_find_placements', 'Where an asset is live (site, URL, repo path, commit), or what is live at a URL. Read from each site\'s deploy ref by `vis library observe`. Read-only.', {
+    asset_id: stringProp('VIS asset_id'),
+    sha256: stringProp('Content hash'),
+    url: stringProp('Exact public URL'),
+    site: stringProp('Site label, for example frankx.ai'),
+    status: stringProp('live (default), gone, or all'),
+    limit: numberProp('Result limit'),
   }),
   tool('library_list_proposals', 'Open (or all) proposals plus accept/dismiss history per rule. Read-only.', {
     status: stringProp('open (default), accepted, dismissed, or all'),
