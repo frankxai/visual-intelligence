@@ -2,9 +2,9 @@ name: Library tests
 
 on:
   pull_request:
-    branches: [main, codex/visual-intelligence-os-v02]
+    branches: [main, codex/visual-intelligence-os-v02, 'claude/**']
   push:
-    branches: [claude/library-2026-09-30]
+    branches: ['claude/**']
 
 permissions:
   contents: read
@@ -27,7 +27,7 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Syntax check
         run: |
-          for f in bin/vis.mjs core/vis-core.mjs core/vis-library.mjs core/vis-storage.mjs \
+          for f in bin/vis.mjs core/vis-core.mjs core/vis-library.mjs core/vis-storage.mjs core/vis-placements.mjs \
                    web/vis-library-server.mjs web/vis-dashboard.mjs mcp/vis-mcp-server.mjs \
                    workers/vis-media/src/index.js; do node --check "$f"; done
       - name: Tests
