@@ -3,9 +3,16 @@ import path from 'path'
 import crypto from 'crypto'
 import { searchAssets } from './vis-core.mjs'
 import { planVercelBlobUpload, executeVercelBlobUpload } from './adapters/vercel-blob-adapter.mjs'
-import { planCloudflareR2Upload, executeCloudflareR2Upload } from './adapters/cloudflare-r2-adapter.mjs'
-import { planIpfsNftBundle, executeIpfsNftUpload } from './adapters/ipfs-nft-adapter.mjs'
+import { planCloudflareR2Upload } from './adapters/cloudflare-r2-adapter.mjs'
+import { planIpfsNftBundle } from './adapters/ipfs-nft-adapter.mjs'
 import { routeAssetDestination, routeAndPlanBatch } from './adapters/upload-router.mjs'
+
+// Only these rights may leave the machine, and only with approval_status = approved.
+export const PUBLISHABLE_RIGHTS = ['owned', 'generated-owned', 'licensed']
+
+export function isPublishable(asset = {}) {
+  return PUBLISHABLE_RIGHTS.includes(asset.rights_status) && asset.approval_status === 'approved'
+}
 
 export function queryAssetsForStorage(db, options = {}) {
   let query = `
@@ -34,6 +41,12 @@ export function queryAssetsForStorage(db, options = {}) {
     WHERE 1=1
   `
   const params = []
+
+  // Plans list publishable assets only, unless a caller asks to review the rest.
+  if (options.includeUnreviewed !== true) {
+    query += ` AND a.approval_status = 'approved' AND a.rights_status IN (${PUBLISHABLE_RIGHTS.map(() => '?').join(', ')})`
+    params.push(...PUBLISHABLE_RIGHTS)
+  }
 
   if (options.approvalStatus) {
     query += ' AND a.approval_status = ?'
@@ -130,17 +143,37 @@ export function planStorageUpload(db, options = {}) {
 
 export async function executeStorageUpload(db, plan, options = {}) {
   const target = plan.target || options.target
-  let result = null
 
-  if (target === 'vercel-blob') {
-    result = await executeVercelBlobUpload(plan.plan || plan, options)
-  } else if (target === 'cloudflare-r2') {
-    result = await executeCloudflareR2Upload(plan.plan || plan, options)
-  } else if (target === 'ipfs' || target === 'ipfs-nft') {
-    result = await executeIpfsNftUpload(plan.plan || plan, options)
-  } else {
-    throw new Error(`Unsupported direct execution target: ${target}. Specify vercel-blob, cloudflare-r2, or ipfs.`)
+  // Human gate: uploading is publishing. A person turns this on for one session.
+  if (process.env.VIS_ENABLE_PUBLISH !== '1') {
+    throw new Error('Uploads are a human gate. Set VIS_ENABLE_PUBLISH=1 for this session after Frank approves the upload.')
   }
+  // R2 goes through the private vis-media Worker (core/vis-storage.mjs) under a named
+  // registry exception (frankxai/agentic-ops#115), never with raw S3 keys in this process.
+  if (target === 'cloudflare-r2') {
+    throw new Error('Direct R2 upload with S3 keys is disabled. Use the vis-media Worker adapter (core/vis-storage.mjs) once agentic-ops#115 is accepted.')
+  }
+  // IPFS pinning cannot be undone. It is not available from the batch engine.
+  if (target === 'ipfs' || target === 'ipfs-nft') {
+    throw new Error('IPFS pinning is irreversible and is disabled in the batch engine. Mint one reviewed asset at a time with an explicit human decision.')
+  }
+  if (target !== 'vercel-blob') {
+    throw new Error(`Unsupported direct execution target: ${target}. Only vercel-blob can execute.`)
+  }
+
+  // Re-check every item against the live record, not the plan that was built earlier.
+  const manifest = plan.plan || plan
+  const refused = []
+  const items = (manifest.items || []).filter(item => {
+    const row = db.prepare('SELECT rights_status, approval_status FROM asset WHERE asset_id = ?').get(item.asset_id)
+    if (row && isPublishable(row)) return true
+    refused.push({ asset_id: item.asset_id, rights_status: row?.rights_status || 'missing', approval_status: row?.approval_status || 'missing' })
+    return false
+  })
+  const result = items.length
+    ? await executeVercelBlobUpload({ ...manifest, items }, options)
+    : { provider: 'vercel-blob', total: 0, uploaded_count: 0, failed_count: 0, results: [] }
+  result.refused = refused
 
   // Record successful uploads into storage_object and provenance_event tables
   recordUploadResults(db, result)

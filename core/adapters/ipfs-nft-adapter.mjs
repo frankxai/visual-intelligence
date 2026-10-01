@@ -40,7 +40,7 @@ export function generateNftMetadata(asset, options = {}) {
   // Provenance attributes
   attributes.push({ trait_type: 'Media Type', value: capitalize(asset.media_type || 'image') })
   attributes.push({ trait_type: 'Provenance Standard', value: 'VIS-3.0' })
-  attributes.push({ trait_type: 'Rights Status', value: asset.rights_status || 'generated-owned' })
+  attributes.push({ trait_type: 'Rights Status', value: asset.rights_status || 'unknown' })
 
   const isMotionOrAudio = ['video', 'audio'].includes(asset.media_type)
 
