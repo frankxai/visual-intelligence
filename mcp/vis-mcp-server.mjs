@@ -53,6 +53,7 @@ import {
   executeStorageUpload,
   getStorageStats,
   routeAssetDestination,
+  tasteLedgerPath,
 } from '../core/vis-core.mjs'
 
 const ROOT = path.resolve(process.env.VIS_ROOT || findProjectRoot(process.cwd()))
@@ -298,7 +299,7 @@ function toolRecordCurationFeedback(args = {}) {
           brand,
           scope,
           actor,
-          would_drain_to: 'C:/Users/frank/starlight/ops/TASTE_FEEDBACK_LEDGER.jsonl',
+          would_drain_to: tasteLedgerPath({ config: CONFIG }),
         },
       }
     }
@@ -346,7 +347,7 @@ function toolDrainFeedbackOutbox(args = {}) {
       dryRun: { would_drain: true },
     }))
   }
-  return withDb(db => drainFeedbackOutbox(db))
+  return withDb(db => drainFeedbackOutbox(db, { config: CONFIG }))
 }
 
 function toolGetTasteDirectives(args = {}) {
@@ -959,7 +960,7 @@ const TOOLS = [
     path: stringProp('Local or relative path'),
     execute: booleanProp('Revert curation when VIS_ENABLE_WRITES=1'),
   }),
-  tool('drain_feedback_outbox', 'Drain pending curation feedback events to C:/Users/frank/starlight/ops/TASTE_FEEDBACK_LEDGER.jsonl.', {
+  tool('drain_feedback_outbox', 'Drain pending curation feedback events to the taste ledger (vis.config.json tasteLedgerPath, or VIS_TASTE_LEDGER).', {
     execute: booleanProp('Drain outbox when VIS_ENABLE_WRITES=1'),
   }),
   tool('get_taste_directives', 'Retrieve active taste doctrines, approved visual patterns, and defect tags to avoid before generating visuals.', {
