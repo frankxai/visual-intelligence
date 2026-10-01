@@ -1219,6 +1219,11 @@ export function scanUsageEdges(db, root, config = loadConfig(root)) {
   }
 
   let count = 0
+  const clearScannerUsage = db.prepare("DELETE FROM asset_usage WHERE source_file = ? AND COALESCE(usage_context, '') <> 'reference'")
+  // Scanner edges from source files that no longer exist are stale.
+  for (const row of db.prepare("SELECT DISTINCT source_file FROM asset_usage WHERE COALESCE(usage_context, '') <> 'reference'").all()) {
+    if (!fs.existsSync(path.resolve(root, row.source_file))) clearScannerUsage.run(row.source_file)
+  }
   const textFiles = walkUsageFiles(root, config)
   const ts = nowIso()
   const seen = new Set()
@@ -1232,6 +1237,9 @@ export function scanUsageEdges(db, root, config = loadConfig(root)) {
     } catch {
       continue
     }
+    // Refresh this file's scanner edges so references that were removed stop counting.
+    // Linker rows (usage_context 'reference') are written elsewhere and are kept.
+    clearScannerUsage.run(slash(path.relative(root, filePath)))
     for (const needle of extractMediaReferences(content, mediaRefPattern)) {
       const matches = byNeedle.get(needle) || byNeedle.get(slash(needle)) || byNeedle.get(path.basename(needle)) || byNeedle.get(`/${slash(needle).replace(/^\/+/, '')}`)
       if (!matches) continue
@@ -1269,6 +1277,11 @@ export function walkUsageFiles(root, config = loadConfig(root)) {
   const roots = rootCandidates
     .map(dir => resolveProjectPath(root, dir))
     .filter(dir => dir && fs.existsSync(dir))
+  // VIS's own exports list every asset; scanning them made every asset look "used".
+  const ownOutputs = new Set(['registryPath', 'atlasPath', 'dashboardPath', 'brandDnaPath', 'sitemapMapPath', 'indexPath']
+    .map(key => config[key] || DEFAULT_CONFIG[key])
+    .filter(Boolean)
+    .map(rel => path.resolve(resolveProjectPath(root, rel)).toLowerCase()))
   const files = []
   for (const start of roots) {
     function walk(dir) {
@@ -1289,6 +1302,7 @@ export function walkUsageFiles(root, config = loadConfig(root)) {
         if (!entry.isFile()) continue
         if (!exts.has(path.extname(entry.name).toLowerCase())) continue
         if (broadUsageMode && !hasUsageSegment(full, start, usageIncludeDirs)) continue
+        if (ownOutputs.has(path.resolve(full).toLowerCase())) continue
         files.push(full)
       }
     }
