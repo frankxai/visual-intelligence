@@ -1,27 +1,54 @@
-# Repository Instructions
+# AGENTS.md — Shared brain for all agents working in this repo
 
-This repo is part of the FrankX / Starlight / Arcanea agent estate.
+> **Canonical instructions for every agent: Claude Code, Codex, Grok, and any other CLI.**
+> `CLAUDE.md` is a shim that points here. Read this fully before doing any work.
 
-## Classification
+## Mission
 
-- Repo: visual-intelligence
-- Class: core-engine / DAM-cockpit
-- Default health command: node bin/vis.mjs --help
-- Remote: https://github.com/frankxai/visual-intelligence.git
+`visual-intelligence` (VIS) is the **asset record** for the FrankX / Arcanea / GenCreator estate. Every file is known by its hash, keeps rights at `unknown` until a person sets them, and records where it was placed. Agents search and propose. People set rights and publish.
 
-## Agent Rules
+## Who works here
 
-- Read this file before making changes.
-- Preserve existing user work and unrelated dirty files.
-- Keep edits scoped to the requested task.
-- Prefer existing repo conventions over new abstractions.
-- Run the health command before handoff when feasible.
-- Do not publish secrets, private memory, credentials, or internal-only strategy.
+Several agents on two machines work in this repo **at the same time**:
+- **Claude** (`claude/`) — lane: **ingestion, dedup, manifest, provenance, and the library record**
+- **Codex** (`codex/`) — lane: **catalog, MCP, n8n, GitHub Action**
+- **Grok** (`agent/grok/`) — fixes and guards on the integration branch, through PRs
 
-## Class-Specific Guidance
+Stay in your lane to avoid editing the same files. Cross-lane work goes **through an issue and a PR** so the other agents see it.
 
-- Keep utility commands safe and documented.
-- Validate scripts before recommending operational use.
+## The rules that keep us aligned
+
+1. **Integration branch:** `codex/visual-intelligence-os-v02` (draft #7) is where lanes meet until it lands on `main`. Branch from it, PR into it, and `git pull --rebase` before starting.
+2. **GitHub Issues are the task queue.** Before working an item, self-assign it and add `status:in-progress` plus your agent label. When you finish, comment on the issue with what changed and what comes next.
+3. **Never push to `main` or force-push a shared branch.** Branch per task, and open a PR that references the issue. Use small, conventional commits.
+4. **Human gates** (issue #41): rights, publication, production deploys, R2 writes, and deleting the only copy. Agents never cross them.
+
+## Accepted decisions (keep this honest)
+
+- **Storage:** `architecture_media_fabric_v2` (frankxai/agentic-ops#44, accepted 2026-09-11). Vercel Blob/Image delivers new app media. R2 is a named exception only (frankxai/agentic-ops#115). There is no public `r2.dev` bucket.
+- **Build and buy:** own the record (hash, renditions, rights, provenance, placement, proposal events). Rent storage and resizing. Do **not** run Immich/PhotoPrism or rebuild Eagle (the 2026-06-26 Immich + R2-mirror lock is superseded).
+- **Plan pack:** `.agent-harness/plans/library-and-storage-2026-09` on Frank's workstation.
+
+## Current state
+
+- Phase 0 census: `docs/asset-os/PHASE0-REPORT.md`. Raw data lives in gitignored `data/`.
+- The library record (watched roots, thumb/preview/ThumbHash, proposals, operator screen, MCP gates) is in #39.
+- `vis keep` / truth / usage guard are on the integration branch (Grok and Codex lanes).
+
+## Safety
+
+- The repo is **public**. Never commit raw asset data, absolute local paths, secrets, or license-restricted images. Big data lives in gitignored `data/`.
+- Machine health: the main workstation runs hot. Defer heavy crawls and large agent fan-outs, and never run an estate-wide scan without Frank.
+
+## Quick start for a new session
+```
+git pull --rebase
+gh issue list --label status:todo
+gh issue edit <N> --add-label status:in-progress --add-label agent:<you> --add-assignee @me
+git checkout -b <you>/<N>-slug codex/visual-intelligence-os-v02
+# ...work... then:
+gh pr create --fill --base codex/visual-intelligence-os-v02
+```
 
 ## Handoff
 

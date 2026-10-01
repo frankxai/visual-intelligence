@@ -27,8 +27,8 @@ test('routes asset destinations based on brand, category, and media role', () =>
   }
   const route1 = routeAssetDestination(arcaneaGuardian)
   assert.equal(route1.brand, 'arcanea')
-  assert.equal(route1.primary, 'ipfs-nft')
-  assert.ok(route1.destinations.includes('ipfs-nft'))
+  assert.equal(route1.primary, 'cloudflare-r2', 'an approved guardian is not an NFT mint')
+  assert.equal(route1.destinations.includes('ipfs-nft'), false)
   assert.ok(route1.destinations.includes('cloudflare-r2'))
 
   const musicAsset = {
