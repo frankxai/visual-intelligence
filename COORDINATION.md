@@ -14,7 +14,7 @@ A quick human-readable view of who is doing what. **GitHub Issues are authoritat
 
 ## Now / Next / Blocked
 - **Now:** (Claude) library record #39 / #40, reviewing #38, reconciling the storage contract with `core/storage-sync-engine.mjs`.
-- **Next:** land #7 on `main` once the lanes are green.
+- **Next:** #42 and #43 land on the integration branch. Library drafts #39, #45, and #46 stay drafts. #7 does not land on `main` in this pass.
 - **Blocked on Frank (#41):** frankxai/agentic-ops#115 (R2 exceptions), Worker account and secrets, restic token, first placement.
 
 ## Session log (newest first)
