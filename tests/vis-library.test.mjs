@@ -271,3 +271,32 @@ test('a root inside a folder named like a private pattern (tmp, build) is still 
   const plan = await ingestLibrary({ root: project })
   assert.deepEqual(plan.plan.map(p => path.basename(p.path)), ['a.png'], 'ancestors do not hide the root; private folders inside it stay skipped')
 })
+
+test('SVG and video get a thumb and preview; backfill fills assets filed earlier', async t => {
+  const { execFileSync } = await import('child_process')
+  const { backfillRenditions } = await import('../core/vis-library.mjs')
+  const fx = await fixture()
+  fs.writeFileSync(path.join(fx.inbox, 'mark.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><circle cx="32" cy="32" r="30" fill="#7cb7ff"/></svg>')
+  let hasFfmpeg = true
+  try {
+    execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=64x48:d=1', '-pix_fmt', 'yuv420p', path.join(fx.inbox, 'clip.mp4')])
+  } catch { hasFfmpeg = false }
+  const run = await ingestLibrary({ root: fx.project, execute: true })
+  const db = openLibraryDatabase(fx.project, loadConfig(fx.project))
+  try {
+    const svg = listLibrary(db).assets.find(a => a.title === 'mark')
+    assert.ok(svg.thumb_width > 0, 'SVG has a raster thumb')
+    if (hasFfmpeg) {
+      const clip = listLibrary(db).assets.find(a => a.title === 'clip')
+      assert.ok(clip.thumb_width > 0, 'video has a poster thumb')
+    } else t.diagnostic('ffmpeg not installed: video poster not checked')
+    // Simulate an asset filed before this support existed.
+    db.prepare("DELETE FROM asset_rendition WHERE asset_id = ?").run(svg.asset_id)
+  } finally { db.close() }
+  assert.equal(run.failed, 0)
+  const plan = await backfillRenditions({ root: fx.project })
+  assert.equal(plan.missing, 1)
+  const done = await backfillRenditions({ root: fx.project, execute: true })
+  assert.equal(done.rendered, 1)
+  assert.deepEqual(done.failed, [])
+})

@@ -10,6 +10,7 @@
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
+import { execFileSync } from 'child_process'
 import {
   assetPublishGate,
   buildAssetEntry,
@@ -38,7 +39,10 @@ export const LIBRARY_DEFAULTS = {
   sourceKind: 'local-staging',
 }
 
-const RENDERABLE = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'])
+const RASTER = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'])
+const VECTOR = new Set(['.svg'])
+const VIDEO = new Set(['.mp4', '.webm', '.mov', '.m4v'])
+const RENDERABLE = new Set([...RASTER, ...VECTOR, ...VIDEO])
 export const PROPOSAL_KINDS = ['rank', 'set', 'tags', 'rights']
 const RIGHTS_VALUES = new Set(['unknown', 'needs-review', 'owned', 'generated-owned', 'licensed', 'blocked'])
 
@@ -370,8 +374,16 @@ function hasRenditions(db, sha256) {
 export async function renderLadder(filePath, sha256, renditionsDir, lib = LIBRARY_DEFAULTS) {
   const { default: sharp } = await import('sharp')
   const { rgbaToThumbHash } = await import('thumbhash')
-  const bytes = fs.readFileSync(filePath)
-  const image = sharp(bytes, { failOn: 'none', animated: false })
+  const ext = path.extname(filePath).toLowerCase()
+  let image
+  if (VIDEO.has(ext)) {
+    image = sharp(videoPoster(filePath), { failOn: 'none' })
+  } else if (VECTOR.has(ext)) {
+    // librsvg in sharp does not load external resources; density gives a crisp preview.
+    image = sharp(fs.readFileSync(filePath), { failOn: 'none', density: 288 })
+  } else {
+    image = sharp(fs.readFileSync(filePath), { failOn: 'none', animated: false })
+  }
   const dir = path.join(renditionsDir, sha256.slice(0, 2))
   fs.mkdirSync(dir, { recursive: true })
   const out = []
@@ -387,6 +399,55 @@ export async function renderLadder(filePath, sha256, renditionsDir, lib = LIBRAR
   const hash = Buffer.from(rgbaToThumbHash(raw.info.width, raw.info.height, raw.data)).toString('base64')
   out.push({ kind: 'thumbhash', data: hash, bytes: 0 })
   return out
+}
+
+/** One PNG poster frame from a video via ffmpeg (no shell, bounded time and output). */
+export function videoPoster(filePath) {
+  const args = ['-nostdin', '-v', 'error', '-i', filePath, '-vf', 'thumbnail', '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', '-']
+  try {
+    return execFileSync(process.env.VIS_FFMPEG || 'ffmpeg', args, { timeout: 30000, maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] })
+  } catch (error) {
+    throw new Error(`video poster failed: ${error.code === 'ENOENT' ? 'ffmpeg not found (set VIS_FFMPEG)' : error.message.split('\n')[0]}`)
+  }
+}
+
+/** Fill renditions for library assets that have none (for example, filed before SVG/video support). */
+export async function backfillRenditions(options = {}) {
+  const root = path.resolve(options.root || findProjectRoot())
+  const config = normalizeConfig({ ...loadConfig(root), ...(options.config || {}) })
+  const lib = libraryConfig(config)
+  const renditionsDir = resolveProjectPath(root, expandPathTokens(lib.renditionsDir))
+  const db = openLibraryDatabase(root, config)
+  try {
+    const rows = db.prepare(`
+SELECT f.asset_id, MIN(f.absolute_path) AS absolute_path, f.sha256 FROM library_file_state f
+WHERE f.asset_id <> '' AND NOT EXISTS (SELECT 1 FROM asset_rendition r WHERE r.asset_id = f.asset_id AND r.kind = 'thumb')
+GROUP BY f.asset_id`).all().filter(r => RENDERABLE.has(path.extname(r.absolute_path).toLowerCase()))
+    if (options.execute !== true) return { dryRun: true, missing: rows.length, files: rows.map(r => r.absolute_path) }
+    const done = []
+    const failed = []
+    for (const row of rows) {
+      try {
+        if (!fs.existsSync(row.absolute_path)) throw new Error('file is gone')
+        const out = await renderLadder(row.absolute_path, row.sha256, renditionsDir, lib)
+        const ts = nowIso()
+        for (const r of out) {
+          db.prepare(`
+INSERT OR IGNORE INTO asset_rendition (rendition_id, asset_id, sha256, kind, storage, path, data_text, mime_type, width, height, byte_size, created_at)
+VALUES (?, ?, ?, ?, 'local', ?, ?, ?, ?, ?, ?, ?)`).run(
+            stableId('rnd', `${row.sha256}:${r.kind}:local`), row.asset_id, row.sha256, r.kind,
+            r.path ? slash(path.relative(root, r.path)) : null, r.data || null, r.mime || null, r.width || null, r.height || null, r.bytes || null, ts,
+          )
+        }
+        done.push(row.absolute_path)
+      } catch (error) {
+        failed.push({ path: row.absolute_path, error: error.message })
+      }
+    }
+    return { dryRun: false, rendered: done.length, failed }
+  } finally {
+    db.close()
+  }
 }
 
 /** Watch declared roots and file changes after a quiet period. Returns { close }. */

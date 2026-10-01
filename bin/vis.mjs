@@ -1336,6 +1336,15 @@ ${result.note}`)
     process.on('SIGINT', () => { watcher.close(); process.exit(0) })
     return new Promise(() => {})
   }
+  if (sub === 'render') {
+    const { backfillRenditions } = await import('../core/vis-library.mjs')
+    const result = await backfillRenditions({ root, execute })
+    if (hasFlag('--json') || !result.dryRun) return printJson(result)
+    console.log(`${result.missing} assets have no thumb or preview.`)
+    for (const f of result.files.slice(0, 20)) console.log(`  ${f}`)
+    console.log('\nDry run. Add --execute to render them.')
+    return
+  }
   if (sub === 'observe') {
     const { observePlacements } = await import('../core/vis-placements.mjs')
     const result = await observePlacements({ root, site: getFlag('--site'), execute })
@@ -1396,6 +1405,7 @@ ${result.note}`)
   propose <asset> --kind rank|set|tags|rights [...] [--execute]
   decide <proposal> accept|dismiss [--execute]
   suggest [--execute]                Built-in proposer; muted rules are skipped
+  render [--execute]                 Fill thumbs/previews that are missing (SVG, video poster via ffmpeg)
   observe [--execute] [--site s]     Record what each site's deploy ref serves (read from git, not the working copy)
   placements [asset] [--url u]       Where an asset is live, or what is at a URL
   proposals | stats                  Open proposals; accept and dismiss history per rule
