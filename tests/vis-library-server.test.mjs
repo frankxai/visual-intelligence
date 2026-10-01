@@ -28,6 +28,17 @@ async function setup() {
 const post = (url, body, headers = { 'x-vis-operator': '1' }) =>
   fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) })
 
+test('the operator screen stays on loopback when another host is requested', async () => {
+  const project = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-lib-bind-'))
+  fs.writeFileSync(path.join(project, 'vis.config.json'), '{}')
+  const { server } = await serveLibrary(project, { port: 0, host: '0.0.0.0' })
+  try {
+    assert.equal(server.address().address, '127.0.0.1')
+  } finally {
+    server.close()
+  }
+})
+
 test('operator screen: renditions only, guarded writes, closed publish gate', async t => {
   const { project, server, url } = await setup()
   t.after(() => server.close())

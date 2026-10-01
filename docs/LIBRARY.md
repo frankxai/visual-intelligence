@@ -49,7 +49,7 @@ An ingest run stops early if free disk falls below `minFreeDiskGB` or if new ren
 
 ## Operator screen
 
-It binds to `127.0.0.1` only, and it answers only when the Host header is `127.0.0.1`, `localhost`, or `::1`. Writes need the `X-VIS-Operator: 1` header and a same-origin request. A directory junction inside a root is not followed. The grid is virtualized, and only rows near the viewport exist in the page. The rights dot is the only color on a tile: amber for `unknown` or `needs-review`, green for `owned`, `generated-owned`, or `licensed`, and red for `blocked`.
+It binds to `127.0.0.1` only. `--host` is ignored unless it is `127.0.0.1`, `localhost`, or `::1`, and it answers only when the Host header is one of those. Writes need the `X-VIS-Operator: 1` header and a same-origin request. A directory junction inside a root is not followed. The grid is virtualized, and only rows near the viewport exist in the page. The rights dot is the only color on a tile: amber for `unknown` or `needs-review`, green for `owned`, `generated-owned`, or `licensed`, and red for `blocked`.
 
 ## MCP
 

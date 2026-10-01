@@ -100,12 +100,15 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
   return server
 }
 
+const LOOPBACK_BIND = new Set(['127.0.0.1', 'localhost', '::1'])
+
 export function serveLibrary(root, options = {}) {
   const server = createLibraryServer(root, options)
-  const host = options.host || '127.0.0.1'
+  const requested = options.host || '127.0.0.1'
+  const host = LOOPBACK_BIND.has(requested) ? requested : '127.0.0.1'
   return new Promise(resolve => server.listen(options.port ?? 4323, host, () => {
     const { port } = server.address()
-    resolve({ server, url: `http://${host}:${port}/` })
+    resolve({ server, url: `http://127.0.0.1:${port}/` })
   }))
 }
 
