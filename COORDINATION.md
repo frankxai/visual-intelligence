@@ -13,9 +13,9 @@ A quick human-readable view of who is doing what. **GitHub Issues are authoritat
 `git pull --rebase` → claim issue (`status:in-progress` + `agent:*`) → branch from `codex/visual-intelligence-os-v02` → work → PR into it → comment handoff.
 
 ## Now / Next / Blocked
-- **Now:** (Claude) library record #39 / #40, reviewing #38, reconciling the storage contract with `core/storage-sync-engine.mjs`.
-- **Next:** #42 and #43 land on the integration branch. Library drafts #39, #45, and #46 stay drafts. #7 does not land on `main` in this pass.
-- **Blocked on Frank (#41):** frankxai/agentic-ops#115 (R2 exceptions), Worker account and secrets, restic token, first placement.
+- **Now:** the library record is the operator screen at `http://127.0.0.1:4323`. Uploads need `VIS_ENABLE_PUBLISH=1`. Unknown rights cannot upload.
+- **Next:** this branch is the publication to `main`. The preview Worker source stays in the repo and is not deployed.
+- **Blocked on Frank (#41):** frankxai/agentic-ops#115 (R2 exceptions), Worker account and secrets, restic token, and the first rights decision on one owned image.
 
 ## Session log (newest first)
 - 2026-09-30 Claude — merged `main` into the integration branch (AGENTS.md conflict), updated this board, triaged #2 and #23 as superseded by `architecture_media_fabric_v2`.

@@ -45,34 +45,22 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 ## Quick Start
 
 ```powershell
-cd C:\Users\frank\starlight\repos\visual-intelligence
 npm install
-npm run lint
 npm test
-node bin\vis.mjs doctor
-node bin\vis.mjs vault-plan
-node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos"
-node bin\vis.mjs usage --usage-root "C:\Users\frank\starlight\repos\frankx.ai-vercel-website"
-node bin\vis.mjs scan-profile frank-estate
-node bin\vis.mjs eagle --library "<Google Drive>\Starlight Creative Vault\01_Eagle_Library"
-node bin\vis.mjs dashboard --limit 3000
+node bin/vis.mjs doctor
+node bin/vis.mjs library serve
 ```
 
-Open:
-
-```text
-C:\Users\frank\starlight\repos\visual-intelligence\data\vis-dashboard.html
-```
+Open `http://127.0.0.1:4323`. The screen stays on this machine. Rights stay `unknown` until a person sets them. An upload still needs `VIS_ENABLE_PUBLISH=1` for that session.
 
 ## Claude/Codex MCP Install
 
 Local Claude Code install:
 
+From the repository root, register the read-only server. Leave `VIS_ENABLE_WRITES`, `VIS_ENABLE_RIGHTS`, and `VIS_ENABLE_PUBLISH` unset.
+
 ```powershell
-claude mcp add vis-mcp `
-  -e VIS_ROOT="C:\Users\frank\starlight\repos\visual-intelligence" `
-  -e VIS_ALLOWED_ROOTS="C:\Users\frank\starlight\repos" `
-  -- node "C:\Users\frank\starlight\repos\visual-intelligence\mcp\vis-mcp-server.mjs"
+claude mcp add vis-mcp -- node mcp/vis-mcp-server.mjs
 ```
 
 Verify:
@@ -92,18 +80,12 @@ For older MCP clients, set `VIS_MCP_PROTOCOL_VERSION=2024-11-05`. The tested def
 On Frank's other PC:
 
 ```powershell
-cd C:\Users\frank\starlight\repos\visual-intelligence
 git fetch origin
-git checkout codex/visual-intelligence-os-v02
+git checkout main
 npm install
-npm run lint
 npm test
-node bin\vis.mjs doctor
-node bin\vis.mjs scan --media-root "C:\Users\frank\starlight\repos" --json
-node bin\vis.mjs scan-profile frank-estate --json
-node bin\vis.mjs dashboard --limit 3000
-node bin\vis.mjs serve-dashboard --limit 3000
-claude mcp get vis-mcp
+node bin/vis.mjs doctor
+node bin/vis.mjs library serve
 ```
 
 Cross-check against the coordination branch without merging over the implementation:
