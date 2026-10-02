@@ -33,7 +33,11 @@ export function planVercelBlobUpload(assets, options = {}) {
     const ext = path.extname(filePath).toLowerCase()
     const mimeType = getMimeType(filePath)
     const category = slugify(asset.category || 'general')
-    const pathname = `${brandPrefix}${category}/${filename}`
+    // Content-addressed name: two different files called hero.png can never overwrite each other.
+    const hash = String(asset.sha256 || asset.source_hash || '').toLowerCase()
+    const pathname = /^[a-f0-9]{12,}$/.test(hash)
+      ? `${brandPrefix}${category}/${hash.slice(0, 12)}-${filename}`
+      : `${brandPrefix}${category}/${filename}`
     const expectedUrl = `${publicBaseUrl.replace(/\/$/, '')}/${pathname}`
     const sizeBytes = Number(asset.byte_size || (asset.sizeKB ? Math.round(asset.sizeKB * 1024) : 0))
 
@@ -41,6 +45,7 @@ export function planVercelBlobUpload(assets, options = {}) {
     const warnings = []
     if (isOversized) warnings.push('Exceeds standard 4.5MB Vercel edge upload threshold without streaming')
     if (asset.approval_status !== 'approved') warnings.push(`Asset approval status is "${asset.approval_status || 'candidate'}"`)
+    if (!/^[a-f0-9]{12,}$/.test(hash)) warnings.push('No content hash: the Blob name is not collision-safe')
 
     return {
       index: index + 1,
