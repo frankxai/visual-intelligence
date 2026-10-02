@@ -41,6 +41,7 @@ This branch is intended to become `main` after cross-machine Claude/Codex verifi
 - Exposes MCP resources and tools for agents via `visual://asset/{asset_id}`.
 - Produces Codex-ready curation packets with path, `visual://` URI, rights, provenance, and next action.
 - Produces dry-run Cloudinary manifests, NFT readiness reports, and publication records.
+- Produces a governed, checksum-addressed DAM storage plan for private R2 masters, private workflow staging, shared R2 renditions, app-local Vercel Blob delivery, Drive retention, and existing Git assets. The planner cannot upload, publish, delete, or change provider state.
 
 ## Quick Start
 
@@ -56,6 +57,7 @@ node bin\vis.mjs usage --usage-root "C:\Users\frank\starlight\repos\frankx.ai-ve
 node bin\vis.mjs scan-profile frank-estate
 node bin\vis.mjs eagle --library "<Google Drive>\Starlight Creative Vault\01_Eagle_Library"
 node bin\vis.mjs dashboard --limit 3000
+npm run dam:plan -- --db "C:\Users\frank\starlight\repos\visual-intelligence\data\vis.sqlite" --limit 100
 ```
 
 Open:
@@ -84,6 +86,24 @@ node bin\vis.mjs search arcanea --limit 3
 ```
 
 The MCP server is read-only by default. Write-like tools require both `VIS_ENABLE_WRITES=1` and an explicit `execute: true` argument.
+
+## Governed DAM storage rollout
+
+The estate storage boundary and routing gates are documented in [`docs/DAM_STORAGE_ARCHITECTURE.md`](docs/DAM_STORAGE_ARCHITECTURE.md). The machine-readable policy is [`config/dam-storage-policy.json`](config/dam-storage-policy.json).
+
+Generate a plan from an existing VIS database:
+
+```powershell
+npm run dam:plan -- --db "C:\path\to\data\vis.sqlite"
+```
+
+Write a review manifest locally with an explicit file-write gate:
+
+```powershell
+npm run dam:plan -- --db "C:\path\to\data\vis.sqlite" --out "C:\safe\review\dam-plan.json" --write-plan
+```
+
+The planner opens SQLite read-only, emits opaque location IDs instead of paths by default, uses SHA-256 and immutable version IDs for keys, and fails closed on `--execute`. Provider adapters remain a separate reviewed phase.
 
 For older MCP clients, set `VIS_MCP_PROTOCOL_VERSION=2024-11-05`. The tested default is `2025-06-18`.
 

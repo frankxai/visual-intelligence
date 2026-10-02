@@ -1,0 +1,191 @@
+{
+  "$schema": "../schemas/dam-storage-policy.schema.json",
+  "policyVersion": "1.0.0",
+  "estate": "starlight",
+  "providerEvidence": "../docs/evidence/r2-bucket-topology-2026-08-27.json",
+  "region": "EU",
+  "storageClass": "Standard",
+  "providers": {
+    "r2Originals": {
+      "provider": "cloudflare-r2",
+      "bucket": "starlight-dam-originals-eu",
+      "purpose": "Private, content-addressed source masters and rights-cleared business originals",
+      "publicAccess": false,
+      "keyTemplate": "v1/{brand}/{role}/{shaPrefix}/{sha256}/source.{extension}"
+    },
+    "r2Renditions": {
+      "provider": "cloudflare-r2",
+      "bucket": "starlight-dam-renditions-eu",
+      "purpose": "Approved cross-site web, social, video, and audio renditions",
+      "publicAccess": false,
+      "productionAccess": "custom-domain-only",
+      "r2DevAllowed": false,
+      "keyTemplate": "v1/{brand}/{assetId}/{versionId}/{profile}/{sha256}.{extension}"
+    },
+    "r2Workflow": {
+      "provider": "cloudflare-r2",
+      "bucket": "starlight-dam-workflow-eu",
+      "purpose": "Private and expiring inbox, agent, render, and review artifacts",
+      "publicAccess": false,
+      "keyTemplate": "v1/{brand}/{stage}/{shaPrefix}/{sha256}/asset.{extension}"
+    },
+    "vercelBlob": {
+      "provider": "vercel-blob",
+      "purpose": "App-local uploads, dynamic media, and explicitly selected small delivery assets",
+      "publicAccess": "application-defined",
+      "keyTemplate": "v1/{brand}/{app}/{legacyKey}/{versionId}/{shaPrefix}-{assetId}.{extension}"
+    },
+    "googleDrive": {
+      "provider": "google-drive",
+      "purpose": "Human collaboration, intake, approvals, source documents, and browseable archive"
+    },
+    "github": {
+      "provider": "github",
+      "purpose": "Code, content, schemas, manifests, provenance, and intentionally small static assets"
+    }
+  },
+  "thresholds": {
+    "premiumAssetScore": 26,
+    "premiumAssetScoreMaximum": 30,
+    "vercelBlobMaximumBytes": 2097152,
+    "r2MultipartRecommendedBytes": 104857600,
+    "r2CustomMetadataMaximumBytes": 2048
+  },
+  "rights": {
+    "deliveryAllowed": ["owned", "generated-owned", "licensed"],
+    "privateMasterAllowed": ["owned", "generated-owned", "licensed"],
+    "blocked": ["unknown", "needs-review", "blocked"]
+  },
+  "approval": {
+    "deliveryRequired": "approved"
+  },
+  "quality": {
+    "acceptedRubricMarkers": ["premium asset", "30 point", "generated asset quality gate"],
+    "makerAndReviewerMustDiffer": true,
+    "actualExportInspectionRequired": true,
+    "requiredVerdict": "ship",
+    "requiredEvidence": [
+      "maker_id",
+      "reviewer_id",
+      "reviewed_at",
+      "review_artifact_sha256",
+      "version_id",
+      "sha256",
+      "inspected_variants"
+    ]
+  },
+  "workflowApproval": {
+    "requiredCurationStatus": "workflow-approved",
+    "requiredClassificationTag": "data-classification:business-nonsensitive"
+  },
+  "roles": [
+    "logo",
+    "wordmark",
+    "favicon",
+    "icon",
+    "mascot",
+    "hero",
+    "open-graph",
+    "social",
+    "thumbnail",
+    "cover",
+    "proof",
+    "product",
+    "editorial",
+    "video",
+    "audio",
+    "source",
+    "other"
+  ],
+  "brands": [
+    { "key": "arcanea", "patterns": ["arcanea", "eldrian", "luminor", "sanctum"] },
+    { "key": "frankx", "patterns": ["frankx", "frank x", "frankx.ai"] },
+    { "key": "gencreator", "patterns": ["gencreator", "gen creator"] },
+    { "key": "starlight", "patterns": ["starlight", "sis", "starlight intelligence"] },
+    { "key": "energetic-income", "patterns": ["energetic income", "energetic-income"] },
+    { "key": "akamoto", "patterns": ["akamoto", "nonakamito", "jade"] },
+    { "key": "rova", "patterns": ["rova", "rova-resort"] },
+    { "key": "vibeclubs", "patterns": ["vibeclubs", "vibe clubs"] },
+    { "key": "ocean-intelligence", "patterns": ["ocean intelligence", "ocean-intelligence"] }
+  ],
+  "applications": [
+    {
+      "key": "arcanea-ai-app",
+      "patterns": ["arcanea-ai-app"],
+      "blobRoles": ["thumbnail", "icon", "logo", "social", "open-graph"],
+      "requiresLegacyResolver": true
+    },
+    {
+      "key": "frankx-ai-vercel-website",
+      "patterns": ["frankx.ai-vercel-website", "frankx-ai-vercel-website"],
+      "blobRoles": ["thumbnail", "product", "editorial", "social", "open-graph"],
+      "requiresLegacyResolver": true
+    },
+    {
+      "key": "starlight-intelligence-system",
+      "patterns": ["starlight-intelligence-system", "starlightintelligence.org"],
+      "blobRoles": ["thumbnail", "social", "open-graph"],
+      "requiresLegacyResolver": false
+    },
+    {
+      "key": "gencreator-ai",
+      "patterns": ["gencreator.ai", "gencreator-ai"],
+      "blobRoles": ["thumbnail", "social", "open-graph"],
+      "requiresLegacyResolver": false
+    }
+  ],
+  "deliveryDomains": [
+    { "brand": "arcanea", "status": "unverified", "domain": null },
+    { "brand": "frankx", "status": "unverified", "domain": null },
+    { "brand": "gencreator", "status": "unverified", "domain": null },
+    { "brand": "starlight", "status": "unverified", "domain": null }
+  ],
+  "sourceClasses": {
+    "workflow-inbox-mobile": ["00_INBOX_MOBILE"],
+    "workflow-agent-output": ["08_AGENT_OUTPUTS"],
+    "approvedMasters": ["02_APPROVED_MASTERS"],
+    "website": ["03_WEBSITE_ASSETS"],
+    "social": ["04_SOCIAL_EXPORTS"],
+    "archive": ["99_ARCHIVE"],
+    "provenance": ["07_PROMPTS_AND_PROVENANCE", "_MANIFESTS"]
+  },
+  "sensitivePathMarkers": [
+    "passport",
+    "identity-document",
+    "recovery-key",
+    "private-key",
+    "credential",
+    ".env"
+  ],
+  "lifecycle": {
+    "r2Workflow": [
+      { "prefix": "v1/", "reviewAfterDays": 30, "deleteAfterDays": 90 },
+      { "prefix": "tmp/", "deleteAfterDays": 7 }
+    ],
+    "r2Originals": "retain-until-governed-archive-or-rights-removal",
+    "r2Renditions": "retain-while-referenced-by-a-publication-or-active-manifest"
+  },
+  "customMetadataAllowlist": [
+    "asset_id",
+    "version_id",
+    "sha256",
+    "brand",
+    "role",
+    "rights_status",
+    "approval_status",
+    "manifest_version"
+  ],
+  "driveFolderContract": [
+    "00_INBOX_MOBILE",
+    "01_Eagle_Library",
+    "02_APPROVED_MASTERS",
+    "03_WEBSITE_ASSETS",
+    "04_SOCIAL_EXPORTS",
+    "05_NFT_COLLECTIONS",
+    "06_MUSIC_RELEASES",
+    "07_PROMPTS_AND_PROVENANCE",
+    "08_AGENT_OUTPUTS",
+    "99_ARCHIVE",
+    "_MANIFESTS"
+  ]
+}

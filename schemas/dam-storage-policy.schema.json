@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/visual-intelligence/dam-storage-policy.schema.json",
+  "title": "VIS DAM Storage Policy",
+  "type": "object",
+  "required": ["policyVersion", "estate", "providerEvidence", "region", "providers", "thresholds", "rights", "approval", "quality", "workflowApproval", "brands", "applications", "deliveryDomains"],
+  "properties": {
+    "policyVersion": { "type": "string" },
+    "estate": { "type": "string" },
+    "providerEvidence": { "type": "string" },
+    "region": { "type": "string" },
+    "storageClass": { "type": "string" },
+    "providers": { "type": "object" },
+    "thresholds": {
+      "type": "object",
+      "required": ["premiumAssetScore", "vercelBlobMaximumBytes"],
+      "properties": {
+        "premiumAssetScore": { "type": "integer", "minimum": 0, "maximum": 30 },
+        "premiumAssetScoreMaximum": { "type": "integer", "const": 30 },
+        "vercelBlobMaximumBytes": { "type": "integer", "minimum": 1 },
+        "r2MultipartRecommendedBytes": { "type": "integer", "minimum": 1 },
+        "r2CustomMetadataMaximumBytes": { "type": "integer", "maximum": 2048 }
+      }
+    },
+    "rights": { "type": "object" },
+    "approval": { "type": "object" },
+    "quality": { "type": "object" },
+    "workflowApproval": { "type": "object" },
+    "roles": { "type": "array", "items": { "type": "string" } },
+    "brands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "patterns"],
+        "properties": {
+          "key": { "type": "string" },
+          "patterns": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+        }
+      }
+    },
+    "applications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "patterns", "blobRoles"],
+        "properties": {
+          "key": { "type": "string" },
+          "patterns": { "type": "array", "items": { "type": "string" } },
+          "blobRoles": { "type": "array", "items": { "type": "string" } },
+          "requiresLegacyResolver": { "type": "boolean" }
+        }
+      }
+    },
+    "deliveryDomains": { "type": "array", "items": { "type": "object" } },
+    "sourceClasses": { "type": "object" },
+    "sensitivePathMarkers": { "type": "array", "items": { "type": "string" } },
+    "lifecycle": { "type": "object" },
+    "customMetadataAllowlist": { "type": "array", "items": { "type": "string" } },
+    "driveFolderContract": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}
