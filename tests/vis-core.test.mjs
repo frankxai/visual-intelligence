@@ -941,3 +941,16 @@ test('extracts SVG color palettes and searches assets by color family', () => {
     fs.rmSync(root, { recursive: true, force: true })
   }
 })
+
+test('the taste ledger path comes from config, env, or a token default, never a literal user path', async () => {
+  const { tasteLedgerPath } = await import('../core/vis-core.mjs')
+  assert.equal(tasteLedgerPath({ tasteLedgerPath: '/data/ledger.jsonl' }), '/data/ledger.jsonl')
+  assert.equal(tasteLedgerPath({ config: { tasteLedgerPath: '/cfg/ledger.jsonl' } }), '/cfg/ledger.jsonl')
+  const saved = process.env.VIS_TASTE_LEDGER
+  process.env.VIS_TASTE_LEDGER = '/env/ledger.jsonl'
+  try { assert.equal(tasteLedgerPath(), '/env/ledger.jsonl') } finally {
+    if (saved === undefined) delete process.env.VIS_TASTE_LEDGER; else process.env.VIS_TASTE_LEDGER = saved
+  }
+  const src = fs.readFileSync(new URL('../core/vis-core.mjs', import.meta.url), 'utf8') + fs.readFileSync(new URL('../mcp/vis-mcp-server.mjs', import.meta.url), 'utf8')
+  assert.equal(/C:[\/]Users[\/]frank/i.test(src), false, 'no workstation path in shipped code')
+})

@@ -3095,10 +3095,16 @@ export function undoCurationFeedback(dbOrRoot, assetRef) {
   }
 }
 
+// Where curation feedback drains. Configurable so this public repo carries no workstation path.
+export function tasteLedgerPath(options = {}) {
+  const configured = options.tasteLedgerPath || options.config?.tasteLedgerPath || process.env.VIS_TASTE_LEDGER
+  return expandPathTokens(configured || '%USERPROFILE%/starlight/ops/TASTE_FEEDBACK_LEDGER.jsonl')
+}
+
 export function drainFeedbackOutbox(dbOrRoot, options = {}) {
   const { db, close } = resolveDbArgs(dbOrRoot)
   try {
-    const ledgerPath = options.ledgerPath || 'C:/Users/frank/starlight/ops/TASTE_FEEDBACK_LEDGER.jsonl'
+    const ledgerPath = options.ledgerPath || tasteLedgerPath(options)
     const rows = options.outboxId
       ? db.prepare("SELECT * FROM feedback_outbox WHERE outbox_id = ? AND status = 'pending'").all(options.outboxId)
       : db.prepare("SELECT * FROM feedback_outbox WHERE status = 'pending' ORDER BY created_at ASC LIMIT 100").all()
@@ -3149,7 +3155,7 @@ export function drainFeedbackOutbox(dbOrRoot, options = {}) {
 }
 
 export function getTasteDirectives(dbOrRoot, options = {}) {
-  const ledgerPath = options.ledgerPath || 'C:/Users/frank/starlight/ops/TASTE_FEEDBACK_LEDGER.jsonl'
+  const ledgerPath = options.ledgerPath || tasteLedgerPath(options)
   const brand = (options.brand || '').toLowerCase()
   const category = (options.category || '').toLowerCase()
   const polarity = (options.polarity || '').toLowerCase()

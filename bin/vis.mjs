@@ -656,7 +656,7 @@ function cmdUndoFeedback() {
 
 function cmdDrainOutbox() {
   const root = projectRoot()
-  const result = drainFeedbackOutbox(root)
+  const result = drainFeedbackOutbox(root, { config: loadConfig(root) })
   printJson(result)
 }
 
