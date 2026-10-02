@@ -71,7 +71,9 @@ test('rendition URL: 200 with signature; 401 without, tampered, or expired', asy
   assert.deepEqual(Buffer.from(await ok.arrayBuffer()), fs.readFileSync(thumb))
 
   assert.equal((await fetchImpl(`${base}/r/${sha}/thumb`)).status, 401)
-  assert.equal((await fetchImpl(url.replace(/sig=./, 'sig=A'))).status, 401)
+  const tampered = url.replace(/([?&]sig=)([^&])/, (_m, prefix, ch) => `${prefix}${ch === 'a' ? 'b' : 'a'}`)
+  assert.notEqual(tampered, url)
+  assert.equal((await fetchImpl(tampered)).status, 401)
   assert.equal((await fetchImpl(url.replace(`/${sha}/thumb`, `/${sha}/preview`))).status, 401, 'signature is bound to the path')
   const past = Math.floor(Date.now() / 1000) - 10
   assert.equal((await fetchImpl(`${base}/r/${sha}/thumb?exp=${past}&sig=${signPath(env.PREVIEW_SIGNING_KEY, `/r/${sha}/thumb`, past)}`)).status, 401)
