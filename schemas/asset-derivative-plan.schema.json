@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/visual-intelligence/asset-derivative-plan.schema.json",
+  "title": "VIS Asset Derivative Plan",
+  "description": "Dry-run derivative/export manifest for website, social, music release, NFT/Web3, and Cloudinary adapters. The plan never transforms, uploads, publishes, mints, deletes, or posts by itself.",
+  "type": "object",
+  "required": [
+    "dryRun",
+    "execute_supported",
+    "plan_id",
+    "preset",
+    "generated_at",
+    "items",
+    "gates"
+  ],
+  "properties": {
+    "dryRun": { "const": true },
+    "execute_supported": { "const": false },
+    "requested_execute_ignored": { "type": "boolean" },
+    "plan_id": { "type": "string", "pattern": "^derivative_plan_[a-f0-9]{24}$" },
+    "preset": { "type": "string", "enum": ["website", "social", "music-release", "nft", "cloudinary"] },
+    "label": { "type": "string" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "intended_use": { "type": "string" },
+    "write_model": { "type": "string" },
+    "target_root": { "type": ["string", "null"] },
+    "requested": { "type": "integer", "minimum": 0 },
+    "selected": { "type": "integer", "minimum": 0 },
+    "compatible_assets": { "type": "integer", "minimum": 0 },
+    "planned_variants": { "type": "integer", "minimum": 0 },
+    "blocked_variants": { "type": "integer", "minimum": 0 },
+    "blocked_assets": { "type": "integer", "minimum": 0 },
+    "filters": { "type": "object" },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/item" }
+    },
+    "errors": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/error" }
+    },
+    "music_boundary": { "type": ["string", "null"] },
+    "gates": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "commands": {
+      "type": "object",
+      "properties": {
+        "cli_dry_run": { "type": "string" },
+        "codex_packet": { "type": "string" }
+      }
+    },
+    "note": { "type": "string" }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "required": ["asset_id", "visual_uri", "media_type", "status", "variants"],
+      "properties": {
+        "asset_id": { "type": "string", "pattern": "^asset_[a-f0-9]{24}$" },
+        "visual_uri": { "type": "string", "pattern": "^visual://asset/asset_[a-f0-9]{24}$" },
+        "version_id": { "type": ["string", "null"] },
+        "media_type": { "type": "string", "enum": ["image", "video", "audio"] },
+        "title": { "type": ["string", "null"] },
+        "local_path": { "type": ["string", "null"] },
+        "relative_path": { "type": ["string", "null"] },
+        "rights_status": { "type": "string" },
+        "approval_status": { "type": "string" },
+        "status": { "type": "string", "enum": ["planned", "blocked", "unsupported"] },
+        "publish_gate": { "type": "object" },
+        "variants": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/variant" }
+        }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "required": [
+        "variant_id",
+        "target_role",
+        "source_media_type",
+        "target_media_type",
+        "format",
+        "adapter",
+        "adapter_status",
+        "status"
+      ],
+      "properties": {
+        "variant_id": { "type": "string" },
+        "label": { "type": "string" },
+        "target_role": { "type": "string" },
+        "source_media_type": { "type": "string", "enum": ["image", "video", "audio"] },
+        "target_media_type": { "type": "string" },
+        "format": { "type": "string" },
+        "width": { "type": ["integer", "null"], "minimum": 1 },
+        "height": { "type": ["integer", "null"], "minimum": 1 },
+        "duration_seconds": { "type": ["number", "null"], "minimum": 0 },
+        "max_duration_seconds": { "type": ["number", "null"], "minimum": 0 },
+        "adapter": { "type": "string" },
+        "adapter_status": { "type": "string" },
+        "target_path": { "type": ["string", "null"] },
+        "status": { "type": "string", "enum": ["planned", "blocked"] },
+        "blockers": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "handoff": { "type": "object" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "ref": { "type": "string" },
+        "asset_id": { "type": "string" },
+        "error": { "type": "string" }
+      }
+    }
+  }
+}

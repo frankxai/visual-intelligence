@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/vis/asset-annotation.schema.json",
+  "title": "VIS Asset Annotation",
+  "type": "object",
+  "required": ["asset_id", "curation_status", "custom_tags", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "asset_id": {
+      "type": "string",
+      "pattern": "^asset_[a-f0-9]{24}$"
+    },
+    "rating": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 5
+    },
+    "color_label": {
+      "type": ["string", "null"],
+      "maxLength": 64
+    },
+    "curation_status": {
+      "type": "string",
+      "enum": ["uncurated", "curated", "favorite", "approved", "rejected", "needs-review", "blocked"]
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "maxLength": 12000
+    },
+    "custom_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$"
+      },
+      "uniqueItems": true
+    },
+    "collection": {
+      "type": ["string", "null"],
+      "maxLength": 160
+    },
+    "updated_by": {
+      "type": ["string", "null"],
+      "maxLength": 120
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

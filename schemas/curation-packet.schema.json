@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/visual-intelligence/curation-packet.schema.json",
+  "title": "VIS Curation Packet",
+  "type": "object",
+  "required": ["asset_id", "visual_uri", "local_path", "rights_status", "approval_status", "codex_prompt"],
+  "properties": {
+    "asset_id": { "type": "string", "pattern": "^asset_[a-f0-9]{24}$" },
+    "visual_uri": { "type": "string", "pattern": "^visual://asset/asset_[a-f0-9]{24}$" },
+    "title": { "type": ["string", "null"] },
+    "media_type": { "type": "string", "enum": ["image", "video", "audio"] },
+    "local_path": { "type": ["string", "null"] },
+    "relative_path": { "type": ["string", "null"] },
+    "public_path": { "type": ["string", "null"] },
+    "version_id": { "type": ["string", "null"] },
+    "sha256": { "type": ["string", "null"] },
+    "rights_status": { "type": "string" },
+    "approval_status": { "type": "string" },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "prompt": { "type": ["string", "null"] },
+    "provenance_summary": { "type": "object" },
+    "score": { "type": ["object", "null"] },
+    "intended_use": { "type": ["string", "null"] },
+    "next_recommended_action": { "type": ["string", "null"] },
+    "codex_prompt": { "type": "string" }
+  }
+}

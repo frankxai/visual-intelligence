@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/visual-intelligence/provenance-event.schema.json",
+  "title": "VIS Provenance Event",
+  "type": "object",
+  "required": ["provenance_event_id", "asset_id", "event_type", "created_at"],
+  "properties": {
+    "provenance_event_id": { "type": "string" },
+    "asset_id": { "type": "string", "pattern": "^asset_[a-f0-9]{24}$" },
+    "version_id": { "type": ["string", "null"], "pattern": "^ver_[a-f0-9]{32}$" },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "indexed",
+        "prompt-linked",
+        "generated",
+        "edited",
+        "evaluated",
+        "approved",
+        "rejected",
+        "publication-recorded",
+        "uploaded",
+        "derivative-created"
+      ]
+    },
+    "actor": { "type": ["string", "null"] },
+    "source": { "type": ["string", "null"] },
+    "payload": { "type": "object" },
+    "created_at": { "type": "string", "format": "date-time" }
+  }
+}
+

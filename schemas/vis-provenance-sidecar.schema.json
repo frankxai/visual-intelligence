@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/vis-provenance-sidecar.schema.json",
+  "title": "VIS Generation Provenance Sidecar",
+  "description": "Portable sidecar for generated or agent-edited media when embedded metadata is missing or may be stripped by platforms.",
+  "type": "object",
+  "required": ["schema_version", "generation"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": { "type": ["string", "null"] },
+        "version_id": { "type": ["string", "null"] },
+        "media_type": { "type": ["string", "null"], "enum": ["image", "video", "audio", "document", null] },
+        "sha256": { "type": ["string", "null"] },
+        "local_path": { "type": ["string", "null"] },
+        "relative_path": { "type": ["string", "null"] }
+      }
+    },
+    "generation": {
+      "type": "object",
+      "required": ["prompt"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "type": ["string", "null"] },
+        "model": { "type": ["string", "null"] },
+        "prompt": { "type": ["string", "null"] },
+        "negative_prompt": { "type": ["string", "null"] },
+        "seed": { "type": ["string", "number", "null"] },
+        "settings": { "type": "object", "additionalProperties": true },
+        "output_paths": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "created_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "agent": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "coding_agent": { "type": ["string", "null"] },
+        "repo": { "type": ["string", "null"] },
+        "thread_ref": { "type": ["string", "null"] },
+        "session_ref": { "type": ["string", "null"] },
+        "summary": { "type": ["string", "null"] },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "skill": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "metadata": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "evaluation": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "rights": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,5 +1,17 @@
 node_modules/
 dist/
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+data/vis-dashboard.html
+data/vis-dashboard.webmanifest
+data/vis-dashboard-sw.js
+data/vis-icon.svg
+data/vis-atlas.json
+data/visual-registry.json
+data/brand-visual-dna.json
+data/renditions/
+data/receipts/
 *.log
 .env
 .DS_Store
@@ -19,3 +31,5 @@ link-checker-report.txt
 
 # Asset OS Phase-0 raw data (local paths; public repo)
 data/phase0/
+.dev.vars
+.wrangler/

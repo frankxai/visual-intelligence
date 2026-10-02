@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/asset-action-recipe.schema.json",
+  "title": "VIS Asset Action Recipe",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["recipe", "execute"],
+  "properties": {
+    "recipe": {
+      "type": "string",
+      "enum": [
+        "designer-inbox",
+        "music-release-inbox",
+        "prompt-gap-review",
+        "provenance-gap-review",
+        "website-candidates",
+        "social-candidates",
+        "nft-trait-review",
+        "orphan-review",
+        "duplicate-review",
+        "similar-review"
+      ]
+    },
+    "asset_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "assets": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "query": { "type": "string" },
+    "media_type": {
+      "type": "string",
+      "enum": ["image", "video", "audio"]
+    },
+    "category": { "type": "string" },
+    "filter_tag": { "type": "string" },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "note": { "type": "string" },
+    "rating": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "color": { "type": "string" },
+    "curation_status": { "type": "string" },
+    "collection": { "type": "string" },
+    "rights_status": {
+      "type": "string",
+      "enum": ["owned", "generated-owned", "licensed", "unknown", "blocked", "needs-review"]
+    },
+    "approval_status": {
+      "type": "string",
+      "enum": ["candidate", "approved", "rejected", "needs-review"]
+    },
+    "reason": { "type": "string" },
+    "limit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "execute": {
+      "type": "boolean",
+      "description": "False by default in CLI/MCP usage. True persists annotations/reviews only after human approval."
+    }
+  }
+}

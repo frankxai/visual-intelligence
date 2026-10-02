@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/visual-intelligence/asset.schema.json",
+  "title": "VIS Asset",
+  "type": "object",
+  "required": ["asset_id", "media_type", "versions", "locations", "rights_status", "approval_status"],
+  "properties": {
+    "asset_id": { "type": "string", "pattern": "^asset_[a-f0-9]{24}$" },
+    "visual_uri": { "type": "string", "pattern": "^visual://asset/asset_[a-f0-9]{24}$" },
+    "media_type": { "type": "string", "enum": ["image", "video", "audio"] },
+    "title": { "type": ["string", "null"] },
+    "category": { "type": ["string", "null"] },
+    "mood": { "type": ["string", "null"] },
+    "tags": { "type": "array", "items": { "type": "string" } },
+    "rights_status": {
+      "type": "string",
+      "enum": ["owned", "generated-owned", "licensed", "unknown", "blocked", "needs-review"]
+    },
+    "approval_status": { "type": "string", "enum": ["candidate", "approved", "rejected", "archived"] },
+    "versions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/version" }
+    },
+    "locations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/location" }
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "object",
+      "required": ["version_id", "sha256", "byte_size", "media_type"],
+      "properties": {
+        "version_id": { "type": "string", "pattern": "^ver_[a-f0-9]{32}$" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "byte_size": { "type": "integer", "minimum": 0 },
+        "media_type": { "type": "string" },
+        "mime_type": { "type": ["string", "null"] },
+        "width": { "type": ["integer", "null"], "minimum": 1 },
+        "height": { "type": ["integer", "null"], "minimum": 1 },
+        "duration_seconds": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "location": {
+      "type": "object",
+      "required": ["location_id", "absolute_path", "relative_path", "storage_kind"],
+      "properties": {
+        "location_id": { "type": "string" },
+        "absolute_path": { "type": "string" },
+        "relative_path": { "type": "string" },
+        "public_path": { "type": ["string", "null"] },
+        "storage_kind": { "type": "string", "enum": ["local", "r2", "cloudinary", "drive", "onedrive", "ipfs", "url"] },
+        "provider": { "type": ["string", "null"] },
+        "provider_id": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
+

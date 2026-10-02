@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/vis/asset-color-palette.schema.json",
+  "title": "VIS Asset Color Palette",
+  "type": "object",
+  "required": ["source", "dominant", "families", "colors"],
+  "additionalProperties": false,
+  "properties": {
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "dominant": {
+      "type": ["string", "null"],
+      "pattern": "^#[0-9a-f]{6}$"
+    },
+    "families": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["black", "white", "gray", "red", "orange", "yellow", "green", "cyan", "blue", "purple", "magenta", "pink", "mixed"]
+      },
+      "uniqueItems": true
+    },
+    "colors": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": ["hex", "count", "ratio", "family"],
+        "additionalProperties": false,
+        "properties": {
+          "hex": {
+            "type": "string",
+            "pattern": "^#[0-9a-f]{6}$"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "ratio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "family": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

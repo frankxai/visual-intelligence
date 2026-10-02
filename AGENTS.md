@@ -1,68 +1,91 @@
 # AGENTS.md — Shared brain for all agents working in this repo
 
-> **Canonical instructions for every agent — Claude Code, Codex, and any other CLI.**
+> **Canonical instructions for every agent: Claude Code, Codex, Grok, and any other CLI.**
 > `CLAUDE.md` is a shim that points here. Read this fully before doing any work.
 
 ## Mission
 
-`visual-intelligence` (VIS) is the **Asset OS** for the FrankX / Arcanea ecosystem:
-one source of truth for managing visual assets — and their prompts and plans —
-across every repo and machine. Audit → dedup → catalog → curate → provenance → publish.
+`visual-intelligence` (VIS) is the **asset record** for the FrankX / Arcanea / GenCreator estate. Every file is known by its hash, keeps rights at `unknown` until a person sets them, and records where it was placed. Agents search and propose. People set rights and publish.
 
 ## Who works here
 
-Two agents on two machines operate this repo **concurrently**:
-- **Claude** (FrankX main workstation) — lane: **ingestion / dedup / manifest / provenance**
-- **Codex** (second laptop) — lane: **catalog infra / MCP / n8n automations / GitHub Action**
+Several agents on two machines work in this repo **at the same time**:
+- **Claude** (`claude/`) — lane: **ingestion, dedup, manifest, provenance, and the library record**
+- **Codex** (`codex/`) — lane: **catalog, MCP, n8n, GitHub Action**
+- **Grok** (`agent/grok/`) — fixes and guards on the integration branch, through PRs
 
-Stay in your lane to avoid editing the same files. Cross-lane work is allowed but
-**only via an issue + PR** so the other agent sees it.
+Stay in your lane to avoid editing the same files. Cross-lane work goes **through an issue and a PR** so the other agents see it.
 
-## The 4 rules that keep us aligned
+## The rules that keep us aligned
 
-1. **Single source of truth = this repo, `main` branch.** Always `git pull --rebase` before starting.
-2. **GitHub Issues are the task queue.** Before working an item:
-   - self-assign the issue, add label `status:in-progress` + your agent label (`agent:claude` / `agent:codex`).
-   - If it is already claimed by the other agent, pick a different one.
-   - Comment on the issue when you finish: *what changed + what's next* (this is the handoff log).
-3. **Never push to `main`.** Branch per task: `claude/<issue#>-slug` or `codex/<issue#>-slug`.
-   Open a PR that references the issue (`Closes #N`). Small, conventional commits
-   (`feat:`, `fix:`, `chore:`, `docs:`).
-4. **Lanes** (see above) minimize file-level collisions. When in doubt, smaller PRs, merge often.
+1. **Integration branch:** `codex/visual-intelligence-os-v02` (draft #7) is where lanes meet until it lands on `main`. Branch from it, PR into it, and `git pull --rebase` before starting.
+2. **GitHub Issues are the task queue.** Before working an item, self-assign it and add `status:in-progress` plus your agent label. When you finish, comment on the issue with what changed and what comes next.
+3. **Never push to `main` or force-push a shared branch.** Branch per task, and open a PR that references the issue. Use small, conventional commits.
+4. **Human gates** (issue #41): rights, publication, production deploys, R2 writes, and deleting the only copy. Agents never cross them.
 
-## Definition of "claimed" / "done"
-- **Claimed:** issue assigned + `status:in-progress` label + your agent label.
-- **Done:** PR merged to `main`, issue closed, handoff comment posted.
+## Accepted decisions (keep this honest)
 
-## Current state (updated by whoever changes it — keep this honest)
-- **Phase 0 (census) — DONE.** `docs/asset-os/PHASE0-REPORT.md`. 3,146 assets, 336 exact-dup
-  clusters (~350 MB), no provenance, license unverified. Raw manifest/dup data is in
-  `data/phase0/` (gitignored — local only; repo is public).
-- **Locked decisions:** OSS catalog (Immich/PhotoPrism) · hybrid topology (local masters + Cloudflare R2 mirror)
-  · thin Supabase+pgvector manifest backbone · reuse `arcanea-onchain` `canon-checker` + Prompt Hub + Higgsfield.
-- **Existing VIS building blocks:** `scripts/scan-visual-registry.mjs` (→ `data/visual-registry.json` = the manifest),
-  `scripts/audit-visual-health.mjs` (placeholders/dupes/orphans/oversized), `vis.config.json` `council` perspectives
-  (= the curation eval council), `bin/vis.mjs` CLI, `action.yml` (PR-gate Action).
+- **Storage:** `architecture_media_fabric_v2` (frankxai/agentic-ops#44, accepted 2026-09-11). Vercel Blob/Image delivers new app media. R2 is a named exception only (frankxai/agentic-ops#115). There is no public `r2.dev` bucket.
+- **Build and buy:** own the record (hash, renditions, rights, provenance, placement, proposal events). Rent storage and resizing. Do **not** run Immich/PhotoPrism or rebuild Eagle (the 2026-06-26 Immich + R2-mirror lock is superseded).
+- **Plan pack:** `.agent-harness/plans/library-and-storage-2026-09` on Frank's workstation.
 
-## Roadmap (issues track the detail)
-- **P1** Catalog: stand up Immich/PhotoPrism + R2 mirror *(Codex lane)*
-- **P2** Manifest+embeddings: extend `visual-registry.json` with sha256 dedup + CLIP vectors *(Claude lane)*
-- **P3** Curation council: wire `canon-checker` + quality scorer into the audit *(shared)*
-- **P4** Provenance graph: prompt + model + seed + plan-id per asset *(Claude lane)*
-- **P5** Publish/mint: IPFS/Arweave pin → Vanguard 20 *(shared)*
+## Current state
+
+- Phase 0 census: `docs/asset-os/PHASE0-REPORT.md`. Raw data lives in gitignored `data/`.
+- The library record (watched roots, thumb/preview/ThumbHash, proposals, operator screen, MCP gates) is in #39.
+- `vis keep` / truth / usage guard are on the integration branch (Grok and Codex lanes).
 
 ## Safety
-- Repo is **public** — never commit raw asset data, local paths, secrets, or license-restricted images.
-  Big data lives in gitignored `data/`. Flip repo private if you need to track manifests.
-- Machine health: the main workstation runs hot (RED). Defer heavy crawls/large agent fan-outs;
-  prefer the second laptop for compute-heavy steps.
+
+- The repo is **public**. Never commit raw asset data, absolute local paths, secrets, or license-restricted images. Big data lives in gitignored `data/`.
+- Machine health: the main workstation runs hot. Defer heavy crawls and large agent fan-outs, and never run an estate-wide scan without Frank.
 
 ## Quick start for a new session
 ```
 git pull --rebase
-gh issue list --label status:todo        # find unclaimed work
+gh issue list --label status:todo
 gh issue edit <N> --add-label status:in-progress --add-label agent:<you> --add-assignee @me
-git checkout -b <you>/<N>-slug
-# ...work...  then PR:
-gh pr create --fill --base main
+git checkout -b <you>/<N>-slug codex/visual-intelligence-os-v02
+# ...work... then:
+gh pr create --fill --base codex/visual-intelligence-os-v02
 ```
+
+## Handoff
+
+Summarize changed files, validation run, risks, and any follow-up needed.
+
+## Design Taste Kernel
+
+For any site, app, landing page, dashboard, visual identity, brand, motion, media, social, or frontend task, apply the shared Design Taste Kernel before handoff:
+
+- DESIGN_TASTE.md
+- WEB_EXPERIENCE_STANDARD.md
+- MOTION_TASTE_RUBRIC.md
+- MULTI_AGENT_DESIGN_COUNCIL.md
+- VISUAL_QA_GATE.md
+
+When motion, scroll, generated media, GIF/video, or premium polish matters, route through the Motion Design Studio plugin/skills and verify the result visually.
+
+
+<!-- PREMIUM-WEB-OS:START -->
+## Premium Intelligence Web OS Adoption
+
+This repo participates in the Starlight Premium Intelligence Web OS.
+
+For any website, app, landing page, dashboard, brand surface, visual asset, motion system, 3D/WebGL scene, generated media, or public-facing UI work:
+
+- Read the estate OS first: `_intelligence/README.md` in the estate design checkout.
+- Use the activation contract: `_intelligence/adoption/activation-contract.md`.
+- Treat `_intelligence/` as the source of truth for premium web taste, design, motion, WebGL, copy, assets, and quality gates.
+- Use `/pwo` or the `premium-web-os` skill for full builds; use `/mad` for a design council pass.
+- Use `/pwo review-pr` before absorbing another agent's PR or branch.
+- Use `/pwo absorb-assets` before using external, generated, scientific, audio, video, or 3D assets.
+- Use `/pwo motion-score` before shipping cinematic scroll, sound-paired motion, or complex choreography.
+- Build static composition first, add Track A local motion second, add Track B GSAP/Lenis scroll only when earned, and add 3D only with fallback and reduced-motion behavior.
+- Use this repository for asset provenance, curation packets, rights, and publication records.
+- Use `_intelligence/visual-worlds/neural-cosmos.md` for neuroscience, cerebrum, spine, electron, signal, or golden spiral direction.
+- Do not copy reference sites or agencies. Deconstruct principles and create original execution.
+- Do not ship without responsive, accessibility, performance, reduced-motion, and visual QA checks appropriate to the change.
+
+Repo-local instructions remain authoritative when stricter.
+<!-- PREMIUM-WEB-OS:END -->

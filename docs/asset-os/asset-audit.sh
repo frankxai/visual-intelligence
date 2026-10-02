@@ -3,22 +3,18 @@
 # Crawl -> manifest -> exact-dup (size-gated sha256) -> source/license + collection buckets
 set -uo pipefail
 
-OUT="${1:-./asset-audit-out}"
+if [ "$#" -lt 2 ]; then
+  echo "usage: asset-audit.sh OUT_DIR ROOT [ROOT...]" >&2
+  echo "Pass the folders to read. This script does not name a home directory." >&2
+  exit 2
+fi
+OUT="$1"
+shift
+ROOTS=("$@")
 mkdir -p "$OUT"
 RAW="$OUT/raw.tsv"           # size \t mtime \t ext \t collection \t source \t path
 MANIFEST="$OUT/asset-manifest.tsv"
 : > "$RAW"
-
-ROOTS=(
-"/c/Users/frank/Arcanea/.arcanea/visual-assets"
-"/c/Users/frank/arcanea-nft-forge"
-"/c/Users/frank/arcanea-onchain"
-"/c/Users/frank/AnimeLegends.ai/vendor/arcanea-nft-forge"
-"/c/Users/frank/OneDrive/NFT"
-"/c/Users/frank/OneDrive/Desktop/Akamoto"
-"/c/Users/frank/OneDrive/Bilder/Arcanea"
-"/c/Users/frank/OneDrive/Dokumente/Downloads Old/NFT"
-)
 
 classify_collection() {
   local p="$1" lp
