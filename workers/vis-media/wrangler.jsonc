@@ -1,6 +1,6 @@
 {
-  // Private preview Worker for the VIS library. Not deployed.
-  // Deploy only after Frank confirms the account and the R2 exception is on the Empire Registry.
+  // Private preview Worker for the VIS library.
+  // Deployed 2026-10-03. workers.dev, preview URLs, routes, and r2.dev stay off.
   "name": "vis-media",
   "main": "src/index.js",
   "compatibility_date": "2026-09-28",
