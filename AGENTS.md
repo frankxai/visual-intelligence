@@ -12,28 +12,30 @@
 Several agents on two machines work in this repo **at the same time**:
 - **Claude** (`claude/`) — lane: **ingestion, dedup, manifest, provenance, and the library record**
 - **Codex** (`codex/`) — lane: **catalog, MCP, n8n, GitHub Action**
-- **Grok** (`agent/grok/`) — fixes and guards on the integration branch, through PRs
+- **Grok** (`agent/grok/`) — review-screen quality, guards, and the local library on this workstation, through PRs
 
 Stay in your lane to avoid editing the same files. Cross-lane work goes **through an issue and a PR** so the other agents see it.
 
 ## The rules that keep us aligned
 
-1. **Integration branch:** `codex/visual-intelligence-os-v02` (draft #7) is where lanes meet until it lands on `main`. Branch from it, PR into it, and `git pull --rebase` before starting.
+1. **`main` is the base.** The library record landed there as merge `60428b6`, and the private-preview note landed as `febd182`. Branch from `main`, open a PR into `main`, and rebase onto `main` before pushing.
 2. **GitHub Issues are the task queue.** Before working an item, self-assign it and add `status:in-progress` plus your agent label. When you finish, comment on the issue with what changed and what comes next.
-3. **Never push to `main` or force-push a shared branch.** Branch per task, and open a PR that references the issue. Use small, conventional commits.
+3. **Ship through a PR.** Do not push directly to `main` and do not force-push a shared branch. When lint and `node --test` are green and the diff does not cross issue #41, squash-merge the PR. Suggest the change, build it, and merge it. A written proposal with no PR is not done.
 4. **Human gates** (issue #41): rights, publication, production deploys, R2 writes, and deleting the only copy. Agents never cross them.
 
 ## Accepted decisions (keep this honest)
 
-- **Storage:** `architecture_media_fabric_v2` (frankxai/agentic-ops#44, accepted 2026-09-11). Vercel Blob/Image delivers new app media. R2 is a named exception only (frankxai/agentic-ops#115). There is no public `r2.dev` bucket.
+- **Storage:** `architecture_media_fabric_v2` (frankxai/agentic-ops#44, accepted 2026-09-11). Vercel Blob or the product repo delivers a page. Private R2 is the accepted internal exception (agentic-ops#155, `fdd0233`). There is no public `r2.dev` URL.
 - **Build and buy:** own the record (hash, renditions, rights, provenance, placement, proposal events). Rent storage and resizing. Do **not** run Immich/PhotoPrism or rebuild Eagle (the 2026-06-26 Immich + R2-mirror lock is superseded).
 - **Plan pack:** `.agent-harness/plans/library-and-storage-2026-09` on Frank's workstation.
 
 ## Current state
 
-- Phase 0 census: `docs/asset-os/PHASE0-REPORT.md`. Raw data lives in gitignored `data/`.
-- The library record (watched roots, thumb/preview/ThumbHash, proposals, operator screen, MCP gates) is in #39.
-- `vis keep` / truth / usage guard are on the integration branch (Grok and Codex lanes).
+- The library record is on `main`: watched roots, thumb and preview renditions, proposals, the loopback operator screen, and the MCP gates.
+- The operator screen is `vis library serve` at `http://127.0.0.1:4323`. It shows thumbs and a preview, sets rank, and accepts or dismisses proposals. It does not publish.
+- `workers/vis-media` is the private preview Worker. `workers_dev` and preview URLs stay off. No route is added unless issue #41 is already satisfied and Frank asks.
+- Issue #41 is the remaining human work: an Infisical login before a restic token, and a real page before a publication.
+- The next build is the review screen itself: a folder rail, keyboard review, and a stable preview. Build it, test it, and merge it. Do not add a second catalog or a browser extension.
 
 ## Safety
 
@@ -42,12 +44,13 @@ Stay in your lane to avoid editing the same files. Cross-lane work goes **throug
 
 ## Quick start for a new session
 ```
-git pull --rebase
-gh issue list --label status:todo
-gh issue edit <N> --add-label status:in-progress --add-label agent:<you> --add-assignee @me
-git checkout -b <you>/<N>-slug codex/visual-intelligence-os-v02
-# ...work... then:
-gh pr create --fill --base codex/visual-intelligence-os-v02
+git fetch origin
+git checkout main
+git pull --rebase origin main
+git checkout -b agent/<you>/<N>-slug
+# implement, then node --test
+gh pr create --base main
+# squash-merge only after lint and node --test are green, and only if the diff stays outside issue #41
 ```
 
 ## Handoff
