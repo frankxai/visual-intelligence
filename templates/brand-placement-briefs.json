@@ -1,0 +1,577 @@
+{
+  "format": "vis.brand-placement-briefs.example.v1",
+  "observed_on": "2026-10-16",
+  "status": "proposal_not_runtime",
+  "asset_catalog": "existing VIS only",
+  "live_deployment_revision_verified": false,
+  "publication_authorized": false,
+  "automated_ranking_installed": false,
+  "brands": [
+    {
+      "id": "frankx",
+      "repo": "frankxai/frankx.ai-vercel-website",
+      "source_revision": "d816cd59ef755154d9315ad6e3970b499e93cf0f",
+      "authority": [
+        "AGENTS.md",
+        "taste.md",
+        "docs/strategy/HOMEPAGE-PRESERVATION-CONTRACT.md"
+      ],
+      "identity": "Living studio; technical craft, music and authored work",
+      "slots": [
+        {
+          "slot_id": "frankx.first-viewport",
+          "route": "/",
+          "component_ref": "components/home/HomePageElite.tsx#Hero",
+          "communication_job": "Preserve current first read and identity; compare only within the existing composition",
+          "existing_baseline_ref": "current hero identity",
+          "preferred_subject_type": "human/studio presence",
+          "destination": null,
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "frankx.architecture-feature",
+          "route": "/",
+          "component_ref": "components/home/HomePageElite.tsx",
+          "communication_job": "Connect architecture section to a specific system or method",
+          "existing_baseline_ref": "public/images/home/ai-architecture-atelier-v2.webp",
+          "preferred_subject_type": "technical atelier or real explanatory diagram",
+          "destination": "/ai-architecture",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "frankx.music-feature",
+          "route": "/",
+          "component_ref": "data/homepage-featured-release.ts",
+          "communication_job": "Show an actual reviewed release",
+          "existing_baseline_ref": "public/images/music/star-show-us.jpg",
+          "preferred_subject_type": "reviewed release cover",
+          "destination": "/music",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "frankx.creative-systems",
+          "route": "/",
+          "component_ref": "components/home/HomePageElite.tsx",
+          "communication_job": "Illustrate the explicitly creative worldbuilding work",
+          "existing_baseline_ref": "public/images/arcanea/eldrian-conclave-20260301.webp",
+          "preferred_subject_type": "worldbuilding study",
+          "destination": "existing Creative Systems Lab destination",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "frankx.book-cover",
+          "route": "/",
+          "component_ref": "components/home/HomePageElite.tsx#BooksShowcase",
+          "communication_job": "Identify the exact authored book",
+          "existing_baseline_ref": "book.coverImage from registry",
+          "preferred_subject_type": "actual cover",
+          "destination": "matching book route",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "frankx.social-build-story",
+          "route": null,
+          "component_ref": null,
+          "communication_job": "Explain one real build through artifact, decision and reusable method",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "source artifact/detail sequence",
+          "destination": "matching article or repository",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "arcanea",
+      "repo": "frankxai/arcanea-ai-app",
+      "source_revision": "ea7e89e8f23c7a6964c75c7eed497f0ba2106f47",
+      "authority": [
+        "AGENTS.md",
+        ".arcanea/lore/CANON_LOCKED.md"
+      ],
+      "identity": "Coherent mythic content inside a restrained connected-world product",
+      "slots": [
+        {
+          "slot_id": "arcanea.portal-scene",
+          "route": "/",
+          "component_ref": "apps/web/app/v3/v3-content.tsx#HeroPortal",
+          "communication_job": "Establish a coherent world while preserving the creation action",
+          "existing_baseline_ref": "apps/web/public/brand/arcanea-dashboard-hero-premium.png",
+          "preferred_subject_type": "world backdrop or current proof view",
+          "destination": "existing creation action",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "arcanea.world-card",
+          "route": "/",
+          "component_ref": "exact live component to verify",
+          "communication_job": "Make a specific approved or clearly staged world recognizable",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "world scene",
+          "destination": "matching world route",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "arcanea.character-card",
+          "route": "/",
+          "component_ref": "exact live component to verify",
+          "communication_job": "Preserve a verified character/godbeast identity",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "reference-backed portrait",
+          "destination": "matching canon or character route",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "arcanea.creation-proof",
+          "route": "/",
+          "component_ref": "exact live component to verify",
+          "communication_job": "Show connected lore, characters, rules and artifacts",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "real world artifact or graph excerpt",
+          "destination": "working creation/proof route",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "arcanea.social-world-sequence",
+          "route": null,
+          "component_ref": null,
+          "communication_job": "Establish place, reveal subject and explain one creative/canon decision",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "scene, portrait and detail",
+          "destination": "matching world/story",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "gencreator",
+      "repo": "frankxai/gencreator.ai",
+      "source_revision": "0cd245389357cc2c8da82d30888300f899257aa3",
+      "authority": [
+        "AGENTS.md",
+        "design.md",
+        "taste.md",
+        "docs/brand/GENCREATOR_BRAND_SOCIAL_SYSTEM.md"
+      ],
+      "identity": "Territory B; warm paper/ink, Instrument Serif/Sans, one spot red",
+      "slots": [
+        {
+          "slot_id": "gencreator.product-proof",
+          "route": "/",
+          "component_ref": "app/components/home/HomepageClient.tsx#ArtifactProof",
+          "communication_job": "Let the visitor inspect source to artifact to review to export",
+          "existing_baseline_ref": "existing working ArtifactProof",
+          "preferred_subject_type": "real interactive artifact",
+          "destination": "existing create/workspace route",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "gencreator.signature",
+          "route": "/",
+          "component_ref": "app/components/home/HomepageClient.tsx",
+          "communication_job": "Show where human authorship changes readiness",
+          "existing_baseline_ref": "existing signature sequence",
+          "preferred_subject_type": "source excerpt, review and export",
+          "destination": "existing review/export action",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "gencreator.edition-case",
+          "route": null,
+          "component_ref": "specific case route/component to verify",
+          "communication_job": "Show a source-owned creator work with a point of view",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "actual artifact with editorial crop",
+          "destination": "source artifact or edition",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "gencreator.social-edition",
+          "route": null,
+          "component_ref": null,
+          "communication_job": "Sequence source, editorial decision, proof and signature",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "authored proof carousel",
+          "destination": "matching artifact or creator instrument",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "starlight",
+      "repo": "frankxai/starlightintelligence.ai",
+      "source_revision": "f9f83b25a54ef0ae5bb3267700e37e09fac449f5",
+      "authority": [
+        "AGENTS.md",
+        "docs/PRODUCT_BRIEF.md",
+        "docs/PAGE_SPEC.md",
+        "docs/SCENE_BRIEF.md"
+      ],
+      "identity": "Inspectable work, evidence and bounded agent/human responsibility",
+      "slots": [
+        {
+          "slot_id": "starlight.mission-or-brief-proof",
+          "route": "/",
+          "component_ref": "live/source mapping unresolved",
+          "communication_job": "Show a real saved mission or useful system brief",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "real receipt/product proof",
+          "destination": "matching inspectable mission or builder",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "starlight.mechanism",
+          "route": null,
+          "component_ref": "exact route/component to verify",
+          "communication_job": "Explain workflow, authority, evidence and next decision",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "authored diagram with real states",
+          "destination": "matching workflow",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "starlight.vision-context",
+          "route": null,
+          "component_ref": "exact route/component to verify",
+          "communication_job": "Express the setting without implying a real campus or client",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "labeled concept or real work",
+          "destination": "about or vision route",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        },
+        {
+          "slot_id": "starlight.social-mission-story",
+          "route": null,
+          "component_ref": null,
+          "communication_job": "Show question, evidence, owner boundary, result and limitation",
+          "existing_baseline_ref": null,
+          "preferred_subject_type": "actual mission excerpts",
+          "destination": "matching mission",
+          "selected_asset_id": null,
+          "selected_version_id": null,
+          "state": "briefed",
+          "human_approval": null,
+          "review_required": [
+            "actual candidate inspection",
+            "source and rights",
+            "brand and canon where applicable",
+            "desktop/mobile crop in context",
+            "independent review before consequential release"
+          ],
+          "runtime_checks": {
+            "focus": null,
+            "touch": null,
+            "reduced_motion": null,
+            "interrupted_transitions": null,
+            "layout_stability": null
+          }
+        }
+      ]
+    }
+  ]
+}

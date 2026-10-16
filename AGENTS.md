@@ -37,6 +37,10 @@ reuse work, read `docs/ASSET_EXECUTION_PLAYBOOK.md` and
 library/storage work and its ownership. Local instructions do not update ChatGPT
 project settings; report prepared, applied, and verified separately.
 
+For brand art direction, homepage/component placement and visual social strategy,
+read `docs/VISUAL_EDITORIAL_TEAM.md` and `docs/BRAND_PLACEMENT_STRATEGY.md`.
+The initial slot briefs are proposals; they do not approve assets or website changes.
+
 ## Design Taste Kernel
 
 For any site, app, landing page, dashboard, visual identity, brand, motion, media, social, or frontend task, apply the shared Design Taste Kernel before handoff:

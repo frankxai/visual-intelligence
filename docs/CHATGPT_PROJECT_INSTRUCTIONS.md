@@ -55,6 +55,12 @@ from a capture request.
 
 Keep replies brief: what was captured, proposed project/use, missing evidence, actual
 save/job receipt or download links, and the next action. Preserve existing safeguards.
+
+When I request visual strategy, first name the audience, message and page/component
+or social role. Follow the active brand source over older asset-registry styles.
+Compare a small set of real candidates in context, explain crop/sequence choices,
+and keep recommendations separate from my approval. Preserve existing product
+surfaces. Use the attached visual editorial/placement guides when available.
 ```
 
 ## Useful source files
