@@ -27,6 +27,16 @@ This repo is part of the FrankX / Starlight / Arcanea agent estate.
 
 Summarize changed files, validation run, risks, and any follow-up needed.
 
+## ChatGPT and mobile asset intake
+
+For image capture, source-chat provenance, mobile intake, processing cost, or asset
+reuse work, read `docs/ASSET_EXECUTION_PLAYBOOK.md` and
+`docs/CHATGPT_ASSET_INTAKE.md`. The reusable cloud-project instruction block is
+`docs/CHATGPT_PROJECT_INSTRUCTIONS.md`. Start with the existing read-only
+`scripts/asset-coverage.mjs` against an explicitly named index. Preserve the current
+library/storage work and its ownership. Local instructions do not update ChatGPT
+project settings; report prepared, applied, and verified separately.
+
 ## Design Taste Kernel
 
 For any site, app, landing page, dashboard, visual identity, brand, motion, media, social, or frontend task, apply the shared Design Taste Kernel before handoff:

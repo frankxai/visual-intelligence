@@ -1,0 +1,49 @@
+{
+  "handoff_format": "vis.capture-handoff.example.v1",
+  "status": "prepared",
+  "example_only": true,
+  "compatibility": "Context interchange example; no live VIS importer or validation is installed for this format.",
+  "items": [
+    {
+      "handoff_item_id": "retain-the-same-id-on-retry",
+      "source": {
+        "provider": "chatgpt",
+        "chat_ref": null,
+        "project_ref": null,
+        "message_ref": null,
+        "image_ref": null
+      },
+      "file": {
+        "original_filename": null,
+        "retrievable_reference": null,
+        "sha256": null,
+        "width": null,
+        "height": null,
+        "measurement_evidence": null
+      },
+      "creation": {
+        "user_prompt_verbatim": null,
+        "effective_image_prompt_verbatim": null,
+        "ordered_edit_instructions": [],
+        "reference_images": [],
+        "provider": null,
+        "model": null,
+        "seed": null,
+        "settings": {},
+        "model_identity_evidence": null,
+        "context_summary": null
+      },
+      "project_links": [],
+      "intended_use": null,
+      "human_feedback": [],
+      "model_recommendations": [],
+      "existing_vis_asset_id": null,
+      "provider_file_receipts": [],
+      "processing_job_receipt": null,
+      "rights_status": "unknown",
+      "approval_status": "candidate",
+      "missing_evidence": [],
+      "additional_api_spend_authorized": false
+    }
+  ]
+}
