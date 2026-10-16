@@ -416,6 +416,8 @@ function cmdDashboard() {
   const out = generateDashboard(root, {
     output: getFlag('--output') || getFlag('-o') || undefined,
     limit: getFlag('--limit') || undefined,
+    readOnly: hasFlag('--read-only'),
+    verifyLocations: hasFlag('--verify-locations'),
   })
   console.log(`Dashboard generated: ${out.outputPath}`)
   console.log(`Assets rendered: ${out.assets}`)
@@ -1513,6 +1515,8 @@ Commands:
   vis report --html                Generate dashboard HTML
   vis usage --usage-root <path>     Re-scan usage edges without rehashing media. Refuses to delete links unless --replace-usage is passed.
   vis dashboard                    Generate dashboard HTML and PWA shell
+  vis dashboard --read-only --verify-locations --limit 40
+                                   Export private snapshot; check up to 8 paths per asset
   vis serve-dashboard              Serve dashboard locally with media preview proxy
   vis search <query>               Search assets by path, tag, mood, category, color
   vis trace <asset|path|uri>        Print full provenance and usage trace

@@ -17,6 +17,7 @@ import {
   listSmartCollections,
   loadConfig,
   openVisDatabase,
+  openVisDatabaseReadOnly,
   parseJson,
   recordCurationFeedback,
   resolveProjectPath,
@@ -26,14 +27,20 @@ import {
 
 export function generateDashboard(root, options = {}) {
   const config = loadConfig(root)
-  const db = openVisDatabase(root, config)
+  const db = options.readOnly
+    ? openVisDatabaseReadOnly(resolveProjectPath(root, config.indexPath))
+    : openVisDatabase(root, config)
   try {
+    db.exec('BEGIN')
     const limit = Number(options.limit || 3000)
+    if (!Number.isInteger(limit) || limit < 1 || limit > 10000) throw new Error('Dashboard limit must be an integer from 1 to 10000')
+    if (options.verifyLocations && limit > 100) throw new Error('Location verification is limited to 100 assets per snapshot')
     const assets = listAssets(db, { limit })
+    const catalogueSeenAt = db.prepare('SELECT MAX(last_seen_at) AS at FROM asset').get().at
     const summary = getSummary(db)
     const duplicates = findDuplicates(db, { limit: 20 })
     const orphans = findOrphans(db, { limit: 60 })
-    const similar = findSimilarAssets(db, { limit: 20, minScore: 58 })
+    const similar = findSimilarAssets(db, { limit: 20, minScore: 58, poolLimit: options.readOnly ? limit : undefined })
     const savedSearches = listSavedSearches(db)
     const smartCollections = listSmartCollections(db)
     const actionRecipes = listAssetActionRecipes()
@@ -75,6 +82,20 @@ export function generateDashboard(root, options = {}) {
       const prompt = promptMap.get(asset.asset_id)
       const gen = genMap.get(asset.asset_id)
       const usages = usageMap.get(asset.asset_id) || []
+      const locationCount = db.prepare('SELECT COUNT(*) AS n FROM asset_location WHERE asset_id = ?').get(asset.asset_id).n
+      const locations = db.prepare(`SELECT absolute_path, root, repo, seen_at, exists_now
+        FROM asset_location WHERE asset_id = ? ORDER BY exists_now DESC, seen_at DESC LIMIT 8`).all(asset.asset_id)
+      for (const location of locations) {
+        location.availability = 'not-checked'
+        // A local stat is existence evidence only. Never fetch a URL or walk a network share.
+        if (options.verifyLocations && path.isAbsolute(location.absolute_path) && !/^[/\\]{2}/.test(location.absolute_path)) {
+          try {
+            location.availability = fs.statSync(location.absolute_path).isFile() ? 'present' : 'not-a-file'
+          } catch (error) {
+            location.availability = ['ENOENT', 'ENOTDIR'].includes(error.code) ? 'missing' : 'unavailable'
+          }
+        }
+      }
       return {
         ...asset,
         tags: parseJson(asset.tags_json, []),
@@ -83,14 +104,21 @@ export function generateDashboard(root, options = {}) {
         negative_prompt: prompt?.negative_prompt || null,
         gen_model: prompt?.model || gen?.model || prompt?.model_hint || null,
         gen_provider: prompt?.provider || gen?.provider || null,
-        gen_seed: prompt?.seed || gen?.seed || null,
+        gen_seed: prompt?.seed ?? gen?.seed ?? null,
         sidecar_path: prompt?.source_path || null,
+        locations,
+        location_count: locationCount,
+        derivative_count: db.prepare('SELECT COUNT(*) AS n FROM asset_derivative WHERE source_asset_id = ?').get(asset.asset_id).n,
+        storage_count: db.prepare('SELECT COUNT(*) AS n FROM storage_object WHERE asset_id = ?').get(asset.asset_id).n,
         usages: usages.map(u => ({ file: u.source_file, route: u.route, ref: u.reference_text })),
       }
     })
     const facets = deriveDashboardFacets(normalizedAssets, duplicates, orphans, similar)
     const payload = {
       generatedAt: new Date().toISOString(),
+      catalogueSeenAt,
+      readOnly: Boolean(options.readOnly),
+      locationsVerified: Boolean(options.verifyLocations),
       root,
       limit,
       summary,
@@ -107,6 +135,7 @@ export function generateDashboard(root, options = {}) {
       ...facets,
     }
     const outputPath = resolveProjectPath(root, options.output || config.dashboardPath)
+    if (outputPath === resolveProjectPath(root, config.indexPath)) throw new Error('Dashboard output cannot replace the index')
     fs.mkdirSync(path.dirname(outputPath), { recursive: true })
     const pwa = writeDashboardPwaArtifacts(outputPath, payload)
     fs.writeFileSync(outputPath, renderDashboardHtml({ ...payload, pwa }), 'utf-8')
@@ -788,6 +817,16 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 .empty{color:var(--muted);font-size:13px;border:1px dashed var(--border);border-radius:var(--radius);padding:16px;text-align:center}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#101827;border:1px solid #26324B;border-radius:8px;padding:10px 14px;color:var(--ink);font-size:13px;opacity:0;pointer-events:none;transition:opacity .16s ease;z-index:30}
 .toast.show{opacity:1}
+.evidence-band{border:1px solid var(--border);border-radius:var(--radius);padding:16px;background:var(--surface)}
+.evidence-band h2{margin:0;font-size:16px}.evidence-band p{color:var(--soft);font-size:13px;line-height:1.55}
+.evidence-views{display:flex;gap:8px;flex-wrap:wrap}.evidence-views button{min-height:44px;background:var(--surface-2);color:var(--ink);border:1px solid var(--border);border-radius:6px;padding:8px 12px;cursor:pointer;transition:background-color 120ms ease-out}
+.evidence-views button[aria-pressed=true]{border-color:var(--accent);background:#14243A}.evidence-views button:disabled{opacity:.5;cursor:default}
+.evidence-views button:active{background:#20334C}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.evidence-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.evidence-item{border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px;color:var(--soft)}
+.evidence-item strong{display:block;color:var(--ink);font-size:14px;margin-bottom:4px}
+.location-record{padding:10px 0;border-top:1px solid var(--border);font-size:12px;overflow-wrap:anywhere}.location-record p{margin:5px 0;color:var(--soft)}
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .drawer,.toast{transition:none}
@@ -894,6 +933,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
         <p id="brief"></p>
         <div class="focus-line" id="focusLine"></div>
       </section>
+      <section class="evidence-band" aria-labelledby="evidenceTitle">
+        <h2 id="evidenceTitle">Files and processing</h2>
+        <p id="catalogueFreshness"></p>
+        <div class="evidence-views" id="evidenceViews" aria-label="Filter by recorded evidence"></div>
+        <p>Open an asset to inspect its locations and records. Code references, processing records and publication records are separate evidence.</p>
+        <div class="evidence-views"><button id="downloadInventory">Download inventory</button></div>
+      </section>
       <section class="status-grid">
         <div class="status accent"><small>Indexed assets</small><strong id="sAssets">0</strong></div>
         <div class="status good"><small>Prompts linked</small><strong id="sPrompts">0</strong></div>
@@ -941,7 +987,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     </div>
   </main>
 </div>
-<aside class="drawer" id="drawer" aria-hidden="true">
+<aside class="drawer" id="drawer" aria-hidden="true" inert role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
   <div class="drawer-head">
     <div class="drawer-nav">
       <button class="nav-btn" id="prevAssetBtn" title="Previous asset [ [ ]" aria-label="Previous asset">◀</button>
@@ -960,7 +1006,8 @@ const DUPLICATE_IDS = new Set(DATA.duplicateAssetIds || []);
 const SIMILAR_IDS = new Set(DATA.similarAssetIds || []);
 let activeCategory = "";
 const selectedIds = new Set();
-const state = { query:"", media:"", readiness:"", source:"", folder:"", smart:"", saved:"", sort:"newest" };
+const state = { query:"", media:"", readiness:"", source:"", folder:"", smart:"", saved:"", evidence:"", sort:"newest" };
+let drawerOpener = null;
 const $ = (id) => document.getElementById(id);
 
 let currentAssetId = null;
@@ -980,7 +1027,7 @@ const DEFECT_OPTIONS = [
 ];
 
 function pathBasename(p){
-  const parts = String(p || "").replace(/\\/g, "/").split("/").filter(Boolean);
+  const parts = String(p || "").replace(/\\\\/g, "/").split("/").filter(Boolean);
   return parts[parts.length - 1] || p;
 }
 
@@ -999,6 +1046,7 @@ function nextAsset(){
 }
 
 function setRating(rating, autoSubmit = true){
+  if (DATA.readOnly) return toast("Read-only snapshot. No decision was saved.");
   currentRating = rating;
   updateStarUi(rating);
   if (autoSubmit) {
@@ -1032,16 +1080,19 @@ function toggleDefectChip(chipName){
 }
 
 function approveCurrentAsset(){
+  if (DATA.readOnly) return toast("Read-only snapshot. No decision was saved.");
   currentRating = Math.max(currentRating, 4);
   submitFeedback("approve", currentRating);
 }
 
 function rejectCurrentAsset(){
+  if (DATA.readOnly) return toast("Read-only snapshot. No decision was saved.");
   currentRating = currentRating > 0 && currentRating <= 2 ? currentRating : 1;
   submitFeedback("reject", currentRating);
 }
 
 function undoCurrentAsset(){
+  if (DATA.readOnly) return toast("Read-only snapshot. No decision was saved.");
   if (!currentAssetId) return;
   if (location.protocol.startsWith("http")) {
     fetch("/api/feedback/undo", {
@@ -1078,6 +1129,7 @@ function copyCurrentPrompt(){
 }
 
 function submitFeedback(action, ratingOverride){
+  if (DATA.readOnly) return toast("Read-only snapshot. No decision was saved.");
   if (!currentAssetId) return;
   const asset = DATA.assets.find(a => a.asset_id === currentAssetId);
   if (!asset) return;
@@ -1236,6 +1288,7 @@ function assetMediaSrc(asset){
 function filteredAssets(){
   const words = state.query.trim().toLowerCase().split(/\\s+/).filter(Boolean);
   const rows = DATA.assets.filter(asset => {
+    if (state.evidence && !evidenceMatches(asset, state.evidence)) return false;
     if (activeCategory && asset.category !== activeCategory) return false;
     if (state.smart && !smartMatches(asset, state.smart)) return false;
     if (state.saved && !savedSearchMatches(asset, state.saved)) return false;
@@ -1312,6 +1365,7 @@ function renderMetrics(){
   const s = DATA.summary || {};
   const rightsReview = DATA.assets.filter(asset => ["unknown","needs-review"].includes(asset.rights_status)).length;
   $("generatedAt").textContent = new Date(DATA.generatedAt).toLocaleString();
+  renderEvidenceViews();
   $("mAssets").textContent = fmt(s.assets);
   $("mVersions").textContent = fmt(s.versions);
   $("mLocations").textContent = fmt(s.locations);
@@ -1521,9 +1575,55 @@ function renderSide(){
   for (const btn of document.querySelectorAll("[data-open-mini]")) btn.addEventListener("click", () => openAsset(btn.getAttribute("data-open-mini")));
 }
 function renderAll(){ renderMetrics(); renderRail(); renderGrid(); renderSide(); }
+
+function evidenceMatches(asset, view){
+  if (view === "present") return (asset.locations || []).some(l => l.availability === "present");
+  if (view === "prompt-gap") return !Number(asset.prompt_count || 0);
+  if (view === "export-gap") return !Number(asset.derivative_count || 0);
+  if (view === "publication-gap") return !Number(asset.publication_count || 0);
+  return true;
+}
+function renderEvidenceViews(){
+  const seen = DATA.catalogueSeenAt ? new Date(DATA.catalogueSeenAt).toLocaleString() : "unknown";
+  $("catalogueFreshness").textContent = (DATA.readOnly ? "Read-only snapshot. " : "Catalogue view. ") +
+    "Latest catalogue observation: " + seen + ". Snapshot created: " + new Date(DATA.generatedAt).toLocaleString() +
+    ". Showing " + fmt(DATA.assets.length) + " of " + fmt(DATA.summary.assets) + " indexed assets. " +
+    (DATA.locationsVerified ? "Up to 8 paths per displayed asset checked for file presence at snapshot time; bytes were not re-hashed." : "Paths have not been checked against the filesystem in this snapshot.");
+  const views = [["", "All in snapshot"], ["present", "File present"], ["prompt-gap", "Prompt gaps"], ["export-gap", "No export record"], ["publication-gap", "No publication record"]];
+  $("evidenceViews").innerHTML = views.map(([id,label]) => '<button data-evidence="'+id+'" aria-pressed="'+(state.evidence === id)+'" '+(id === "present" && !DATA.locationsVerified ? "disabled" : "")+'>'+label+' · '+fmt(DATA.assets.filter(a => evidenceMatches(a,id)).length)+'</button>').join("");
+  for (const btn of $("evidenceViews").querySelectorAll("button")) btn.onclick = () => { state.evidence = btn.dataset.evidence; renderAll(); $("evidenceViews").querySelector('[data-evidence="'+state.evidence+'"]').focus(); };
+}
+function processingEvidence(asset){
+  const items = [[asset.location_count, "Catalogue locations", "Locations observed by an earlier index run"],
+    [asset.prompt_count, "Prompt records", "Model labels may be incomplete or unverified"],
+    [asset.derivative_count, "Export records", "Recorded derivatives; files are not validated here"],
+    [asset.eval_count, "Evaluation records", "A record is not a human taste approval"],
+    [asset.storage_count, "Storage records", "May include plans; not proof of a completed upload"],
+    [asset.publication_count, "Publication records", "May include plans; live URLs are not verified here"]];
+  const locations = asset.locations || [];
+  return '<section class="evidence-band"><h3>Locations and processing evidence</h3>' +
+    '<div class="evidence-list">'+items.map(([count,label,note]) => '<div class="evidence-item"><strong>'+fmt(count)+' '+label+'</strong>'+note+'</div>').join("")+'</div>'+
+    '<p>Presence checks do not verify content hashes. Missing records do not prove a file was never processed or published.</p>'+
+    locations.map(l => '<div class="location-record"><span class="mono">'+esc(l.absolute_path)+'</span><p>At snapshot: '+esc(l.availability)+' · Last indexed: '+esc(l.seen_at)+' · Present at last index: '+(l.exists_now ? "yes" : "no")+'</p></div>').join("")+
+    (asset.location_count > locations.length ? '<p>Showing '+locations.length+' of '+fmt(asset.location_count)+' locations.</p>' : '') +
+    '<p>Physical moves require a reviewed source and destination, hash verification, a receipt, and a recoverable undo. This view does not move files.</p></section>';
+}
+function downloadInventory(){
+  const assets = selectedIds.size ? selectedAssets() : filteredAssets();
+  const body = { type:"vis_inventory_snapshot", generated_at:DATA.generatedAt, catalogue_seen_at:DATA.catalogueSeenAt, read_only:DATA.readOnly,
+    caveat:"Recorded evidence only. File presence is a point-in-time stat, not hash verification. Publication and storage records may be planned.",
+    assets:assets.map(a => ({asset_id:a.asset_id, sha256:a.sha256, title:a.title, locations:a.locations, location_count:a.location_count,
+      prompt_records:a.prompt_count, derivative_records:a.derivative_count, evaluation_records:a.eval_count, publication_records:a.publication_count,
+      storage_records:a.storage_count, code_references:a.usage_count, rights:a.rights_status, approval:a.approval_status})) };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(body,null,2)], {type:"application/json"}));
+  const link = document.createElement("a"); link.href = url; link.download = "vis-inventory.json"; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast("Inventory exported on this device. It contains local paths.");
+}
 function openAsset(assetId){
   const asset = DATA.assets.find(a => a.asset_id === assetId);
   if (!asset) return;
+  if (!$("drawer").classList.contains("open")) drawerOpener = document.activeElement;
   currentAssetId = assetId;
 
   const currentList = filteredAssets();
@@ -1573,14 +1673,14 @@ function openAsset(assetId){
       '<div class="prompt-header">' +
         '<div class="prompt-badge"><span>⚡ Generation Prompt</span></div>' +
       '</div>' +
-      '<div class="prompt-gap">⚠️ Zero-Orphan Alert: No prompt sidecar (.vis.provenance.json) found for this asset.</div>' +
+      '<div class="prompt-gap">No prompt text linked in this catalogue. Original photography and imported files may not have a generation prompt.</div>' +
     '</div>';
   }
 
   const genSpecsHtml = '<div class="gen-grid">' +
     '<div class="gen-card"><span>Model</span><strong title="' + esc(asset.gen_model || "unknown") + '">' + esc(asset.gen_model || "unknown") + '</strong></div>' +
-    '<div class="gen-card"><span>Provider</span><strong title="' + esc(asset.gen_provider || "local") + '">' + esc(asset.gen_provider || "local") + '</strong></div>' +
-    '<div class="gen-card"><span>Seed</span><strong title="' + esc(asset.gen_seed || "none") + '">' + esc(asset.gen_seed || "none") + '</strong></div>' +
+    '<div class="gen-card"><span>Provider</span><strong title="' + esc(asset.gen_provider || "unknown") + '">' + esc(asset.gen_provider || "unknown") + '</strong></div>' +
+    '<div class="gen-card"><span>Seed</span><strong title="' + esc(asset.gen_seed ?? "unknown") + '">' + esc(asset.gen_seed ?? "unknown") + '</strong></div>' +
     '<div class="gen-card"><span>Dimensions</span><strong>' + esc(asset.width && asset.height ? asset.width + "×" + asset.height : "unknown") + '</strong></div>' +
   '</div>';
 
@@ -1642,6 +1742,7 @@ function openAsset(assetId){
 
   $("drawerBody").innerHTML = (
     '<div class="preview">' + mediaPreview(asset, "detail") + '</div>' +
+    processingEvidence(asset) +
     curationHudHtml +
     promptHtml +
     genSpecsHtml +
@@ -1672,6 +1773,11 @@ function openAsset(assetId){
     '<div class="kv"><span>Prompt links</span><div>' + fmt(asset.prompt_count) + '</div></div>' +
     '<div class="kv"><span>Score</span><div>' + esc(score ? score.score + " / " + score.verdict : "not scored") + '</div></div>'
   );
+
+  if (DATA.readOnly) {
+    for (const control of $("drawerBody").querySelectorAll(".curation-card button, .curation-card textarea, .curation-card select")) control.disabled = true;
+    $("curationNote").placeholder = "Read-only snapshot. Decisions are disabled.";
+  }
 
   for (const btn of $("drawerBody").querySelectorAll(".star-btn")) {
     btn.addEventListener("click", () => setRating(Number(btn.dataset.value || 0)));
@@ -1712,6 +1818,8 @@ function openAsset(assetId){
 
   $("drawer").classList.add("open");
   $("drawer").setAttribute("aria-hidden", "false");
+  $("drawer").inert = false;
+  $("closeDrawer").focus({preventScroll:true});
 }
 function copySelectedPackets(){
   const assets = selectedAssets();
@@ -1898,11 +2006,19 @@ $("clearSelection").addEventListener("click", () => { selectedIds.clear(); rende
 $("copySelection").addEventListener("click", copySelectedPackets);
 $("copyCurationCommand").addEventListener("click", copyBatchCurationCommand);
 $("copyReviewCommand").addEventListener("click", copyReviewCommand);
-$("closeDrawer").addEventListener("click", () => { $("drawer").classList.remove("open"); $("drawer").setAttribute("aria-hidden","true"); });
+$("downloadInventory").addEventListener("click", downloadInventory);
+$("closeDrawer").addEventListener("click", () => { $("drawer").classList.remove("open"); $("drawer").setAttribute("aria-hidden","true"); $("drawer").inert = true; if (drawerOpener?.isConnected) drawerOpener.focus({preventScroll:true}); });
 $("prevAssetBtn")?.addEventListener("click", prevAsset);
 $("nextAssetBtn")?.addEventListener("click", nextAsset);
 
 document.addEventListener("keydown", e => {
+  if (e.key === "Tab" && $("drawer").classList.contains("open")) {
+    const controls = [...$("drawer").querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], audio[controls], video[controls]')];
+    const first = controls[0], last = controls[controls.length-1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+    return;
+  }
   const tag = String(e.target?.tagName || "").toLowerCase();
   const isInput = tag === "input" || tag === "textarea" || tag === "select";
 

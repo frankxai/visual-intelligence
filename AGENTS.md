@@ -57,6 +57,22 @@ gh pr create --base main
 
 Summarize changed files, validation run, risks, and any follow-up needed.
 
+## Cloud and local asset continuation
+
+Start at `docs/CLOUD_CONTINUATION.md` for the current handoff, branch, verification
+and next task. Read `docs/VISUAL_WORKSPACE.md` for cockpit/location evidence,
+`docs/ASSET_EXECUTION_PLAYBOOK.md` for bounded processing, and
+`docs/CHATGPT_ASSET_INTAKE.md` for capture/provenance design. The reusable session
+prompt is `docs/CREATIVE_OPERATOR_PROMPT.md`; cloud-project capture instructions
+are prepared in `docs/CHATGPT_PROJECT_INSTRUCTIONS.md`.
+
+Use the already merged library on main. Private indexes, masters, rendered local
+snapshots and credentials stay outside Git. Cloud repository access does not
+provide workstation paths, another session's browser, or unseen ChatGPT chats.
+If an estate-only guide or brand reference is unavailable, report that scope and
+continue repository-contained work; obtain the guide before dependent design or
+release decisions. Instruction pointers do not install tools or cloud settings.
+
 ## Design Taste Kernel
 
 For any site, app, landing page, dashboard, visual identity, brand, motion, media, social, or frontend task, apply the shared Design Taste Kernel before handoff:
