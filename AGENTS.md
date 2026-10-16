@@ -41,6 +41,11 @@ For brand art direction, homepage/component placement and visual social strategy
 read `docs/VISUAL_EDITORIAL_TEAM.md` and `docs/BRAND_PLACEMENT_STRATEGY.md`.
 The initial slot briefs are proposals; they do not approve assets or website changes.
 
+For the visual operator interface, folder/location evidence and future execution
+handoffs, read `docs/VISUAL_WORKSPACE.md`. The reusable session brief is
+`docs/CREATIVE_OPERATOR_PROMPT.md`. Preserve the already merged watched-library
+implementation; reconcile current main before adding parallel library machinery.
+
 ## Design Taste Kernel
 
 For any site, app, landing page, dashboard, visual identity, brand, motion, media, social, or frontend task, apply the shared Design Taste Kernel before handoff:
