@@ -127,6 +127,11 @@ with reasons, creator/model evidence, rights state, and intended use. Give each
 edit/reference/derivative an explicit relationship to its parent. Do not infer the
 exact model from a chat's displayed assistant name, a filename, or the current date.
 
+The user's typed prompt and the effective image-tool request may differ. Preserve
+both when exposed, label revised prompts separately, and never replace an original
+with an assistant summary. A prompt/model/seed record improves traceability but
+does not guarantee identical output from a later service/model revision.
+
 One image can support multiple projects. Store many-to-many links with role and
 confidence. Explicit user choice outranks chat/project evidence, which outranks
 semantic suggestions. A file under an estate folder is insufficient evidence that
