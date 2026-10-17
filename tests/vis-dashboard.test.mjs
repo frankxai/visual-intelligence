@@ -4,6 +4,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import vm from 'node:vm'
+import http from 'node:http'
 import { indexProject, openVisDatabase, searchAssets } from '../core/vis-core.mjs'
 import { generateDashboard, serveDashboard } from '../web/vis-dashboard.mjs'
 
@@ -171,10 +172,15 @@ test('dashboard refuses foreign browser writes, untrusted hosts and raw catalogu
     const write = await fetch(new URL('api/feedback', served.url), {
       method: 'POST', headers: { origin: 'https://untrusted.example', 'content-type': 'application/json' }, body: '{}',
     })
-    const host = await fetch(served.url, { headers: { host: 'untrusted.example' } })
+    const hostStatus = await new Promise((resolve, reject) => {
+      http.get(served.url, { headers: { host: 'untrusted.example' } }, response => {
+        response.resume()
+        response.on('end', () => resolve(response.statusCode))
+      }).on('error', reject)
+    })
     const raw = await fetch(new URL(path.basename(index), served.url))
     await raw.arrayBuffer()
-    assert.deepEqual({ foreignWrite: write.status, untrustedHost: host.status, rawIndex: raw.status },
+    assert.deepEqual({ foreignWrite: write.status, untrustedHost: hostStatus, rawIndex: raw.status },
       { foreignWrite: 403, untrustedHost: 403, rawIndex: 404 })
     assert.equal(write.headers.get('access-control-allow-origin'), null)
   } finally {
@@ -200,6 +206,16 @@ test('snapshot refuses a hard-linked index output', () => {
     const before = fs.readFileSync(index)
     assert.throws(() => generateDashboard(root, { readOnly: true, output: alias, limit: 5 }), /cannot replace the index/)
     assert.deepEqual(fs.readFileSync(index), before)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('read-only serving rejects stale writable shells and non-loopback binds', () => {
+  const { root } = sampleCatalogue()
+  try {
+    assert.throws(() => serveDashboard(root, { host: '0.0.0.0' }), /loopback/)
+    assert.throws(() => serveDashboard(root, { readOnly: true, generate: false }), /fresh snapshot/)
   } finally {
     fs.rmSync(root, { recursive: true, force: true })
   }

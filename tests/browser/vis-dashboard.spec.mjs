@@ -41,7 +41,7 @@ const test = base.extend({
 
 test.afterEach(async ({ page }, info) => {
   const file = info.outputPath('interface.png')
-  await page.screenshot({ path: file, fullPage: true })
+  await page.screenshot({ path: file })
   await info.attach('Interface', { path: file, contentType: 'image/png' })
 })
 
@@ -51,18 +51,21 @@ test('contact sheet loads without runtime errors or horizontal overflow', async 
   await page.goto(desk.url)
   await expect(page.locator('#grid .asset')).toHaveCount(4)
   await expect(page.locator('#catalogueFreshness')).toContainText('Read-only snapshot')
-  await expect(page.locator('#grid img').first()).toHaveJSProperty('complete', true)
+  await expect(page.locator(`.asset-open[data-id="${desk.copper}"] img`)).toHaveJSProperty('naturalWidth', 800)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  const firstAsset = await page.locator('#grid .asset').first().boundingBox()
+  expect(firstAsset.y).toBeLessThan(page.viewportSize().height - 80)
   expect(errors).toEqual([])
 })
 
 test('evidence filters and multiword search export the matching inventory', async ({ page, desk }) => {
   await page.goto(desk.url)
-  await page.getByRole('button', { name: /Prompt gaps/ }).click()
+  const filters = page.getByRole('group', {name:'Filter by recorded evidence'})
+  await filters.getByRole('button', { name: /Prompt gaps/ }).click()
   await expect(page.locator('#grid .asset')).toHaveCount(3)
-  await page.getByRole('button', { name: /File present/ }).click()
+  await filters.getByRole('button', { name: /File present/ }).click()
   await expect(page.locator('#grid .asset')).toHaveCount(3)
-  await page.getByRole('button', { name: /All in snapshot/ }).click()
+  await filters.getByRole('button', { name: /All in snapshot/ }).click()
   await page.locator('#search').fill('copper study')
   await expect(page.locator('#grid .asset')).toHaveCount(1)
   const downloadEvent = page.waitForEvent('download')

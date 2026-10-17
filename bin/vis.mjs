@@ -435,6 +435,8 @@ async function cmdServeDashboard() {
     port: getFlag('--port') || undefined,
     host: getFlag('--host') || undefined,
     generate: !hasFlag('--no-generate'),
+    readOnly: hasFlag('--read-only'),
+    verifyLocations: hasFlag('--verify-locations'),
   })
   console.log(`VIS dashboard server: ${served.url}`)
   console.log(`Serving: ${served.outputPath}`)

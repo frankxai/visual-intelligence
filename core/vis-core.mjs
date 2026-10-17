@@ -3038,11 +3038,13 @@ export function recordCurationFeedback(dbOrRoot, args = {}) {
 
       db.exec('COMMIT')
 
-      const drainResult = drainFeedbackOutbox(db, { outboxId })
+      const drainResult = drainCommittedFeedback(db, outboxId)
 
       return {
         ok: true,
         receipt: {
+          ledger_status: drainResult.pending ? 'pending' : 'drained',
+          ledger_error: drainResult.error || null,
           outbox_id: outboxId,
           asset_id: assetId,
           action,
@@ -3108,11 +3110,14 @@ export function undoCurationFeedback(dbOrRoot, assetRef) {
 
       db.exec('COMMIT')
 
-      drainFeedbackOutbox(db, { outboxId })
+      const drainResult = drainCommittedFeedback(db, outboxId)
 
       return {
         ok: true,
         message: `Reverted feedback on ${assetId}`,
+        ledger_status: drainResult.pending ? 'pending' : 'drained',
+        ledger_error: drainResult.error || null,
+        annotation: previousState?.annotation || null,
         reverted_action: lastOutbox.action,
         approval_status: prevApproval,
       }
@@ -3122,6 +3127,14 @@ export function undoCurationFeedback(dbOrRoot, assetRef) {
     }
   } finally {
     if (close) db.close()
+  }
+}
+
+function drainCommittedFeedback(db, outboxId) {
+  // A filesystem failure after the decision commits leaves the outbox pending.
+  // It must not trigger a rollback or invite another decision submission.
+  try { return drainFeedbackOutbox(db, { outboxId }) } catch (error) {
+    return { syncedCount: 0, drainedIds: [], pending: true, error: error.message }
   }
 }
 
@@ -3144,16 +3157,25 @@ export function drainFeedbackOutbox(dbOrRoot, options = {}) {
     fs.mkdirSync(path.dirname(ledgerPath), { recursive: true })
     const ledgerLines = []
     const drainedIds = []
+    const existingIds = new Set()
+    if (fs.existsSync(ledgerPath)) {
+      for (const line of fs.readFileSync(ledgerPath, 'utf8').split('\n')) {
+        try { existingIds.add(JSON.parse(line).id) } catch {}
+      }
+    }
     const ts = nowIso()
 
     for (const row of rows) {
       const payload = parseJson(row.payload_json, {})
-      const asset = db.prepare('SELECT title, primary_path, repo FROM asset WHERE asset_id = ?').get(row.asset_id)
+      const asset = db.prepare(`SELECT a.title, a.primary_path,
+        (SELECT l.repo FROM asset_location l WHERE l.asset_id=a.asset_id
+          ORDER BY l.is_primary DESC, l.seen_at DESC LIMIT 1) AS repo
+        FROM asset a WHERE a.asset_id=?`).get(row.asset_id)
       const assetTitle = asset?.title || asset?.primary_path || row.asset_id
       const defects = parseJson(row.defects_json, [])
       
       const ledgerEntry = {
-        id: `taste-vis-${Date.now()}-${row.asset_id.slice(0, 8)}`,
+        id: `taste-vis-${row.outbox_id}`,
         timestamp: row.created_at,
         brand: payload.brand || (asset?.repo?.includes('frankx') ? 'frankx' : asset?.repo?.includes('arcanea') ? 'arcanea' : 'estate'),
         category: 'visual',
@@ -3167,15 +3189,18 @@ export function drainFeedbackOutbox(dbOrRoot, options = {}) {
         scope: row.scope || 'asset',
         tags: ['curation', row.action, ...(defects.map(d => `defect:${d}`)), ...(payload.brand ? [payload.brand] : [])],
       }
-      ledgerLines.push(JSON.stringify(ledgerEntry))
+      if (!existingIds.has(ledgerEntry.id)) {
+        ledgerLines.push(JSON.stringify(ledgerEntry))
+        existingIds.add(ledgerEntry.id)
+      }
       drainedIds.push(row.outbox_id)
     }
 
     if (ledgerLines.length) {
       fs.appendFileSync(ledgerPath, ledgerLines.join('\n') + '\n', 'utf-8')
-      for (const id of drainedIds) {
-        db.prepare("UPDATE feedback_outbox SET status = 'drained', drained_at = ? WHERE outbox_id = ?").run(ts, id)
-      }
+    }
+    for (const id of drainedIds) {
+      db.prepare("UPDATE feedback_outbox SET status = 'drained', drained_at = ? WHERE outbox_id = ?").run(ts, id)
     }
 
     return { syncedCount: drainedIds.length, drainedIds }
