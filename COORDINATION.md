@@ -19,6 +19,7 @@ A quick human-readable view of who is doing what. **GitHub Issues are authoritat
 - **Blocked:** the restic bucket still needs a token scoped to `starlight-restic-offsite` in Infisical. No watched master currently matches a frankx.ai page.
 
 ## Session log (newest first)
+- 2026-10-17 Codex — continued PR #53 / issue #15. Reproduced and fixed read-only serving, output-file protection, inspector focus/motion, missing previews and feedback retry failures. Code revision `242476c` passes all 75 library/unit tests and 16 hosted Chromium cases; sample screenshots inspected at desktop, tablet, mobile touch emulation and reduced motion. See `docs/DASHBOARD_REVIEW.md`. PR stays draft pending independent review. Real private capture-to-placement, rights and production gates remain open.
 - 2026-10-16 Codex — issue #15, branch `agent/codex/asset-cloud-handoff-20261016` from current `main`. Ports the read-only cockpit evidence/audit and a portable cloud/local handoff. Private catalogues, images and machine evidence are excluded. Rendered QA and independent review remain pending; draft PR, no deployment or human-gate action. The AGENTS.md main-based protocol supersedes the older integration-branch line above.
 - 2026-09-30 Claude — merged `main` into the integration branch (AGENTS.md conflict), updated this board, triaged #2 and #23 as superseded by `architecture_media_fabric_v2`.
 - 2026-06-26 Claude — scaffolded AGENTS.md/CLAUDE.md/COORDINATION.md, folded in Phase 0 census. Next: hand off to Codex for catalog infra.

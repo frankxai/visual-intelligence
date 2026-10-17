@@ -111,13 +111,31 @@ test('missing previews and rapid reversal leave the inspector usable', async ({ 
   await expect(page.locator('#drawer .media-unavailable')).toContainText('Preview unavailable')
   await expect(page.locator('#drawerBody')).toContainText('missing')
   await page.keyboard.press('Escape')
-  await page.evaluate(id => {
+  const opening = await page.evaluate(async id => {
     const tile = document.querySelector('.asset-open[data-id="' + id + '"]')
+    const frame = () => new Promise(resolve => requestAnimationFrame(resolve))
+    tile.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true}))
     tile.click()
+    await frame()
+    await frame()
+    const drawer = document.getElementById('drawer')
+    const duration = getComputedStyle(drawer).transitionDuration
+    const transitioning = drawer.getAnimations().some(animation => animation.playState === 'running')
     document.getElementById('closeDrawer').click()
+    await frame()
     tile.click()
+    return {duration, transitioning}
   }, desk.copper)
+  if (info.project.name === 'reduced-motion') {
+    expect(opening.duration).toBe('0s')
+    expect(opening.transitioning).toBe(false)
+  } else {
+    expect(parseFloat(opening.duration)).toBeGreaterThan(0)
+    expect(opening.transitioning).toBe(true)
+  }
   await expect(page.locator('#drawer')).toHaveAttribute('aria-hidden', 'false')
+  await expect(page.locator('#drawer')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)')
   await expect(page.locator('#closeDrawer')).toBeFocused()
+  await expect(page.locator('.shell')).toHaveJSProperty('inert', true)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })

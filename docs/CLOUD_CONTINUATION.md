@@ -51,22 +51,30 @@ approved package setup when absent. Never substitute the private local index for
 a test fixture. Start with:
 
 ```sh
-node --test --test-concurrency=1 tests/asset-coverage.test.mjs tests/vis-dashboard.test.mjs
+node --test --test-concurrency=1 tests/asset-coverage.test.mjs tests/vis-dashboard.test.mjs tests/vis-feedback.test.mjs
 npm run lint
 node bin/vis.mjs --help
 ```
 
 For broader library changes, run the full suite with its dependencies. A Linux
 cloud test does not prove Windows desktop control, file moves or native bindings.
+The PR browser workflow installs Chromium on a hosted runner and uses temporary
+synthetic assets. With an admitted browser runtime, run `pnpm test:browser`.
+See [the review record](DASHBOARD_REVIEW.md) for reproduced defects, fixes and
+the verification boundary.
 
 ## Next useful task
 
-Review this exact PR revision independently, then inspect the running cockpit with
-temporary sample assets at mobile/tablet/desktop sizes. Verify loading failures,
-evidence filters, JSON export, read-only decisions, keyboard focus/return, touch
-and reduced motion. Preserve the accepted library/operator; do not make another
-catalogue or server. Keep rendered QA and independent-review status pending until
-performed. Coordinate cross-lane work through the existing issue and PR.
+Primary code review and hosted sample-based browser QA were performed on 17 October
+2026. The repaired code at `242476c9a5a4b8407029af4af0bf0959512c68b8`
+passed all 75 library/unit tests and 16 Chromium cases. Desktop, tablet, mobile
+touch emulation and reduced motion screenshots were inspected. Follow-up tests
+also exercise reversal during the pointer transition. Actions on PR #53 record
+the results for the latest revision.
+
+The next gate is an independent review of the current PR head. Keep PR #53 in
+draft until that review is complete and its findings are resolved. Preserve the
+accepted library/operator. Coordinate cross-lane work through issue #15 and PR #53.
 
 After that, prove one authorised source image plus context through intake,
 deduplication/retry and one reviewed placement. Real private asset selection,
@@ -80,8 +88,9 @@ Continue frankxai/visual-intelligence on branch
 agent/codex/asset-cloud-handoff-20261016. Read AGENTS.md and
 docs/CLOUD_CONTINUATION.md, then use docs/CREATIVE_OPERATOR_PROMPT.md.
 Verify the checkout and current PR head. Keep the merged library intact.
-First review the code and run the focused tests, then use temporary sample assets
-to verify the actual interface and fix concrete failures. Track work in issue #15.
+Read docs/DASHBOARD_REVIEW.md and check CI for the current head. Independently
+review the changes, resolve concrete findings, and repeat affected verification.
+Track work in issue #15. Preserve sample-only browser QA and the existing library.
 Do not assume access to my local index, images, browser, other chats or credentials.
 Use an authorised connected host only for steps that require it. Keep private data
 out of GitHub and previews. Deliver reviewed code and evidence through the PR;

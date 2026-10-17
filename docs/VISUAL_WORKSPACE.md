@@ -17,8 +17,19 @@ this computer. Paths that no longer exist cannot preview. File paths, prompts an
 internal source references can be embedded in the page. Keep it private; do not
 deploy this export or use the public web build with a private catalogue.
 
+For HTTP previews on the owning computer:
+
+```powershell
+node bin/vis.mjs serve-dashboard --read-only --verify-locations --limit 40
+```
+
+The server accepts loopback binds only. Read-only mode rejects mutation requests
+at the handler, and the server refuses unrelated origins and arbitrary files in
+the output directory. These checks do not make a private catalogue suitable for
+public hosting. Use `vis library serve` for the watched-library workflow below.
+
 The new Files and processing section shows the latest catalogue observation
-separately from the export time. Filters identify present files, prompt gaps and
+separately from the export time, with timing details in a disclosure. Filters identify present files, prompt gaps and
 missing export/publication records within the loaded snapshot. Select an asset
 to inspect up to eight locations, their current presence check and the earlier
 index observation. Download inventory exports selected assets, or the current
@@ -26,7 +37,7 @@ filtered set when nothing is selected. The JSON stays on the device and includes
 private paths. It is an inventory snapshot, not a processing job or move receipt.
 
 `--read-only` opens SQLite read-only, does not create/migrate the index, and disables
-feedback in the exported interface. `--verify-locations` checks local file presence
+feedback in the exported interface and HTTP handler. `--verify-locations` checks local file presence
 for at most 100 displayed assets and eight paths per asset. It does not walk roots,
 download cloud files or re-hash bytes. Network shares and URLs are not checked.
 Records can be stale; no publication records does not mean never published.
