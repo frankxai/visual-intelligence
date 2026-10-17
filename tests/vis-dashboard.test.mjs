@@ -122,3 +122,85 @@ test('read-only snapshot refuses a missing index without creating it', () => {
     fs.rmSync(root, { recursive: true, force: true })
   }
 })
+
+function sampleCatalogue() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-dashboard-review-'))
+  const images = path.join(root, 'public', 'images')
+  fs.mkdirSync(images, { recursive: true })
+  fs.writeFileSync(path.join(images, 'sample.png'), PNG_1X1)
+  indexProject({ root })
+  const db = openVisDatabase(root)
+  const assetId = db.prepare('SELECT asset_id FROM asset LIMIT 1').get().asset_id
+  db.close()
+  return { root, assetId, index: path.join(root, 'data', 'vis.sqlite') }
+}
+
+test('read-only HTTP serving refuses feedback and leaves catalogue bytes unchanged after reads', async () => {
+  const { root, assetId, index } = sampleCatalogue()
+  const previousLedger = process.env.VIS_TASTE_LEDGER
+  process.env.VIS_TASTE_LEDGER = path.join(root, 'test-only-feedback.jsonl')
+  let served
+  try {
+    served = await serveDashboard(root, { port: 0, readOnly: true, limit: 5 })
+    const before = fs.readFileSync(index)
+    for (const endpoint of ['api/stats', `api/asset/${assetId}`, `__vis_media/${assetId}`]) {
+      const response = await fetch(new URL(endpoint, served.url))
+      assert.equal(response.status, 200)
+      await response.arrayBuffer()
+    }
+    const response = await fetch(new URL('api/feedback', served.url), {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ asset_id: assetId, action: 'approve', actor: 'synthetic-test' }),
+    })
+    assert.equal(response.status, 403, await response.text())
+    assert.deepEqual(fs.readFileSync(index), before)
+    assert.equal(fs.existsSync(process.env.VIS_TASTE_LEDGER), false)
+  } finally {
+    if (served) await new Promise(resolve => served.server.close(resolve))
+    if (previousLedger === undefined) delete process.env.VIS_TASTE_LEDGER
+    else process.env.VIS_TASTE_LEDGER = previousLedger
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('dashboard refuses foreign browser writes, untrusted hosts and raw catalogue downloads', async () => {
+  const { root, index } = sampleCatalogue()
+  let served
+  try {
+    served = await serveDashboard(root, { port: 0, limit: 5 })
+    const write = await fetch(new URL('api/feedback', served.url), {
+      method: 'POST', headers: { origin: 'https://untrusted.example', 'content-type': 'application/json' }, body: '{}',
+    })
+    const host = await fetch(served.url, { headers: { host: 'untrusted.example' } })
+    const raw = await fetch(new URL(path.basename(index), served.url))
+    await raw.arrayBuffer()
+    assert.deepEqual({ foreignWrite: write.status, untrustedHost: host.status, rawIndex: raw.status },
+      { foreignWrite: 403, untrustedHost: 403, rawIndex: 404 })
+    assert.equal(write.headers.get('access-control-allow-origin'), null)
+  } finally {
+    if (served) await new Promise(resolve => served.server.close(resolve))
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('snapshot refuses a zero limit', () => {
+  const { root } = sampleCatalogue()
+  try {
+    assert.throws(() => generateDashboard(root, { readOnly: true, limit: 0 }), /Dashboard limit/)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('snapshot refuses a hard-linked index output', () => {
+  const { root, index } = sampleCatalogue()
+  try {
+    const alias = path.join(root, 'data', 'index-alias.html')
+    fs.linkSync(index, alias)
+    const before = fs.readFileSync(index)
+    assert.throws(() => generateDashboard(root, { readOnly: true, output: alias, limit: 5 }), /cannot replace the index/)
+    assert.deepEqual(fs.readFileSync(index), before)
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})

@@ -8,6 +8,7 @@
     "vis": "bin/vis.mjs"
   },
   "scripts": {
+    "test:browser": "playwright test --config tests/browser/playwright.config.mjs",
     "build": "node bin/vis.mjs --help",
     "build:web": "node scripts/build-web.mjs",
     "dev": "node bin/vis.mjs dashboard",
@@ -52,6 +53,7 @@
     "node": ">=22.13.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "typescript": "^5.4.0"
   },
   "optionalDependencies": {

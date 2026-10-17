@@ -1,0 +1,45 @@
+name: Dashboard browser tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'core/**'
+      - 'bin/**'
+      - 'tests/browser/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/dashboard-browser-tests.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard-browser-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.0
+          cache: true
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:browser
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: dashboard-sample-browser-evidence
+          path: |
+            test-results/browser/
+            playwright-report/
+          retention-days: 3

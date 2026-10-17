@@ -33,3 +33,5 @@ link-checker-report.txt
 data/phase0/
 .dev.vars
 .wrangler/
+playwright-report/
+test-results/
