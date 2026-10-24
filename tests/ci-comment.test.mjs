@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 
 function createTempJson(data) {
   const file = path.join(os.tmpdir(), `audit-${Date.now()}-${Math.random()}.json`)
@@ -34,7 +34,7 @@ test('passing audit prints PASS and correctly displays budget icons', () => {
   const mainAudit = createTempJson(emptyAudit)
 
   try {
-    const stdout = execSync(`node scripts/ci-comment.mjs --pr-audit ${prAudit} --main-audit ${mainAudit} --min-score 50 --max-total-size-mb 10`, { encoding: 'utf8' })
+    const stdout = execFileSync(process.execPath, ['scripts/ci-comment.mjs', '--pr-audit', prAudit, '--main-audit', mainAudit, '--min-score', '50', '--max-total-size-mb', '10'], { encoding: 'utf8' })
     const lines = stdout.trim().split('\n')
     const lastLine = lines[lines.length - 1]
     assert.equal(lastLine, 'PASS')
@@ -54,7 +54,7 @@ test('failing audit due to low score prints FAIL and shows warning icon for plac
   const mainAudit = createTempJson(emptyAudit)
 
   try {
-    const stdout = execSync(`node scripts/ci-comment.mjs --pr-audit ${prAudit} --main-audit ${mainAudit} --min-score 50 --max-placeholder-count 0`, { encoding: 'utf8' })
+    const stdout = execFileSync(process.execPath, ['scripts/ci-comment.mjs', '--pr-audit', prAudit, '--main-audit', mainAudit, '--min-score', '50', '--max-placeholder-count', '0'], { encoding: 'utf8' })
     const lines = stdout.trim().split('\n')
     const lastLine = lines[lines.length - 1]
     assert.equal(lastLine, 'FAIL')
@@ -75,7 +75,7 @@ test('handles delta from main correctly', () => {
   const mainAudit = createTempJson(failingAudit)
 
   try {
-    const stdout = execSync(`node scripts/ci-comment.mjs --pr-audit ${prAudit} --main-audit ${mainAudit}`, { encoding: 'utf8' })
+    const stdout = execFileSync(process.execPath, ['scripts/ci-comment.mjs', '--pr-audit', prAudit, '--main-audit', mainAudit], { encoding: 'utf8' })
 
     // PR score 91, Main score 30 => Delta +61
     assert.match(stdout, /delta from main: \+61/)
