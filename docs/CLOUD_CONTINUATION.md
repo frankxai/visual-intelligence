@@ -59,7 +59,7 @@ node bin/vis.mjs --help
 For broader library changes, run the full suite with its dependencies. A Linux
 cloud test does not prove Windows desktop control, file moves or native bindings.
 The PR browser workflow installs Chromium on a hosted runner and uses temporary
-synthetic assets. With an admitted browser runtime, run `pnpm test:browser`.
+synthetic assets. With an admitted browser runtime, run `npm run test:browser`.
 See [the review record](DASHBOARD_REVIEW.md) for reproduced defects, fixes and
 the verification boundary.
 

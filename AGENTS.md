@@ -32,7 +32,7 @@ Stay in your lane to avoid editing the same files. Cross-lane work goes **throug
 ## Current state
 
 - The library record is on `main`: watched roots, thumb and preview renditions, proposals, the loopback operator screen, and the MCP gates.
-- The operator screen is `vis library serve` at `http://127.0.0.1:4323`. It shows thumbs and a preview, sets rank, and accepts or dismisses proposals. It does not publish.
+- The operator screen is `node bin/vis.mjs library serve` at `http://127.0.0.1:4323`. It shows thumbs and a preview, sets rank, and accepts or dismisses proposals. It does not publish.
 - `workers/vis-media` is the private preview Worker. `workers_dev` and preview URLs stay off. No route is added unless issue #41 is already satisfied and Frank asks.
 - Issue #41 is the remaining human work: an Infisical login before a restic token, and a real page before a publication.
 - The next build is the review screen itself: a folder rail, keyboard review, and a stable preview. Build it, test it, and merge it. Do not add a second catalog or a browser extension.

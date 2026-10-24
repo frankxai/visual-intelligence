@@ -12,7 +12,7 @@ VIS turns scattered images, videos, audio files, prompts, website references, an
 - Execution tracker: GitHub Issues and milestones synced from `docs/VIS_TASK_REGISTRY.json`
 - Local-first source of truth: `data/vis.sqlite`
 - Local visual dashboard export: `data/vis-dashboard.html`
-- PWA cockpit shell: `data/vis-dashboard.webmanifest`, `data/vis-dashboard-sw.js`, and `vis serve-dashboard`
+- PWA cockpit shell: `data/vis-dashboard.webmanifest`, `data/vis-dashboard-sw.js`, and `node bin/vis.mjs serve-dashboard`
 - Agent layer: read-first MCP server at `mcp/vis-mcp-server.mjs`
 - Runtime: Node.js `>=22.13.0`; Node 24+ recommended
 
