@@ -26,7 +26,7 @@ node bin/vis.mjs serve-dashboard --read-only --verify-locations --limit 40
 The server accepts loopback binds only. Read-only mode rejects mutation requests
 at the handler, and the server refuses unrelated origins and arbitrary files in
 the output directory. These checks do not make a private catalogue suitable for
-public hosting. Use `vis library serve` for the watched-library workflow below.
+public hosting. Use `node bin/vis.mjs library serve` for the watched-library workflow below.
 
 The new Files and processing section shows the latest catalogue observation
 separately from the export time, with timing details in a disclosure. Filters identify present files, prompt gaps and
@@ -44,7 +44,7 @@ Records can be stale; no publication records does not mean never published.
 Storage and publication records may represent plans rather than completed work.
 
 The existing watched-library operator is a separate, already merged implementation:
-`vis library serve` serves its private local screen at `http://127.0.0.1:4323/`.
+`node bin/vis.mjs library serve` serves its private local screen at `http://127.0.0.1:4323/`.
 See `docs/LIBRARY.md` and issue #40. PR #39 merged on 2 October 2026; earlier notes
 calling it unmerged are stale. This publication branch starts from current main
 and includes that implementation. Preserve its server and shared record.
