@@ -124,7 +124,3 @@ export function signPath(secret, pathPart, exp) {
   return crypto.createHmac('sha256', secret).update(`${pathPart}:${exp}`).digest('base64url')
 }
 
-export function createStorage(options = {}) {
-  if (options.kind === 'worker') return createWorkerStorage(options)
-  return createLocalStorage(options)
-}
