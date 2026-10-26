@@ -6272,5 +6272,7 @@ function slugify(value) {
 export * from './adapters/vercel-blob-adapter.mjs'
 export * from './adapters/cloudflare-r2-adapter.mjs'
 export * from './adapters/ipfs-nft-adapter.mjs'
+export * from './adapters/google-drive-adapter.mjs'
+export * from './adapters/cloudflare-artifacts-adapter.mjs'
 export * from './adapters/upload-router.mjs'
 export * from './storage-sync-engine.mjs'

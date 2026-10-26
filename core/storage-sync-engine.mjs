@@ -5,6 +5,7 @@ import { searchAssets } from './vis-core.mjs'
 import { planVercelBlobUpload, executeVercelBlobUpload } from './adapters/vercel-blob-adapter.mjs'
 import { planCloudflareR2Upload } from './adapters/cloudflare-r2-adapter.mjs'
 import { planIpfsNftBundle } from './adapters/ipfs-nft-adapter.mjs'
+import { buildArtifactsCurationPacket, buildArtifactsGitPushPlan } from './adapters/cloudflare-artifacts-adapter.mjs'
 import { routeAssetDestination, routeAndPlanBatch } from './adapters/upload-router.mjs'
 
 // Only these rights may leave the machine, and only with approval_status = approved.
@@ -138,6 +139,25 @@ export function planStorageUpload(db, options = {}) {
   return {
     target: 'auto-routed',
     plan: routeAndPlanBatch(assets, options),
+  }
+}
+
+export function planArtifactsCurationPacket(db, options = {}) {
+  const assets = queryAssetsForStorage(db, {
+    ...options,
+    includeUnreviewed: options.dryRunPreview === true || options.includeUnreviewed === true,
+  })
+  const packet = buildArtifactsCurationPacket(assets, options)
+  const pushPlan = buildArtifactsGitPushPlan({
+    accountId: options.accountId,
+    brand: options.brand,
+    namespace: packet.namespace,
+    repo: packet.repository,
+    branch: options.branch || 'main',
+  })
+  return {
+    packet,
+    push_plan: pushPlan,
   }
 }
 

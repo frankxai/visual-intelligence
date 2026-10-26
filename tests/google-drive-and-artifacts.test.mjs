@@ -16,6 +16,11 @@ import {
 } from '../core/adapters/cloudflare-artifacts-adapter.mjs'
 import worker from '../workers/vis-media/src/index.js'
 import { createWorkerStorage, sha256File } from '../core/vis-storage.mjs'
+import {
+  openVisDatabase,
+  planArtifactsCurationPacket,
+  scanDriveVaultMirror as coreScanDriveVaultMirror,
+} from '../core/vis-core.mjs'
 
 test('Google Drive Vault taxonomy maps tiers and brands while keeping rights unknown', () => {
   const arc = parseDriveVaultPath('02_BRAND_VAULTS/Arcanea/Guardians/aiyami-crown.png')
@@ -149,5 +154,39 @@ test('vis-media Worker supports legacy VIS_BUCKET binding fallback alongside MED
     assert.equal(sha256File(restored), sha)
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('vis-core re-exports Drive & Artifacts adapters and plans DB-backed curation packets', () => {
+  assert.equal(typeof coreScanDriveVaultMirror, 'function')
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-artifacts-db-'))
+  try {
+    const db = openVisDatabase(tmpDir)
+    try {
+      const ts = new Date().toISOString()
+      const sha = 'c'.repeat(64)
+      db.prepare(`
+        INSERT INTO asset (asset_id, media_type, title, primary_path, source_hash, category, mood, tags_json, rights_status, approval_status, first_seen_at, last_seen_at)
+        VALUES (?, 'image', 'Starlight Hero', 'public/images/starlight-hero.webp', ?, 'hero', 'luminous', '["starlight","hero"]', 'generated-owned', 'approved', ?, ?)
+      `).run('asset_starlight_1', sha, ts, ts)
+      db.prepare(`
+        INSERT INTO asset_version (version_id, asset_id, sha256, media_type, mime_type, extension, byte_size, width, height, duration_seconds, created_at, metadata_json)
+        VALUES ('ver_starlight_1', 'asset_starlight_1', ?, 'image', 'image/webp', '.webp', 16384, 1920, 1080, null, ?, '{}')
+      `).run(sha, ts)
+
+      const planned = planArtifactsCurationPacket(db, {
+        brand: 'starlight',
+        branch: 'main',
+      })
+      assert.equal(planned.packet.namespace, 'Starlight')
+      assert.equal(planned.packet.repository, 'starter-repo')
+      assert.equal(planned.packet.total_accepted, 1)
+      assert.equal(planned.packet.assets[0].asset_id, 'asset_starlight_1')
+      assert.equal(planned.push_plan.credentials_in_remote, false)
+    } finally {
+      db.close()
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true })
   }
 })

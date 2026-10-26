@@ -61,9 +61,11 @@ import {
   traceAsset,
   createMusicReleasePacket,
   planStorageUpload,
+  planArtifactsCurationPacket,
   executeStorageUpload,
   getStorageStats,
   routeAssetDestination,
+  scanDriveVaultMirror,
   undoCurationFeedback,
   drainFeedbackOutbox,
 } from '../core/vis-core.mjs'
@@ -120,6 +122,7 @@ const VALUE_FLAGS = new Set([
   '--template', '--rename-template', '--name-template', '--start', '--pad',
   '--preset', '--target', '--intent', '--intended-use', '--output-root', '--target-root', '--derivatives-root',
   '--brand', '--bucket', '--token', '--collection-name',
+  '--namespace', '--branch', '--account-id',
   '--action', '--defects', '--scope',
   '--kind', '--tags', '--rights', '--offset', '--sort', '--rule', '--by', '--debounce',
 ])
@@ -1300,6 +1303,63 @@ function cmdStorageStats() {
   }
 }
 
+function cmdGdriveScan() {
+  const root = projectRoot()
+  const config = loadConfig(root)
+  const vaultRoot = getFlag('--vault-root') || positionalArgs()[0] || config.creativeVaultRoot
+  if (!vaultRoot) {
+    throw new Error('Usage: vis gdrive-scan <vault-root> [--limit <n>] [--json]')
+  }
+  const resolvedVaultRoot = path.isAbsolute(vaultRoot) ? vaultRoot : path.resolve(root, vaultRoot)
+  const result = scanDriveVaultMirror(resolvedVaultRoot, {
+    limit: Number(getFlag('--limit', 500)),
+  })
+  if (hasFlag('--json')) {
+    printJson(result)
+    return
+  }
+  console.log('\n=== VIS GOOGLE DRIVE CREATIVE VAULT SCAN (READ-ONLY) ===\n')
+  console.log(`Vault Root:  ${result.vault_root}`)
+  console.log(`Discovered:  ${result.total_discovered}`)
+  console.log(`Read-Only:   ${result.read_only}`)
+  if (result.items.length) {
+    console.log('\nSample Candidates:')
+    for (const item of result.items.slice(0, 10)) {
+      console.log(`  - ${item.record.asset_id} | ${item.record.relative_path} | rights=${item.record.rights_status} | proposals=${item.proposals.length}`)
+    }
+  }
+}
+
+function cmdArtifactsPack() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const result = planArtifactsCurationPacket(db, {
+      accountId: getFlag('--account-id'),
+      brand: getFlag('--brand'),
+      namespace: getFlag('--namespace'),
+      repo: getFlag('--repo'),
+      branch: getFlag('--branch', 'main'),
+      collection: getFlag('--collection'),
+      category: getFlag('--category'),
+      mediaType: getFlag('--media-type'),
+      limit: Number(getFlag('--limit', 50)),
+      dryRunPreview: hasFlag('--dry-run'),
+    })
+    if (hasFlag('--json')) {
+      printJson(result)
+      return
+    }
+    console.log(`\n=== CLOUDFLARE ARTIFACTS CURATION PACKET [${result.packet.namespace}/${result.packet.repository}] ===\n`)
+    console.log(`Remote URL:   ${result.push_plan.remote_url}`)
+    console.log(`Accepted:     ${result.packet.total_accepted}`)
+    console.log(`Refused:      ${result.packet.total_refused}`)
+    console.log(`Zero-Secrets: ${!result.push_plan.credentials_in_remote}`)
+  } finally {
+    db.close()
+  }
+}
+
 async function cmdLibrary() {
   const sub = positionalArgs()[0] || 'help'
   const rest = positionalArgs().slice(1)
@@ -1428,6 +1488,9 @@ const commands = {
   'creative-vault': cmdVaultPlan,
   'vault-init': cmdVaultInit,
   'init-vault': cmdVaultInit,
+  'gdrive-scan': cmdGdriveScan,
+  'artifacts-pack': cmdArtifactsPack,
+  'artifacts-packet': cmdArtifactsPack,
   eagle: cmdEagleImport,
   'eagle-import': cmdEagleImport,
   report: cmdReport,
@@ -1510,6 +1573,8 @@ Commands:
   vis scan-profile <name> --execute Index existing roots from a scan profile
   vis vault-plan                   Show Google Drive creative vault plan and cross-device setup status
   vis vault-init --execute          Create Creative Vault folders and VIS manifest after review
+  vis gdrive-scan <vault-root>      Read-only scan of Google Drive Creative Vault mirror; emits proposals
+  vis artifacts-pack [--brand b]    Build Cloudflare Artifacts Git curation packet and push plan
   vis eagle --library <path>        Dry-run Eagle library metadata import
   vis eagle --library <path> --execute Merge Eagle metadata into VIS
   vis audit                        Alias for report summary
