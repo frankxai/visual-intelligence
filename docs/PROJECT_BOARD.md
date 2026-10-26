@@ -1,15 +1,15 @@
 # VIS Project Board
 
-Date: 2026-07-03
+Date: 2026-10-26
 
 This is the operating board for turning VIS from a working scanner/MCP prototype into Frank's daily media asset operating system and then a sellable product. GitHub Issues are now the execution source, with this file as the human-readable board and cross-agent handoff.
 
 ## Decision
 
 - Canonical execution tracker: GitHub Issues in `frankxai/visual-intelligence`, synced from `docs/VIS_TASK_REGISTRY.json`.
+- GitHub Projects v2 board: [Visual Intelligence OS (Project #12)](https://github.com/users/frankxai/projects/12).
 - Repo-visible fallback: this Markdown board plus `docs/GITHUB_ISSUE_BACKLOG.md`.
 - Operating rulebook: `docs/PROJECT_OPERATING_SYSTEM.md`.
-- GitHub Projects v2: pending `gh auth refresh -s read:project,project`; use milestones until that scope is available.
 - Personal reminder layer: Google Tasks/Calendar only for time-bound human actions such as buying Eagle, installing on laptop 2, or weekly review.
 - Product truth: VIS repo docs, SQLite graph, MCP server, and release reports.
 
@@ -60,15 +60,16 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 
 ## Next
 
-- [ ] Build a richer Next.js/PWA dashboard after the static PWA cockpit proves daily value.
-- [ ] Add GitHub Projects v2 board after `gh` token gets project scope.
-- [ ] Verify Eagle adapter against Frank's real synced Eagle library after install.
-- [ ] Add Google Drive metadata adapter with provider IDs and sync health.
-- [ ] Add Google Photos/manual mobile inbox intake workflow.
-- [ ] Verify Music IS release packets against Frank's real proof folders after next estate scan.
-- [x] Add agent run logging sidecars for generated media.
-- [ ] Add semantic embeddings and stronger visual similarity using a permissive local model or external adapter.
-- [ ] Run weekly VIS product experiment and reporting loop.
+- [x] Build Placement Comparison Studio (`VIS-029`) and richer cockpit view across CLI, MCP, and Operator Screen.
+- [x] Add GitHub Projects v2 board (`https://github.com/users/frankxai/projects/12`) after `gh` token gets project scope (`VIS-025`).
+- [ ] Verify Eagle adapter against Frank's real synced Eagle library after install (`VIS-006`).
+- [x] Add Google Drive metadata adapter with provider IDs and sync health (`VIS-007`, PR `#60`).
+- [x] Add Cloudflare Artifacts multi-brand Git curation packet adapter and `vis-media` R2 binding fallback (`VIS-013`, `VIS-028`, PR `#60`).
+- [ ] Add Google Photos/manual mobile inbox intake workflow (`VIS-008`).
+- [ ] Verify Music IS release packets against Frank's real proof folders after next estate scan (`VIS-009`).
+- [x] Add agent run logging sidecars for generated media (`VIS-010`).
+- [ ] Add semantic embeddings and stronger visual similarity using a permissive local model or external adapter (`VIS-012`).
+- [ ] Run weekly VIS product experiment and reporting loop (`VIS-024`).
 
 ## Later
 

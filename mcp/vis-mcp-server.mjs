@@ -53,9 +53,13 @@ import {
   searchAssets,
   traceAsset,
   planStorageUpload,
+  planArtifactsCurationPacket,
+  listPlacementFrames,
+  compareAssetPlacements,
   executeStorageUpload,
   getStorageStats,
   routeAssetDestination,
+  scanDriveVaultMirror,
   tasteLedgerPath,
 } from '../core/vis-core.mjs'
 import {
@@ -662,6 +666,33 @@ function toolGetStorageStatus(args = {}) {
   return withDb(db => getStorageStats(db))
 }
 
+function toolScanGdriveVault(args = {}) {
+  const vaultRoot = args.vault_root || args.vaultRoot || args.path || CONFIG.creativeVaultRoot
+  if (!vaultRoot) throw new Error('Missing vault_root or path')
+  const resolved = path.isAbsolute(vaultRoot) ? path.resolve(vaultRoot) : path.resolve(ROOT, vaultRoot)
+  if (!isAllowedPath(resolved)) {
+    throw new Error('Vault root is outside the VIS allowlist. Configure allowedRoots in vis.config.json or set VIS_ALLOWED_ROOTS.')
+  }
+  return redactOutsideAllowlist(scanDriveVaultMirror(resolved, {
+    limit: args.limit || 500,
+  }))
+}
+
+function toolBuildArtifactsCurationPacket(args = {}) {
+  return withDb(db => planArtifactsCurationPacket(db, {
+    accountId: args.account_id || args.accountId,
+    brand: args.brand,
+    namespace: args.namespace,
+    repo: args.repo,
+    branch: args.branch || 'main',
+    collection: args.collection,
+    category: args.category,
+    mediaType: args.media_type || args.mediaType,
+    limit: args.limit || 50,
+    dryRunPreview: args.dry_run_preview === true || args.dryRunPreview === true,
+  }))
+}
+
 function toolReport() {
   return withDb(db => getSummary(db))
 }
@@ -735,6 +766,18 @@ function toolLibraryDecideProposal(args = {}) {
   })
 }
 
+function toolListPlacementFrames() {
+  return { frames: listPlacementFrames() }
+}
+
+function toolCompareAssetPlacements(args = {}) {
+  return withLibraryDb(db => compareAssetPlacements(db, {
+    frameId: args.frame_id || args.frame || args.brand || 'frankx-hero',
+    assetIds: args.asset_ids || args.assets || [],
+    repoName: args.repo || args.repo_name,
+  }))
+}
+
 const TOOL_HANDLERS = {
   library_search: toolLibrarySearch,
   library_get_asset: toolLibraryGetAsset,
@@ -743,6 +786,8 @@ const TOOL_HANDLERS = {
   library_ingest: toolLibraryIngest,
   library_propose: toolLibraryPropose,
   library_decide_proposal: toolLibraryDecideProposal,
+  list_placement_frames: toolListPlacementFrames,
+  compare_asset_placements: toolCompareAssetPlacements,
   search_assets: toolSearchAssets,
   get_asset: toolGetAsset,
   trace_asset: toolTraceAsset,
@@ -781,6 +826,8 @@ const TOOL_HANDLERS = {
   plan_storage_upload: toolPlanStorageUpload,
   route_asset_destination: toolRouteAssetDestination,
   get_storage_status: toolGetStorageStatus,
+  scan_gdrive_vault: toolScanGdriveVault,
+  build_artifacts_curation_packet: toolBuildArtifactsCurationPacket,
   record_curation_feedback: toolRecordCurationFeedback,
   undo_curation_feedback: toolUndoCurationFeedback,
   drain_feedback_outbox: toolDrainFeedbackOutbox,
@@ -1106,6 +1153,27 @@ const TOOLS = [
     path: stringProp('Local or relative path'),
   }),
   tool('get_storage_status', 'Get multi-cloud storage sync status and breakdown across Vercel Blob, Cloudflare R2, and IPFS.', {}),
+  tool('scan_gdrive_vault', 'Read-only scan of a Google Drive Creative Vault mirror folder. Discovers candidate assets with rights_status: unknown and emits reviewable proposals without mutating files or rights.', {
+    vault_root: stringProp('Relative or allowlisted path to the Creative Vault mirror directory'),
+    limit: numberProp('Maximum files to scan (default 500)'),
+  }),
+  tool('build_artifacts_curation_packet', 'Build a deterministic Cloudflare Artifacts Git curation packet and zero-credential push plan for Starlight, Arcanea, or GenCreator.', {
+    brand: stringProp('Brand name or alias (e.g. starlight, arcanea, gencreator, frankx)'),
+    namespace: stringProp('Explicit Cloudflare Artifacts namespace override (Starlight, Arcanea, GenCreator)'),
+    repo: stringProp('Target repository slug inside the namespace'),
+    branch: stringProp('Target Git branch (default main)'),
+    collection: stringProp('Optional collection filter'),
+    category: stringProp('Optional category filter'),
+    media_type: stringProp('Optional media type filter'),
+    limit: numberProp('Maximum assets to include (default 50)'),
+    dry_run_preview: booleanProp('Include unapproved assets in the refused breakdown for inspection while keeping them out of the packet'),
+  }),
+  tool('list_placement_frames', 'List canonical multi-brand placement frames (FrankX Hero, Arcanea Lore Card, GenCreator Product Box, Starlight OG Social, Music IS Cover) for the Placement Comparison Studio.', {}),
+  tool('compare_asset_placements', 'Evaluate and rank 1-6 candidate visual assets inside a brand placement frame with fit scores, mobile safe-crop diagnostics, publish-gate blockers, and Cloudflare Artifacts handoff commands. Read-only.', {
+    frame: stringProp('Placement frame id or brand: frankx-hero, arcanea-lore-card, gencreator-product-box, starlight-og-social, or music-is-canvas-cover'),
+    asset_ids: { type: 'array', items: { type: 'string' }, description: 'Candidate VIS asset_ids, visual URIs, or paths' },
+    repo: stringProp('Optional target Cloudflare Artifacts repository slug override'),
+  }),
   tool('record_curation_feedback', 'Record human curation feedback, rating (1-5), defect tags, and approve/reject decision with atomic ledger synchronization. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
     asset_id: stringProp('VIS asset_id'),
     uri: stringProp('visual://asset/{asset_id}'),
