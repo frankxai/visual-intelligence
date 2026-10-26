@@ -8,8 +8,8 @@ GitHub repo: https://github.com/frankxai/visual-intelligence
 ## Summary
 
 - Total issues in registry: 29
-- Open issues: 16
-- Completed issues: 13
+- Open issues: 15
+- Completed issues: 14
 - Blocked issues: 0
 - Human-gated open issues: 3
 - GitHub Projects v2: active
@@ -22,7 +22,7 @@ GitHub repo: https://github.com/frankxai/visual-intelligence
 | M1 Daily Cockpit | 2 | 6 | [#12 VIS-005](https://github.com/frankxai/visual-intelligence/issues/12), [#15 VIS-008](https://github.com/frankxai/visual-intelligence/issues/15) |
 | M2 Asset Intelligence | 4 | 3 | [#13 VIS-006](https://github.com/frankxai/visual-intelligence/issues/13), [#14 VIS-007](https://github.com/frankxai/visual-intelligence/issues/14), [#18 VIS-011](https://github.com/frankxai/visual-intelligence/issues/18) |
 | M3 Media Expansion | 1 | 0 | [#16 VIS-009](https://github.com/frankxai/visual-intelligence/issues/16) |
-| M4 Product Beta | 4 | 0 | [#20 VIS-013](https://github.com/frankxai/visual-intelligence/issues/20), [#21 VIS-014](https://github.com/frankxai/visual-intelligence/issues/21), [#31 VIS-024](https://github.com/frankxai/visual-intelligence/issues/31) |
+| M4 Product Beta | 3 | 1 | [#20 VIS-013](https://github.com/frankxai/visual-intelligence/issues/20), [#21 VIS-014](https://github.com/frankxai/visual-intelligence/issues/21), [#31 VIS-024](https://github.com/frankxai/visual-intelligence/issues/31) |
 
 ## Install And Estate Lane
 
@@ -48,7 +48,6 @@ These are the tasks that turn the internal OS into the sellable product: cockpit
 - [#20 VIS-013](https://github.com/frankxai/visual-intelligence/issues/20) Add R2 and Cloudinary publication/storage adapters - `todo` `adapter` `human-gated`
 - [#21 VIS-014](https://github.com/frankxai/visual-intelligence/issues/21) Prepare private beta product package - `todo` `product`
 - [#31 VIS-024](https://github.com/frankxai/visual-intelligence/issues/31) Run weekly VIS product experiment and reporting loop - `todo` `product` `research` `good-first-internal`
-- `VIS-029` Build Placement Comparison Studio and Hybrid Edge + Local Cockpit - `todo` `dashboard` `product` `mcp`
 
 ## Google Tasks Reminder Candidates
 

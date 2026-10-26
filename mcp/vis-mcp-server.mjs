@@ -54,6 +54,8 @@ import {
   traceAsset,
   planStorageUpload,
   planArtifactsCurationPacket,
+  listPlacementFrames,
+  compareAssetPlacements,
   executeStorageUpload,
   getStorageStats,
   routeAssetDestination,
@@ -764,6 +766,18 @@ function toolLibraryDecideProposal(args = {}) {
   })
 }
 
+function toolListPlacementFrames() {
+  return { frames: listPlacementFrames() }
+}
+
+function toolCompareAssetPlacements(args = {}) {
+  return withLibraryDb(db => compareAssetPlacements(db, {
+    frameId: args.frame_id || args.frame || args.brand || 'frankx-hero',
+    assetIds: args.asset_ids || args.assets || [],
+    repoName: args.repo || args.repo_name,
+  }))
+}
+
 const TOOL_HANDLERS = {
   library_search: toolLibrarySearch,
   library_get_asset: toolLibraryGetAsset,
@@ -772,6 +786,8 @@ const TOOL_HANDLERS = {
   library_ingest: toolLibraryIngest,
   library_propose: toolLibraryPropose,
   library_decide_proposal: toolLibraryDecideProposal,
+  list_placement_frames: toolListPlacementFrames,
+  compare_asset_placements: toolCompareAssetPlacements,
   search_assets: toolSearchAssets,
   get_asset: toolGetAsset,
   trace_asset: toolTraceAsset,
@@ -1151,6 +1167,12 @@ const TOOLS = [
     media_type: stringProp('Optional media type filter'),
     limit: numberProp('Maximum assets to include (default 50)'),
     dry_run_preview: booleanProp('Include unapproved assets in the refused breakdown for inspection while keeping them out of the packet'),
+  }),
+  tool('list_placement_frames', 'List canonical multi-brand placement frames (FrankX Hero, Arcanea Lore Card, GenCreator Product Box, Starlight OG Social, Music IS Cover) for the Placement Comparison Studio.', {}),
+  tool('compare_asset_placements', 'Evaluate and rank 1-6 candidate visual assets inside a brand placement frame with fit scores, mobile safe-crop diagnostics, publish-gate blockers, and Cloudflare Artifacts handoff commands. Read-only.', {
+    frame: stringProp('Placement frame id or brand: frankx-hero, arcanea-lore-card, gencreator-product-box, starlight-og-social, or music-is-canvas-cover'),
+    asset_ids: { type: 'array', items: { type: 'string' }, description: 'Candidate VIS asset_ids, visual URIs, or paths' },
+    repo: stringProp('Optional target Cloudflare Artifacts repository slug override'),
   }),
   tool('record_curation_feedback', 'Record human curation feedback, rating (1-5), defect tags, and approve/reject decision with atomic ledger synchronization. Writes require VIS_ENABLE_WRITES=1 and execute:true.', {
     asset_id: stringProp('VIS asset_id'),

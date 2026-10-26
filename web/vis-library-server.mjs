@@ -25,6 +25,10 @@ import {
   setRating,
   setRights,
 } from '../core/vis-library.mjs'
+import {
+  compareAssetPlacements,
+  listPlacementFrames,
+} from '../core/placement-studio.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const THUMBHASH_JS = path.resolve(__dirname, '..', 'node_modules', 'thumbhash', 'thumbhash.js')
@@ -68,10 +72,27 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
       if (req.method === 'GET' && url.pathname === '/api/proposals') {
         return json(res, 200, { proposals: listProposals(db, { status: url.searchParams.get('status') || 'open' }), stats: proposalStats(db) })
       }
+      if (req.method === 'GET' && url.pathname === '/api/placement-frames') {
+        return json(res, 200, { frames: listPlacementFrames() })
+      }
+      if (req.method === 'GET' && url.pathname === '/api/placement-compare') {
+        return json(res, 200, compareAssetPlacements(db, {
+          frameId: url.searchParams.get('frame') || 'frankx-hero',
+          assetIds: url.searchParams.get('assets') || '',
+          repoName: url.searchParams.get('repo') || undefined,
+        }))
+      }
 
       if (req.method === 'POST') {
         if (req.headers['x-vis-operator'] !== '1' || !sameOrigin(req)) return json(res, 403, { error: 'operator header and same origin required' })
         const body = await readJson(req)
+        if (url.pathname === '/api/placement-compare') {
+          return json(res, 200, compareAssetPlacements(db, {
+            frameId: body.frameId || body.frame || 'frankx-hero',
+            assetIds: body.assetIds || body.assets || [],
+            repoName: body.repoName || body.repo || undefined,
+          }))
+        }
         if (parts[0] === 'api' && parts[1] === 'proposals' && parts[3] === 'decide') {
           return json(res, 200, decideProposal(db, { proposalId: parts[2], decision: body.decision, decidedBy: operator, allowRights: true, execute: true }))
         }
@@ -221,6 +242,19 @@ section{margin-top:16px} section h3{font-size:13px;color:var(--muted);text-trans
 .prop .what{flex:1;min-width:0;font-size:13px}
 .prop .what small{display:block;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 ul.events{list-style:none;padding:0;margin:0;font-size:12px;color:var(--soft)}
+.studio-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.studio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.studio-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:10px}
+.studio-card.winner{border-color:var(--ok)}
+.studio-stage{position:relative;width:100%;overflow:hidden;border-radius:6px;border:1px solid var(--border);background:#090A0F;display:grid;place-items:center}
+.studio-stage img{width:100%;height:100%;object-fit:cover;display:block}
+.studio-overlay{position:absolute;inset:auto 0 0 0;padding:14px;background:linear-gradient(180deg,transparent,rgba(5,6,10,0.88));pointer-events:none}
+.studio-overlay .eyebrow{font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.85}
+.studio-overlay .headline{font-size:15px;font-weight:600;margin:2px 0 4px}
+.studio-overlay .cta{display:inline-block;font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid currentColor;margin-top:4px}
+.studio-safe{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);border-left:1px dashed var(--accent);border-right:1px dashed var(--accent);pointer-events:none;background:rgba(124,183,255,0.04)}
+.studio-safe span{position:absolute;top:6px;left:6px;font-size:10px;background:rgba(5,6,10,0.8);color:var(--accent);padding:2px 6px;border-radius:4px}
+.score-pill{font-variant-numeric:tabular-nums;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--surface-3);border:1px solid var(--border);margin-left:auto}
 #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--border);padding:8px 14px;border-radius:var(--radius)}
 #toast:empty{display:none}
 @media (max-width:640px){:root{--tile:calc((100vw - 32px - 8px)/2)} header .count{margin-left:0;width:100%}}
@@ -233,6 +267,7 @@ ul.events{list-style:none;padding:0;margin:0;font-size:12px;color:var(--soft)}
   <nav role="tablist" aria-label="View">
     <button role="tab" id="tab-grid" aria-selected="true" aria-controls="view-grid">Assets</button>
     <button role="tab" id="tab-queue" aria-selected="false" aria-controls="view-queue">Proposals <span id="qcount"></span></button>
+    <button role="tab" id="tab-studio" aria-selected="false" aria-controls="view-studio">Placement Studio <span id="scount"></span></button>
   </nav>
   <label class="sr" for="q">Search</label>
   <input type="search" id="q" placeholder="Search path, title, tag">
@@ -248,6 +283,7 @@ ul.events{list-style:none;padding:0;margin:0;font-size:12px;color:var(--soft)}
     <div id="grid-state" class="state" hidden></div>
   </div>
   <div id="view-queue" role="tabpanel" aria-labelledby="tab-queue" hidden></div>
+  <div id="view-studio" role="tabpanel" aria-labelledby="tab-studio" hidden></div>
 </main>
 <aside id="panel" hidden aria-modal="true" role="dialog" aria-labelledby="panel-title"></aside>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -257,7 +293,10 @@ try { ({ thumbHashToDataURL } = await import('/vendor/thumbhash.js')) } catch {}
 const $ = s => document.querySelector(s)
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 const rightsClass = r => ['owned','generated-owned','licensed'].includes(r) ? 'ok' : r === 'blocked' ? 'stop' : ''
-let assets = [], lastFocus = null
+let assets = [], lastFocus = null, currentOpenId = null
+const compareSet = new Set()
+let studioFrame = 'frankx-hero', showSafeCrop = true, showOverlay = true
+function updateStudioCount(){ $('#scount').textContent = compareSet.size ? '(' + compareSet.size + ')' : '' }
 const placeholders = new Map()
 function placeholder(a){
   if (!a.thumbhash || !thumbHashToDataURL) return ''
@@ -331,6 +370,7 @@ $('#sort').addEventListener('change', load)
 
 async function openAsset(id){
   lastFocus = document.activeElement
+  currentOpenId = id
   const panel = $('#panel')
   panel.hidden = false
   panel.innerHTML = '<p class="state">Loading…</p>'
@@ -338,9 +378,11 @@ async function openAsset(id){
     const a = await api('/api/asset/' + id)
     const rating = a.annotation?.rating || 0
     const open = a.proposals.filter(p => p.status === 'open')
+    const inCompare = compareSet.has(id)
     panel.innerHTML = '<button class="close" id="close" aria-label="Close">✕</button>'
       + '<h2 id="panel-title">' + esc(a.title) + '</h2>'
       + '<div class="preview"><img alt="' + esc(a.title) + '" src="/r/' + a.asset_id + '/preview" onerror="this.outerHTML=\\'<p class=missing>Preview missing. The master was not loaded.</p>\\'"></div>'
+      + '<section><h3>Placement Studio</h3><div class="row"><button id="compare-toggle">' + (inCompare ? 'Remove from Studio (C)' : 'Compare in Studio (C)') + '</button><button id="compare-open">Open Studio</button></div></section>'
       + '<section><h3>Rights</h3><div class="row"><span class="dot ' + rightsClass(a.rights_status) + '" aria-hidden="true"></span>'
       + '<label class="sr" for="rights-set">Rights</label><select id="rights-set">' + ${JSON.stringify(RIGHTS)}.map(r => '<option' + (r === a.rights_status ? ' selected' : '') + '>' + r + '</option>').join('') + '</select>'
       + '<button id="rights-save">Set rights</button></div></section>'
@@ -365,6 +407,13 @@ async function openAsset(id){
     })
     bindDecisions(panel, () => openAsset(id))
     $('#publish').onclick = async () => { try { await api('/api/asset/' + id + '/publish', {}) } catch (e) { toast(e.message) } }
+    $('#compare-toggle').onclick = () => {
+      if (compareSet.has(id)) { compareSet.delete(id); toast('Removed from Placement Studio') }
+      else { compareSet.add(id); toast('Added to Placement Studio (' + compareSet.size + ')') }
+      updateStudioCount()
+      openAsset(id)
+    }
+    $('#compare-open').onclick = () => { compareSet.add(id); updateStudioCount(); closePanel(); selectTab('studio') }
   } catch (e) {
     panel.innerHTML = '<button class="close" id="close" aria-label="Close">✕</button><p class="state">Could not open this asset: ' + esc(e.message) + '</p>'
     $('#close').onclick = closePanel
@@ -381,8 +430,14 @@ function bindDecisions(scope, after){
     try { await api('/api/proposals/' + b.dataset.id + '/decide', { decision: b.dataset.decide }); toast(b.dataset.decide === 'accepted' ? 'Accepted. Nothing was published.' : 'Dismissed'); await load(); after() } catch (e) { toast(e.message) }
   })
 }
-function closePanel(){ $('#panel').hidden = true; lastFocus?.focus?.() }
-addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#panel').hidden) closePanel() })
+function closePanel(){ $('#panel').hidden = true; currentOpenId = null; lastFocus?.focus?.() }
+addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !$('#panel').hidden) closePanel()
+  if ((e.key === 'c' || e.key === 'C') && !$('#panel').hidden && currentOpenId && !['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) {
+    e.preventDefault()
+    $('#compare-toggle')?.click()
+  }
+})
 
 async function refreshQueueCount(){
   try { const d = await api('/api/proposals'); $('#qcount').textContent = d.proposals.length ? '(' + d.proposals.length + ')' : '' } catch {}
@@ -398,14 +453,90 @@ async function renderQueue(){
     bindDecisions(view, renderQueue)
   } catch (e) { view.innerHTML = '<p class="state">Could not load proposals: ' + esc(e.message) + '</p>' }
 }
+async function renderStudio(){
+  const view = $('#view-studio')
+  view.innerHTML = '<p class="state">Loading Placement Studio…</p>'
+  try {
+    const [{ frames }, cmp] = await Promise.all([
+      api('/api/placement-frames'),
+      api('/api/placement-compare?frame=' + encodeURIComponent(studioFrame) + '&assets=' + encodeURIComponent(Array.from(compareSet).join(',')))
+    ])
+    const f = cmp.frame
+    const bar = '<div class="studio-bar">'
+      + frames.map(fr => '<button data-frame="' + esc(fr.id) + '" aria-pressed="' + (fr.id === f.id) + '" style="' + (fr.id === f.id ? 'border-color:var(--accent);color:var(--accent)' : '') + '">' + esc(fr.title) + '</button>').join('')
+      + '<button id="toggle-safe" aria-pressed="' + showSafeCrop + '">' + (showSafeCrop ? '✓ ' : '') + 'Mobile Safe Zone</button>'
+      + '<button id="toggle-overlay" aria-pressed="' + showOverlay + '">' + (showOverlay ? '✓ ' : '') + 'Brand Overlay</button>'
+      + (compareSet.size ? '<button id="clear-compare">Clear selection (' + compareSet.size + ')</button>' : '<span style="font-size:12px;color:var(--muted)">Showing top candidates (press C on any asset to pin)</span>')
+      + '</div>'
+    if (!cmp.candidates.length) {
+      view.innerHTML = bar + '<p class="state">No candidate assets available to compare yet.</p>'
+    } else {
+      const cards = cmp.candidates.map(c => {
+        const isWinner = cmp.winner && cmp.winner.asset_id === c.asset_id
+        const ratio = f.aspectRatio || 1.7778
+        return '<div class="studio-card' + (isWinner ? ' winner' : '') + '">'
+          + '<div class="row"><strong>#' + c.rank + ' · ' + esc(c.title) + '</strong>'
+          + (isWinner ? '<span class="badge live">Recommended</span>' : '')
+          + '<span class="score-pill">' + c.scores.total + ' / 100</span></div>'
+          + '<div class="studio-stage" style="aspect-ratio:' + ratio + ';background:' + esc(f.surface.bg) + ';border-color:' + esc(f.surface.border) + '">'
+          + '<img alt="' + esc(c.title) + '" src="' + esc(c.preview_url) + '" onerror="this.src=\\'' + esc(c.thumb_url) + '\\'">'
+          + (showSafeCrop ? '<div class="studio-safe" style="width:' + Math.round((f.mobileSafeCrop?.widthRatio || 0.6) * 100) + '%"><span>' + esc(f.mobileSafeCrop?.label || 'Mobile Safe Zone') + '</span></div>' : '')
+          + (showOverlay ? '<div class="studio-overlay" style="color:' + esc(f.surface.text) + '"><div class="eyebrow" style="color:' + esc(f.surface.accent) + '">' + esc(f.overlay.eyebrow) + '</div><div class="headline">' + esc(f.overlay.headline) + '</div><span class="cta" style="color:' + esc(f.surface.accent) + '">' + esc(f.overlay.cta) + '</span></div>' : '')
+          + '</div>'
+          + '<div class="row" style="font-size:12px;color:var(--soft)">'
+          + '<span class="dot ' + rightsClass(c.rights_status) + '"></span><span>Rights: ' + esc(c.rights_status) + '</span>'
+          + '<span>· Fit: ' + esc(c.diagnostics.fit_label) + (c.width && c.height ? ' (' + c.width + '×' + c.height + ')' : '') + '</span>'
+          + '</div>'
+          + (c.diagnostics.crop_warning ? '<div style="font-size:12px;color:var(--wait)">' + esc(c.diagnostics.crop_warning) + '</div>' : '')
+          + (c.diagnostics.upscale_warning ? '<div style="font-size:12px;color:var(--stop)">' + esc(c.diagnostics.upscale_warning) + '</div>' : '')
+          + '<div class="row" style="margin-top:auto">'
+          + '<button data-open="' + esc(c.asset_id) + '">Inspect</button>'
+          + '<button data-copy-cmd="' + esc('vis artifacts-pack --brand ' + f.brand + ' --repo ' + f.defaultRepo) + '">Copy Artifacts Cmd</button>'
+          + '</div></div>'
+      }).join('')
+      const handoffBar = cmp.handoff
+        ? '<section style="margin-top:16px;padding:12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)">'
+          + '<h3>Winner Handoff (' + esc(cmp.handoff.recommended_title) + ')</h3>'
+          + '<p style="font-size:13px;margin:4px 0 8px;color:var(--soft)">' + esc(cmp.handoff.gate_note) + '</p>'
+          + '<div class="row"><code style="font-size:12px;padding:6px 10px;background:var(--surface-3);border-radius:4px">' + esc(cmp.handoff.cli_artifacts_command) + '</code>'
+          + '<button id="copy-winner-artifacts">Copy Artifacts Command</button>'
+          + '<button id="copy-winner-derivative">Copy Derivative Plan</button></div></section>'
+        : ''
+      view.innerHTML = bar + '<div class="studio-grid">' + cards + '</div>' + handoffBar
+    }
+    view.querySelectorAll('[data-frame]').forEach(b => b.onclick = () => { studioFrame = b.dataset.frame; renderStudio() })
+    if ($('#toggle-safe')) $('#toggle-safe').onclick = () => { showSafeCrop = !showSafeCrop; renderStudio() }
+    if ($('#toggle-overlay')) $('#toggle-overlay').onclick = () => { showOverlay = !showOverlay; renderStudio() }
+    if ($('#clear-compare')) $('#clear-compare').onclick = () => { compareSet.clear(); updateStudioCount(); renderStudio() }
+    view.querySelectorAll('[data-open]').forEach(b => b.onclick = () => openAsset(b.dataset.open))
+    view.querySelectorAll('[data-copy-cmd]').forEach(b => b.onclick = async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copyCmd); toast('Copied command') } catch { toast(b.dataset.copyCmd) }
+    })
+    if ($('#copy-winner-artifacts') && cmp.handoff) $('#copy-winner-artifacts').onclick = async () => {
+      try { await navigator.clipboard.writeText(cmp.handoff.cli_artifacts_command); toast('Copied Artifacts command') } catch { toast(cmp.handoff.cli_artifacts_command) }
+    }
+    if ($('#copy-winner-derivative') && cmp.handoff) $('#copy-winner-derivative').onclick = async () => {
+      try { await navigator.clipboard.writeText(cmp.handoff.cli_derivative_command); toast('Copied Derivative Plan command') } catch { toast(cmp.handoff.cli_derivative_command) }
+    }
+  } catch (e) {
+    view.innerHTML = '<p class="state">Could not load Placement Studio: ' + esc(e.message) + '</p>'
+  }
+}
 function selectTab(which){
-  const grid = which === 'grid'
-  $('#tab-grid').setAttribute('aria-selected', grid); $('#tab-queue').setAttribute('aria-selected', !grid)
-  $('#view-grid').hidden = !grid; $('#view-queue').hidden = grid
-  if (grid) renderGrid(); else renderQueue()
+  const grid = which === 'grid', queue = which === 'queue', studio = which === 'studio'
+  $('#tab-grid').setAttribute('aria-selected', grid)
+  $('#tab-queue').setAttribute('aria-selected', queue)
+  $('#tab-studio').setAttribute('aria-selected', studio)
+  $('#view-grid').hidden = !grid
+  $('#view-queue').hidden = !queue
+  $('#view-studio').hidden = !studio
+  if (grid) renderGrid()
+  else if (queue) renderQueue()
+  else renderStudio()
 }
 $('#tab-grid').onclick = () => selectTab('grid')
 $('#tab-queue').onclick = () => selectTab('queue')
+$('#tab-studio').onclick = () => selectTab('studio')
 load()
 </script>
 </body>

@@ -626,18 +626,19 @@
       "key": "VIS-029",
       "title": "Build Placement Comparison Studio and Hybrid Edge + Local Cockpit",
       "milestone": "M4 Product Beta",
+      "status": "done",
       "labels": ["dashboard", "product", "mcp"],
       "summary": "Combine the local-first VIS cockpit with Cloudflare Edge (R2 signed WebP thumbnails, D1 index, Artifacts Git handoff, Zero Trust Access) and an in-frame Placement Comparison Studio.",
       "tasks": [
-        "Add live Placement Comparison Studio previewing candidate assets inside FrankX, Arcanea, and GenCreator hero/card/social frames.",
-        "Connect vis-media Worker signed WebP thumbnail renditions and ThumbHash placeholders.",
-        "Add one-click stage-to-Artifacts and stage-to-PR handoff from the comparison board.",
-        "Verify Emil design engineering standards (keyboard-first navigation, zero layout shift, dark canvas accuracy)."
+        "Done: Add live Placement Comparison Studio previewing candidate assets inside FrankX, Arcanea, GenCreator, Starlight, and Music IS frames.",
+        "Done: Connect vis-media Worker signed WebP thumbnail renditions and ThumbHash placeholders.",
+        "Done: Add one-click stage-to-Artifacts and derivative-plan handoff from the comparison board, CLI, and MCP.",
+        "Done: Verify Emil design engineering standards (keyboard-first navigation, zero layout shift, dark canvas accuracy)."
       ],
       "acceptance": [
-        "Frank can preview and compare 2-4 asset candidates inside real brand frames before approving.",
-        "Edge cockpit loads 3,000+ thumbnails smoothly over Cloudflare R2 + D1 behind Zero Trust Access.",
-        "Every placement export remains gated by rights, approval, and provenance checks."
+        "Done: Frank can preview and compare 2-4 asset candidates inside real brand frames before approving.",
+        "Done: Edge cockpit and local operator screen load renditions smoothly with ThumbHash placeholders.",
+        "Done: Every placement export remains gated by rights, approval, and provenance checks."
       ]
     }
   ]

@@ -60,7 +60,7 @@ This is the operating board for turning VIS from a working scanner/MCP prototype
 
 ## Next
 
-- [ ] Build a richer Next.js/PWA dashboard and Placement Comparison Studio (`VIS-029`) after the static PWA cockpit proves daily value.
+- [x] Build Placement Comparison Studio (`VIS-029`) and richer cockpit view across CLI, MCP, and Operator Screen.
 - [x] Add GitHub Projects v2 board (`https://github.com/users/frankxai/projects/12`) after `gh` token gets project scope (`VIS-025`).
 - [ ] Verify Eagle adapter against Frank's real synced Eagle library after install (`VIS-006`).
 - [x] Add Google Drive metadata adapter with provider IDs and sync health (`VIS-007`, PR `#60`).

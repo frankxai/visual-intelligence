@@ -62,6 +62,8 @@ import {
   createMusicReleasePacket,
   planStorageUpload,
   planArtifactsCurationPacket,
+  listPlacementFrames,
+  compareAssetPlacements,
   executeStorageUpload,
   getStorageStats,
   routeAssetDestination,
@@ -1476,6 +1478,53 @@ ${result.note}`)
   serve [--port 4323]                Operator screen on 127.0.0.1 (thumbs and previews only)`)
 }
 
+function cmdPlacementFrames() {
+  const frames = listPlacementFrames()
+  if (hasFlag('--json')) {
+    printJson({ frames })
+    return
+  }
+  console.log(`\n=== VIS PLACEMENT STUDIO FRAMES: ${frames.length} ===\n`)
+  for (const frame of frames) {
+    console.log(`${frame.id} | ${frame.title}`)
+    console.log(`  brand: ${frame.brand} | aspect: ${frame.aspectRatioLabel} (${frame.targetWidth}x${frame.targetHeight}) | namespace: ${frame.artifactsNamespace}`)
+    console.log(`  overlay: "${frame.overlay.headline}" [${frame.overlay.cta}]`)
+  }
+}
+
+function cmdPlacementCompare() {
+  const root = projectRoot()
+  const db = openVisDatabase(root)
+  try {
+    const refs = assetRefArgs()
+    const result = compareAssetPlacements(db, {
+      frameId: getFlag('--frame') || getFlag('--brand') || 'frankx-hero',
+      assetIds: refs,
+      repoName: getFlag('--repo'),
+    })
+    if (hasFlag('--json')) {
+      printJson(result)
+      return
+    }
+    console.log(`\n=== VIS PLACEMENT COMPARISON STUDIO: ${result.frame.title} ===\n`)
+    console.log(`Candidates evaluated: ${result.candidate_count}`)
+    for (const c of result.candidates) {
+      console.log(`#${c.rank} | ${c.scores.total}/100 | ${c.visual_uri} | ${c.title}`)
+      console.log(`  rights: ${c.rights_status} | fit: ${c.diagnostics.fit_label} (${c.width || '?'}x${c.height || '?'}) | gate: ${c.publish_gate.allowed ? 'OPEN' : 'CLOSED'}`)
+      if (c.diagnostics.crop_warning) console.log(`  crop: ${c.diagnostics.crop_warning}`)
+      if (c.diagnostics.upscale_warning) console.log(`  resolution: ${c.diagnostics.upscale_warning}`)
+    }
+    if (result.handoff) {
+      console.log(`\nRecommended Winner: ${result.handoff.recommended_title} (${result.handoff.recommended_asset_id})`)
+      console.log(`Gate: ${result.handoff.gate_note}`)
+      console.log(`Artifacts Command: ${result.handoff.cli_artifacts_command}`)
+      console.log(`Derivative Command: ${result.handoff.cli_derivative_command}`)
+    }
+  } finally {
+    db.close()
+  }
+}
+
 const commands = {
   library: cmdLibrary,
   init: cmdInit,
@@ -1534,6 +1583,9 @@ const commands = {
   derivatives: cmdDerivativePlan,
   'variant-plan': cmdDerivativePlan,
   'export-plan': cmdDerivativePlan,
+  'placement-frames': cmdPlacementFrames,
+  'placement-compare': cmdPlacementCompare,
+  'studio-compare': cmdPlacementCompare,
   'smart-collections': cmdSmartCollections,
   'smart-views': cmdSmartCollections,
   'smart-collection': cmdSmartCollection,
@@ -1606,6 +1658,8 @@ Commands:
   vis action-recipe <recipe>         Dry-run or apply recipe curation across matching assets
   vis derivative-presets            List website/social/music/NFT/Cloudinary variant presets
   vis derivative-plan --preset music Dry-run derivative/export manifest for matching assets
+  vis placement-frames              List brand placement studio frames (FrankX, Arcanea, GenCreator, Starlight, Music IS)
+  vis placement-compare [asset...]  Compare candidate assets in a brand placement frame with fit scores and Artifacts handoff
   vis smart-collections             List live Eagle-style smart views with counts
   vis smart-collection <id>          Inspect one smart view and copy the attached dry-run recipe
   vis record-generation <asset>     Dry-run or save prompt/model/agent/skill provenance sidecar
