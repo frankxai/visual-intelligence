@@ -124,7 +124,7 @@ const VALUE_FLAGS = new Set([
   '--template', '--rename-template', '--name-template', '--start', '--pad',
   '--preset', '--target', '--intent', '--intended-use', '--output-root', '--target-root', '--derivatives-root',
   '--brand', '--bucket', '--token', '--collection-name',
-  '--namespace', '--branch', '--account-id',
+  '--namespace', '--branch', '--account-id', '--frame',
   '--action', '--defects', '--scope',
   '--kind', '--tags', '--rights', '--offset', '--sort', '--rule', '--by', '--debounce',
 ])
