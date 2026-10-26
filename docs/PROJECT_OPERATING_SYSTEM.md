@@ -91,7 +91,7 @@ When Codex, Claude, or another trusted agent starts work:
 For this branch, Claude on the other PC should start with:
 
 ```powershell
-cd C:\Users\frank\starlight\repos\visual-intelligence
+cd <starlight-repos>/visual-intelligence
 git fetch origin
 git checkout codex/visual-intelligence-os-v02
 git pull
@@ -130,10 +130,8 @@ The weekly review should:
 
 ## GitHub Projects V2
 
-GitHub Issues and milestones are enough for now. Add GitHub Projects v2 only after the local GitHub CLI token has project scope:
+GitHub Projects v2 is active at [Visual Intelligence OS (Project #12)](https://github.com/users/frankxai/projects/12) and linked to `frankxai/visual-intelligence`.
 
-```powershell
-gh auth refresh -s read:project,project
-```
-
-Then create a project named `Visual Intelligence OS` and add the milestone issues. Until then, do not block the product on Projects v2.
+- Canonical registry: `docs/VIS_TASK_REGISTRY.json`
+- Sync issues & milestones: `npm run tasks:sync -- --execute`
+- Regenerate status report: `npm run project:report`
