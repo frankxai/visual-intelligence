@@ -27,6 +27,11 @@ export function renditionKey(sha, kind) {
   return `renditions/${sha.slice(0, 2)}/${sha}.${kind}.webp`
 }
 
+function getMediaBucket(env) {
+  // Support both canonical `MEDIA` (wrangler.jsonc) and legacy deployed `VIS_BUCKET` binding.
+  return env.MEDIA || env.VIS_BUCKET
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
@@ -47,12 +52,15 @@ async function readRendition(url, sha, kind, env) {
   const ok = await verifySignature(env.PREVIEW_SIGNING_KEY, `/r/${sha}/${kind}`, url.searchParams.get('exp'), url.searchParams.get('sig'))
   if (!ok) return error(401, 'signature required')
 
+  const bucket = getMediaBucket(env)
+  if (!bucket) return error(500, 'media bucket binding missing')
+
   const headers = { 'content-type': 'image/webp', 'cache-control': 'private, max-age=3600', 'x-content-type-options': 'nosniff' }
-  const stored = await env.MEDIA.get(renditionKey(sha, kind))
+  const stored = await bucket.get(renditionKey(sha, kind))
   if (stored) return new Response(stored.body, { headers: { ...headers, etag: stored.httpEtag } })
 
   if (!env.IMAGES) return error(404, 'rendition not stored')
-  const master = await env.MEDIA.get(masterKey(sha))
+  const master = await bucket.get(masterKey(sha))
   if (!master) return error(404, 'not found')
   if (master.size > MAX_IMAGES_INPUT) return error(413, 'master too large to resize at the edge')
   const out = await env.IMAGES.input(master.body)
@@ -64,13 +72,15 @@ async function readRendition(url, sha, kind, env) {
 async function objectRoute(request, key, env) {
   if (!(await bearerMatches(request, env.ADMIN_TOKEN))) return error(401, 'admin token required')
   if (!KEY.test(key) || key.includes('..')) return error(400, 'invalid key')
+  const bucket = getMediaBucket(env)
+  if (!bucket) return error(500, 'media bucket binding missing')
   if (request.method === 'PUT') {
     const sha = request.headers.get('x-content-sha256')
     if (!sha || !SHA.test(sha)) return error(400, 'x-content-sha256 header required')
     if (key.startsWith('masters/') && key !== masterKey(sha)) return error(400, 'master key must match its sha256')
     // Content-addressed objects are immutable: replacing one would be a silent delete.
-    if (!key.startsWith('test/') && (await env.MEDIA.head(key))) return error(409, 'object exists and is immutable')
-    const put = await env.MEDIA.put(key, request.body, {
+    if (!key.startsWith('test/') && (await bucket.head(key))) return error(409, 'object exists and is immutable')
+    const put = await bucket.put(key, request.body, {
       sha256: sha,
       httpMetadata: { contentType: request.headers.get('content-type') || 'application/octet-stream' },
       customMetadata: { sha256: sha },
@@ -78,18 +88,18 @@ async function objectRoute(request, key, env) {
     return Response.json({ key, size: put.size, etag: put.etag }, { status: 201 })
   }
   if (request.method === 'GET') {
-    const obj = await env.MEDIA.get(key)
+    const obj = await bucket.get(key)
     if (!obj) return error(404, 'not found')
     return new Response(obj.body, { headers: { 'content-type': obj.httpMetadata?.contentType || 'application/octet-stream', etag: obj.httpEtag } })
   }
   if (request.method === 'HEAD') {
-    const obj = await env.MEDIA.head(key)
+    const obj = await bucket.head(key)
     if (!obj) return new Response(null, { status: 404 })
     return new Response(null, { headers: { 'x-content-sha256': obj.customMetadata?.sha256 || '', 'content-length': String(obj.size) } })
   }
   if (request.method === 'DELETE') {
     if (!key.startsWith('test/')) return error(403, 'only test/ objects can be deleted here')
-    await env.MEDIA.delete(key)
+    await bucket.delete(key)
     return new Response(null, { status: 204 })
   }
   return error(405, 'method not allowed')
