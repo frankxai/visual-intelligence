@@ -2,8 +2,10 @@
   "repo": "frankxai/visual-intelligence",
   "project": {
     "title": "Visual Intelligence OS",
-    "status": "pending_project_scope",
-    "note": "GitHub Issues and milestones are canonical now. GitHub Projects v2 requires gh auth refresh with project scope before it can be managed from this repo."
+    "status": "active",
+    "number": 12,
+    "url": "https://github.com/users/frankxai/projects/12",
+    "note": "GitHub Issues, milestones, and docs/VIS_TASK_REGISTRY.json remain canonical. GitHub Projects v2 board (#12) is active at https://github.com/users/frankxai/projects/12."
   },
   "labels": [
     { "name": "setup", "color": "0e8a16", "description": "Install, local estate setup, cross-device setup, and operational readiness." },
@@ -174,15 +176,16 @@
       "labels": ["adapter"],
       "summary": "Link Drive files to provider IDs and sync state so VIS understands cloud locations.",
       "tasks": [
-        "Define Drive metadata fields in storage_object and location model.",
-        "Add dry-run Drive import manifest.",
-        "Add provider ID and web URL capture.",
-        "Keep credentials outside Git."
+        "Done: Define Drive metadata fields in storage_object and location model.",
+        "Done: Add dry-run Drive import manifest.",
+        "Done: Add provider ID and web URL capture.",
+        "Done: Keep credentials outside Git.",
+        "Verify against live multi-device Google Drive Creative Vault folder after desktop sync setup."
       ],
       "acceptance": [
-        "VIS can report local path plus Drive provider identity for a sample asset.",
-        "Adapter runs without exposing tokens.",
-        "Dry-run output is human-readable before writes."
+        "Done: VIS can report local path plus Drive provider identity for a sample asset.",
+        "Done: Adapter runs without exposing tokens.",
+        "Done: Dry-run output is human-readable before writes."
       ]
     },
     {
@@ -288,14 +291,15 @@
       "labels": ["adapter", "human-gated"],
       "summary": "Move from dry-run manifests toward safe gated storage and delivery adapters.",
       "tasks": [
-        "R2 approved masters dry-run to live upload gate.",
+        "Done: R2 approved masters dry-run to live upload gate plus vis-media VIS_BUCKET binding fallback.",
+        "Done: Cloudflare Artifacts multi-brand Git curation packet adapter (Starlight, Arcanea, GenCreator).",
         "Cloudinary production derivatives dry-run to live upload gate.",
-        "Store provider IDs, URLs, checksums, and status.",
-        "Never upload without human approval."
+        "Done: Store provider IDs, URLs, checksums, and status.",
+        "Done: Never upload without human approval."
       ],
       "acceptance": [
-        "Dry-run manifest is reviewed before upload.",
-        "Upload records become storage objects in VIS."
+        "Done: Dry-run manifest is reviewed before upload.",
+        "Done: Upload records become storage objects in VIS."
       ]
     },
     {
@@ -342,6 +346,7 @@
       "key": "VIS-016",
       "title": "Build Eagle parity cockpit slice and adapter path",
       "milestone": "M1 Daily Cockpit",
+      "status": "done",
       "labels": ["dashboard", "adapter", "product"],
       "summary": "Benchmark Eagle capabilities without copying proprietary UX, then ship the VIS-specific advantage layer.",
       "tasks": [
@@ -538,20 +543,20 @@
       "key": "VIS-025",
       "title": "Enable GitHub Projects v2 board after gh project scope refresh",
       "milestone": "M0 Personal Estate Setup",
-      "status": "blocked",
+      "status": "done",
       "labels": ["setup", "human-gated"],
       "summary": "Create a GitHub Projects v2 board for Visual Intelligence OS after the local GitHub CLI token is refreshed with project scope.",
       "tasks": [
-        "Run gh auth refresh -s read:project,project from a trusted shell.",
-        "Create GitHub Project named Visual Intelligence OS.",
-        "Add open VIS issues and group by milestone/status.",
-        "Keep docs/VIS_TASK_REGISTRY.json as canonical even after Projects v2 exists.",
-        "Document the project URL in docs/PROJECT_OPERATING_SYSTEM.md and docs/PROJECT_BOARD.md."
+        "Done: Run gh auth refresh -s read:project,project from a trusted shell.",
+        "Done: Create GitHub Project named Visual Intelligence OS (https://github.com/users/frankxai/projects/12).",
+        "Done: Add open VIS issues and group by milestone/status.",
+        "Done: Keep docs/VIS_TASK_REGISTRY.json as canonical even after Projects v2 exists.",
+        "Done: Document the project URL in docs/PROJECT_OPERATING_SYSTEM.md and docs/PROJECT_BOARD.md."
       ],
       "acceptance": [
-        "GitHub Projects v2 board exists and is linked from the repo docs.",
-        "Issues, milestones, status labels, and registry remain aligned.",
-        "No work is blocked if Projects v2 is unavailable."
+        "Done: GitHub Projects v2 board exists and is linked from the repo docs.",
+        "Done: Issues, milestones, status labels, and registry remain aligned.",
+        "Done: No work is blocked if Projects v2 is unavailable."
       ]
     },
     {
@@ -596,6 +601,44 @@
         "Done: Derivative buttons expose website, social, music-release, NFT/Web3, and Cloudinary plan packets.",
         "Done: Music handoff keeps Music IS canonical and refuses external distribution from VIS.",
         "Done: Dashboard generation and tests prove the shelf is present."
+      ]
+    },
+    {
+      "key": "VIS-028",
+      "title": "Add Cloudflare Artifacts multi-brand Git curation packet adapter",
+      "milestone": "M2 Asset Intelligence",
+      "status": "done",
+      "labels": ["adapter", "mcp", "product"],
+      "summary": "Package approved VIS assets, provenance manifests, and brand tokens into dry-run-first Cloudflare Artifacts Git packets for Starlight, Arcanea, and GenCreator.",
+      "tasks": [
+        "Done: Add core/adapters/cloudflare-artifacts-adapter.mjs with brand namespace routing (Starlight, Arcanea, GenCreator).",
+        "Done: Enforce 50 MiB Cloudflare Artifacts blob size limit and public-use approval gates.",
+        "Done: Expose vis artifacts-pack CLI command and build_artifacts_curation_packet MCP tool.",
+        "Done: Add unit and integration tests for multi-brand packet planning."
+      ],
+      "acceptance": [
+        "Done: Approved assets generate deterministic Cloudflare Artifacts Git packets without leaking tokens or workstation paths.",
+        "Done: Oversized (>50 MiB) or unapproved assets are blocked with explicit reasons.",
+        "Done: CLI and MCP expose identical dry-run-first packet manifests."
+      ]
+    },
+    {
+      "key": "VIS-029",
+      "title": "Build Placement Comparison Studio and Hybrid Edge + Local Cockpit",
+      "milestone": "M4 Product Beta",
+      "status": "done",
+      "labels": ["dashboard", "product", "mcp"],
+      "summary": "Combine the local-first VIS cockpit with Cloudflare Edge (R2 signed WebP thumbnails, D1 index, Artifacts Git handoff, Zero Trust Access) and an in-frame Placement Comparison Studio.",
+      "tasks": [
+        "Done: Add live Placement Comparison Studio previewing candidate assets inside FrankX, Arcanea, GenCreator, Starlight, and Music IS frames.",
+        "Done: Connect vis-media Worker signed WebP thumbnail renditions and ThumbHash placeholders.",
+        "Done: Add one-click stage-to-Artifacts and derivative-plan handoff from the comparison board, CLI, and MCP.",
+        "Done: Verify Emil design engineering standards (keyboard-first navigation, zero layout shift, dark canvas accuracy)."
+      ],
+      "acceptance": [
+        "Done: Frank can preview and compare 2-4 asset candidates inside real brand frames before approving.",
+        "Done: Edge cockpit and local operator screen load renditions smoothly with ThumbHash placeholders.",
+        "Done: Every placement export remains gated by rights, approval, and provenance checks."
       ]
     }
   ]

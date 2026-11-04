@@ -160,7 +160,7 @@ ${reminderIssues().map((issue) => issueChecklist(issue, links)).join("\n") || "-
 Use this on the second laptop or with Claude before changing scope:
 
 \`\`\`powershell
-cd C:\\Users\\frank\\starlight\\repos\\visual-intelligence
+cd <starlight-repos>/visual-intelligence
 git fetch origin
 git checkout codex/visual-intelligence-os-v02
 git pull
