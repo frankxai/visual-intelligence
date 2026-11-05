@@ -1,0 +1,41 @@
+{
+  "as_of": "2026-11-05",
+  "base_commit": "85683bc36803500e911ddc783fa5b6fd743d320e",
+  "highest_evidenced_environment": "local HTTP and embedded Postgres with synthetic tenants",
+  "checks": {
+    "lint": "passed",
+    "repository_tests": {
+      "passed": 113,
+      "failed": 0
+    },
+    "catalog_tests": {
+      "passed": 12,
+      "failed": 0
+    },
+    "migration": "executed in PGlite; not applied to production",
+    "browser_tests": {
+      "local_runtime": "Chromium download unavailable in this container; execute on GitHub runner",
+      "initial_ci_failure": "One test timed out during sample server teardown; browser assertions completed",
+      "repair": "Close the sample server connections during fixture teardown; preserve all assertions",
+      "candidate_ci": "Check the exact PR head for the final browser result"
+    }
+  },
+  "independent_security_review": "pending",
+  "live_oauth_and_supabase_integration": "not verified",
+  "production_deployment": "not performed",
+  "public_plugin_release": "not performed",
+  "tested_files_sha256": {
+    "core/vis-catalog-access.mjs": "6a0c76cd43922631ea3028f60d2de85d2dab14eb0b538f012981e71ea1038c0c",
+    "core/adapters/workspace-catalog-adapter.mjs": "1c0b4acf1ab9fd020fed566f89f20cd21b774d1f253d2e082630f3d74afe45de",
+    "core/adapters/supabase-workspace-catalog.mjs": "d1bc15f64cd47f77a12500d274b52a80758ac610df325d3eafbe042533fa5775",
+    "mcp/vis-catalog-auth.mjs": "0c2c22f71f7e44de9439b7f4574a56e148f34d1f329379677948360033c23bbb",
+    "mcp/vis-http-gateway.mjs": "1aac9a5b04ecde2714227e5ef8214f963a1f33336fc339c2a8e50f1c360c5bfb",
+    "mcp/vis-http-node.mjs": "e483e52d4e4a495c10ab99e53254526a83d004adfef9a054ce471225f8fc2f74",
+    "bin/vis-catalog-gateway.mjs": "5ad276733af06f166a69ae3131addccb5aa45aa8d75167714195e9860afcfbb9",
+    "platform/migrations/20261105_vis_catalog.sql": "12985f1c0e813e454a6adc748c5a980d6d0756e43e7561b12ea52b0eb9a3039c",
+    "tests/vis-catalog-gateway.test.mjs": "3415530c798bf1e22126c73cb8f66aa27a9f4ac378c08c0c2c3593a6ba8b8665",
+    "tests/vis-platform-catalog.test.mjs": "b6d9d91301732e26e44ad7f4ec2049d1923e549fa18561c63750b8456b33cc35",
+    "package.json": "cd5edaacca5178de4d8f77f48f47c1931a149388726a50afc3d70fe4b732eab8",
+    "pnpm-lock.yaml": "f3aafbffe6eaac7dcc5b6b3f6f93d71d5df267738f77fad7a586f89edbb7dfd3"
+  }
+}
