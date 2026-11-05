@@ -1,5 +1,10 @@
 # VIS - Visual Intelligence OS
 
+Workspace-scoped HTTP catalog access and the hosted Supabase adapter are implemented
+in the [platform slice](platform/README.md). Run `pnpm test:catalog` for the two-user
+HTTP/Postgres acceptance exercise. This is locally tested source, not a deployed
+public catalog or an automatically connected ChatGPT plugin.
+
 Local-first visual asset intelligence for AI-native creators, agentic teams, websites, social publishing, and NFT/Web3 collections.
 
 VIS turns scattered images, videos, audio files, prompts, website references, and publication records into a SQLite-backed asset graph. It gives humans and agents a shared way to search, trace, score, curate, and use visual assets without losing provenance.
