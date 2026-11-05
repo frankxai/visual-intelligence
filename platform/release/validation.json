@@ -12,7 +12,13 @@
       "passed": 12,
       "failed": 0
     },
-    "migration": "executed in PGlite; not applied to production"
+    "migration": "executed in PGlite; not applied to production",
+    "browser_tests": {
+      "local_runtime": "Chromium download unavailable in this container; execute on GitHub runner",
+      "initial_ci_failure": "One test timed out during sample server teardown; browser assertions completed",
+      "repair": "Close the sample server connections during fixture teardown; preserve all assertions",
+      "candidate_ci": "Check the exact PR head for the final browser result"
+    }
   },
   "independent_security_review": "pending",
   "live_oauth_and_supabase_integration": "not verified",
