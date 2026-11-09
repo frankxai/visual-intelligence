@@ -25,7 +25,7 @@ Stay in your lane to avoid editing the same files. Cross-lane work goes **throug
 
 ## Accepted decisions (keep this honest)
 
-- **Storage:** `architecture_media_fabric_v2` (frankxai/agentic-ops#44, accepted 2026-09-11). Vercel Blob or the product repo delivers a page. Private R2 is the accepted internal exception (agentic-ops#155, `fdd0233`). There is no public `r2.dev` URL.
+- **Storage:** accepted `architecture_media_fabric_v3` in `frankxai/agentic-ops/registry/architecture_decisions.yaml`, ruled 2026-10-22, supersedes the earlier v2 default. R2 is the canonical binary/media lake; Supabase owns hosted metadata, provenance and approvals; Vercel Image handles web image delivery; existing published Blob renditions remain valid. Local VIS retains its offline catalog and stable identities. This decision does not authorize uploads, production migrations or public bucket access; issue #41 remains in force.
 - **Build and buy:** own the record (hash, renditions, rights, provenance, placement, proposal events). Rent storage and resizing. Do **not** run Immich/PhotoPrism or rebuild Eagle (the 2026-06-26 Immich + R2-mirror lock is superseded).
 - **Plan pack:** `.agent-harness/plans/library-and-storage-2026-09` on Frank's workstation.
 
