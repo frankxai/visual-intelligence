@@ -27,15 +27,15 @@ Nothing outside `roots` is walked. Folders named in `exclude`, plus the usual pr
 
 | Command | What it does |
 |---|---|
-| `vis library ingest` | Dry run: lists what would be filed |
-| `vis library ingest --execute [--limit n]` | Hashes new or changed files, writes a 320 px WebP thumb, a 1600 px WebP preview, and a ThumbHash, sets rights to `unknown`, and writes a receipt. Unchanged files (same size and mtime) are skipped |
-| `vis library watch --execute` | Keeps filing new files as they land |
-| `vis library serve` | Opens the operator screen at http://127.0.0.1:4323 |
-| `vis library list` / `show <asset>` | Reads the record |
-| `vis library suggest --execute` | Runs the built-in proposer. It suggests a set from the folder, two levels deep |
-| `vis library propose <asset> --kind rank\|set\|tags\|rights ... --execute` | Files a proposal |
-| `vis library decide <proposal> accept\|dismiss --execute` | Decides a proposal. The CLI counts as a person |
-| `vis library stats` | Accept and dismiss history per rule |
+| `node bin/vis.mjs library ingest` | Dry run: lists what would be filed |
+| `node bin/vis.mjs library ingest --execute [--limit n]` | Hashes new or changed files, writes a 320 px WebP thumb, a 1600 px WebP preview, and a ThumbHash, sets rights to `unknown`, and writes a receipt. Unchanged files (same size and mtime) are skipped |
+| `node bin/vis.mjs library watch --execute` | Keeps filing new files as they land |
+| `node bin/vis.mjs library serve` | Opens the operator screen at http://127.0.0.1:4323 |
+| `node bin/vis.mjs library list` / `show <asset>` | Reads the record |
+| `node bin/vis.mjs library suggest --execute` | Runs the built-in proposer. It suggests a set from the folder, two levels deep |
+| `node bin/vis.mjs library propose <asset> --kind rank\|set\|tags\|rights ... --execute` | Files a proposal |
+| `node bin/vis.mjs library decide <proposal> accept\|dismiss --execute` | Decides a proposal. The CLI counts as a person |
+| `node bin/vis.mjs library stats` | Accept and dismiss history per rule |
 
 An ingest run stops early if free disk falls below `minFreeDiskGB` or if new renditions exceed `maxNewRenditionBytes` (300 MB by default). It never uploads, never calls a vision model, and never deletes a file.
 

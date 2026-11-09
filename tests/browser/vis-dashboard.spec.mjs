@@ -33,7 +33,13 @@ const test = base.extend({
       served = await serveDashboard(root, { port: 0, limit: 10, readOnly: true, verifyLocations: true })
       await use({ url: served.url, copper, blue, missing })
     } finally {
-      if (served) await new Promise(resolve => served.server.close(resolve))
+      if (served) await new Promise(resolve => {
+        // The page fixture may still hold keep-alive/image connections during
+        // teardown. Stop accepting first, then close only this sample server's
+        // sockets; no behavioral assertion or browser timeout is weakened.
+        served.server.close(resolve)
+        served.server.closeAllConnections()
+      })
       fs.rmSync(root, { recursive: true, force: true })
     }
   },

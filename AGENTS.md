@@ -25,14 +25,14 @@ Stay in your lane to avoid editing the same files. Cross-lane work goes **throug
 
 ## Accepted decisions (keep this honest)
 
-- **Storage:** `architecture_media_fabric_v2` (frankxai/agentic-ops#44, accepted 2026-09-11). Vercel Blob or the product repo delivers a page. Private R2 is the accepted internal exception (agentic-ops#155, `fdd0233`). There is no public `r2.dev` URL.
+- **Storage:** accepted `architecture_media_fabric_v3` in `frankxai/agentic-ops/registry/architecture_decisions.yaml`, ruled 2026-10-22, supersedes the earlier v2 default. R2 is the canonical binary/media lake; Supabase owns hosted metadata, provenance and approvals; Vercel Image handles web image delivery; existing published Blob renditions remain valid. Local VIS retains its offline catalog and stable identities. This decision does not authorize uploads, production migrations or public bucket access; issue #41 remains in force.
 - **Build and buy:** own the record (hash, renditions, rights, provenance, placement, proposal events). Rent storage and resizing. Do **not** run Immich/PhotoPrism or rebuild Eagle (the 2026-06-26 Immich + R2-mirror lock is superseded).
 - **Plan pack:** `.agent-harness/plans/library-and-storage-2026-09` on Frank's workstation.
 
 ## Current state
 
 - The library record is on `main`: watched roots, thumb and preview renditions, proposals, the loopback operator screen, and the MCP gates.
-- The operator screen is `vis library serve` at `http://127.0.0.1:4323`. It shows thumbs and a preview, sets rank, and accepts or dismisses proposals. It does not publish.
+- The operator screen is `node bin/vis.mjs library serve` at `http://127.0.0.1:4323`. It shows thumbs and a preview, sets rank, and accepts or dismisses proposals. It does not publish.
 - `workers/vis-media` is the private preview Worker. `workers_dev` and preview URLs stay off. No route is added unless issue #41 is already satisfied and Frank asks.
 - Issue #41 is the remaining human work: an Infisical login before a restic token, and a real page before a publication.
 - The next build is the review screen itself: a folder rail, keyboard review, and a stable preview. Build it, test it, and merge it. Do not add a second catalog or a browser extension.

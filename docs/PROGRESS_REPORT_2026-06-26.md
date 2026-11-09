@@ -203,7 +203,7 @@ Read-only default: true
 ## Install On Other PC
 
 1. Pull the GitHub branch containing this report.
-2. Run `npm install` or `pnpm install` if dependencies are missing.
+2. Run `npm install` if dependencies are missing.
 3. Run `npm run lint` and `npm test`.
 4. Regenerate local runtime state on that machine:
 

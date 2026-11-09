@@ -1,5 +1,10 @@
 # VIS - Visual Intelligence OS
 
+Workspace-scoped HTTP catalog access and the hosted Supabase adapter are implemented
+in the [platform slice](platform/README.md). Run `pnpm test:catalog` for the two-user
+HTTP/Postgres acceptance exercise. This is locally tested source, not a deployed
+public catalog or an automatically connected ChatGPT plugin.
+
 Local-first visual asset intelligence for AI-native creators, agentic teams, websites, social publishing, and NFT/Web3 collections.
 
 VIS turns scattered images, videos, audio files, prompts, website references, and publication records into a SQLite-backed asset graph. It gives humans and agents a shared way to search, trace, score, curate, and use visual assets without losing provenance.
@@ -12,7 +17,7 @@ VIS turns scattered images, videos, audio files, prompts, website references, an
 - Execution tracker: GitHub Issues and milestones synced from `docs/VIS_TASK_REGISTRY.json`
 - Local-first source of truth: `data/vis.sqlite`
 - Local visual dashboard export: `data/vis-dashboard.html`
-- PWA cockpit shell: `data/vis-dashboard.webmanifest`, `data/vis-dashboard-sw.js`, and `vis serve-dashboard`
+- PWA cockpit shell: `data/vis-dashboard.webmanifest`, `data/vis-dashboard-sw.js`, and `node bin/vis.mjs serve-dashboard`
 - Agent layer: read-first MCP server at `mcp/vis-mcp-server.mjs`
 - Runtime: Node.js `>=22.13.0`; Node 24+ recommended
 
