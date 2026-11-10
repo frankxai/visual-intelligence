@@ -244,8 +244,13 @@
       "version_approval": null,
       "rights_status": "requires_per_asset_verification",
       "source_status": "repository_documentation_verified",
-      "asset_status": "not_verified_as_discrete_sprite_master",
-      "use_policy": "runtime_skin_definition_not_approved_character_canon"
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawStellaris",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
     },
     {
       "identity_id": "product.starlight-agent-pet.skin.arcanea_luminor",
@@ -262,8 +267,13 @@
       "version_approval": null,
       "rights_status": "requires_per_asset_verification",
       "source_status": "repository_documentation_verified",
-      "asset_status": "not_verified_as_discrete_sprite_master",
-      "use_policy": "runtime_skin_definition_not_approved_character_canon"
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawArcaneaLuminor",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
     },
     {
       "identity_id": "product.starlight-agent-pet.skin.cyber_bot",
@@ -280,8 +290,13 @@
       "version_approval": null,
       "rights_status": "requires_per_asset_verification",
       "source_status": "repository_documentation_verified",
-      "asset_status": "not_verified_as_discrete_sprite_master",
-      "use_policy": "runtime_skin_definition_not_approved_character_canon"
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawCyberBot",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
     },
     {
       "identity_id": "product.starlight-agent-pet.skin.kuro_neko",
@@ -298,8 +313,13 @@
       "version_approval": null,
       "rights_status": "requires_per_asset_verification",
       "source_status": "repository_documentation_verified",
-      "asset_status": "not_verified_as_discrete_sprite_master",
-      "use_policy": "runtime_skin_definition_not_approved_character_canon"
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawKuroNeko",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
     },
     {
       "identity_id": "product.starlight-agent-pet.skin.starlight_queen",
@@ -316,8 +336,13 @@
       "version_approval": null,
       "rights_status": "requires_per_asset_verification",
       "source_status": "repository_documentation_verified",
-      "asset_status": "not_verified_as_discrete_sprite_master",
-      "use_policy": "runtime_skin_definition_not_approved_character_canon"
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawStarlightQueen",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
     }
   ],
   "reuse_controls": [
@@ -337,5 +362,23 @@
     "rights_and_approval",
     "storage_readback_hash",
     "published_usage_location"
-  ]
+  ],
+  "additional_renderer_paths": [
+    {
+      "id": "codex_bot",
+      "type": "procedural_canvas_2d",
+      "method": "drawCodexBot",
+      "branch_observed": true,
+      "method_declared": true,
+      "selector_documented_in_readme": false,
+      "source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "review_state": "unverified_product_entrypoint",
+      "policy": "do_not_conflate_with_openai_codex_official_webp"
+    }
+  ],
+  "field_notes": {
+    "codex_sprite_sheet": "Eight vendor-owned external WebP declarations; no binary mirror.",
+    "starlight_skins": "Five named local product skins are drawn procedurally by Canvas code. No independent WebP master assumed.",
+    "codex_bot": "Additional renderer code branch found; not confirmed as CLI-selectable sixth named skin."
+  }
 }
