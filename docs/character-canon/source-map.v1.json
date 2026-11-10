@@ -1,0 +1,76 @@
+{
+  "schema_version": "visual-canon-source-map/v1",
+  "as_of": "2026-11-10",
+  "status": "source-discovery-only",
+  "authority": "VIS asset identity; living-design character contracts",
+  "entries": [
+    {
+      "id": "starlight.queen.study01",
+      "lineage": "starlight-house",
+      "name": "Starlight Queen",
+      "source_uri": "https://chatgpt.com/space/page_d2f7772a2d5c81919b6846c37e5120c3",
+      "source_sha256": "341d87e981b8ee9fb1a9fccf6c4ee5ce6436d05eb0d10d508e63f318542cac26",
+      "sha_evidence": "recorded-in-Space-not-independently-rehashed",
+      "approval": "founder-pending",
+      "rights": "review-required",
+      "use": "reference-only"
+    },
+    {
+      "id": "starlight.house.atlas",
+      "lineage": "starlight-house",
+      "name": "Ten-house atlas",
+      "source_uri": "https://www.figma.com/design/skl1Tjgu8iS7rwg5FZFTNg?node-id=4-2",
+      "source_sha256": null,
+      "approval": "review-required",
+      "rights": "review-required",
+      "use": "reference-only"
+    },
+    {
+      "id": "mini-me.private-canon",
+      "lineage": "mini-me-original",
+      "name": "Mini Frank and original companions",
+      "source_uri": "https://github.com/Starlight-Intelligence/starlight-design-intelligence/blob/main/playbooks/character-canon-retrieval.md",
+      "source_sha256": null,
+      "approval": "unverified-in-this-audit",
+      "rights": "private",
+      "use": "blocked-until-private-skill-index-and-image-hashes-verified"
+    },
+    {
+      "id": "infographic.role-crew.v1",
+      "lineage": "infographic-role-crew",
+      "name": "Coder Gatekeeper Librarian Retry Engine",
+      "source_uri": "https://drive.google.com/file/d/1Cs3ket19jwtFfpN-QttyGYIXFeTLq9--/view",
+      "source_sha256": null,
+      "approval": "candidate",
+      "rights": "review-required",
+      "use": "reference-only"
+    },
+    {
+      "id": "infographic.role-crew.poses",
+      "lineage": "infographic-role-crew",
+      "name": "Five individual poses",
+      "source_uri": "https://drive.google.com/drive/folders/1IOGxivcXPGVrB9NAlnSHasUMkHsFHGVu",
+      "source_sha256": null,
+      "approval": "candidate",
+      "rights": "review-required",
+      "use": "reference-only"
+    },
+    {
+      "id": "infographic.styles.v02",
+      "lineage": "editorial-style",
+      "name": "Clean Light Deep Night Robot Crew",
+      "source_uri": "https://drive.google.com/file/d/1IzYlfoX5AA0Z9Da7EfRTO1WLK7a6Y7BJ/view",
+      "source_sha256": null,
+      "approval": "candidate",
+      "rights": "internal",
+      "use": "reference-only"
+    }
+  ],
+  "constraints": [
+    "Do not infer canon approval from presence in source folder.",
+    "Do not substitute generated lookalikes for private original Mini Me masters.",
+    "Do not equate vendor/model names with owned characters.",
+    "Do not publish source manifests containing private bytes or signed URLs.",
+    "All exact-version approval and archive claims require receipts."
+  ]
+}

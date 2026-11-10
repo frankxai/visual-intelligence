@@ -1,0 +1,384 @@
+{
+  "schema_version": "vis-sprite-origin-catalog/v1",
+  "created_from_sources": "2026-11-10",
+  "scope": "source-intelligence-not-binary-ingestion",
+  "authority": {
+    "assets": "VIS",
+    "identity_contracts": "Starlight Living Design",
+    "editable_folios": "Figma",
+    "human_reviews": "Notion Assets and Visual Atlas"
+  },
+  "figma_source_map": "https://www.figma.com/design/m2wi20fAoCgFOKGXkJJGAm?node-id=20-90",
+  "figma_sprite_inventory": "https://www.figma.com/design/m2wi20fAoCgFOKGXkJJGAm?node-id=26-89",
+  "provider_sprite_sheets": [
+    {
+      "identity_id": "vendor.openai.codex.pet.codex",
+      "display_name": "Codex",
+      "upstream_id": "codex",
+      "asset_family": "provider_sprites",
+      "owner_class": "vendor_openai",
+      "source_catalog": "https://github.com/openai/codex/blob/main/codex-rs/tui/src/pets/catalog.rs",
+      "declared_filename": "codex-spritesheet-v4.webp",
+      "declared_frame_geometry": {
+        "frame_width": 192,
+        "frame_height": 208,
+        "columns": 8,
+        "rows": 9
+      },
+      "declared_sheet_geometry": {
+        "width": 1536,
+        "height": 1872
+      },
+      "binary_sha256": null,
+      "measured_geometry": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_usage_and_redistribution_review",
+      "source_status": "upstream_catalog_verified",
+      "asset_status": "not_ingested",
+      "use_policy": "source_reference_only"
+    },
+    {
+      "identity_id": "vendor.openai.codex.pet.dewey",
+      "display_name": "Dewey",
+      "upstream_id": "dewey",
+      "asset_family": "provider_sprites",
+      "owner_class": "vendor_openai",
+      "source_catalog": "https://github.com/openai/codex/blob/main/codex-rs/tui/src/pets/catalog.rs",
+      "declared_filename": "dewey-spritesheet-v4.webp",
+      "declared_frame_geometry": {
+        "frame_width": 192,
+        "frame_height": 208,
+        "columns": 8,
+        "rows": 9
+      },
+      "declared_sheet_geometry": {
+        "width": 1536,
+        "height": 1872
+      },
+      "binary_sha256": null,
+      "measured_geometry": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_usage_and_redistribution_review",
+      "source_status": "upstream_catalog_verified",
+      "asset_status": "not_ingested",
+      "use_policy": "source_reference_only"
+    },
+    {
+      "identity_id": "vendor.openai.codex.pet.fireball",
+      "display_name": "Fireball",
+      "upstream_id": "fireball",
+      "asset_family": "provider_sprites",
+      "owner_class": "vendor_openai",
+      "source_catalog": "https://github.com/openai/codex/blob/main/codex-rs/tui/src/pets/catalog.rs",
+      "declared_filename": "fireball-spritesheet-v4.webp",
+      "declared_frame_geometry": {
+        "frame_width": 192,
+        "frame_height": 208,
+        "columns": 8,
+        "rows": 9
+      },
+      "declared_sheet_geometry": {
+        "width": 1536,
+        "height": 1872
+      },
+      "binary_sha256": null,
+      "measured_geometry": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_usage_and_redistribution_review",
+      "source_status": "upstream_catalog_verified",
+      "asset_status": "not_ingested",
+      "use_policy": "source_reference_only"
+    },
+    {
+      "identity_id": "vendor.openai.codex.pet.rocky",
+      "display_name": "Rocky",
+      "upstream_id": "rocky",
+      "asset_family": "provider_sprites",
+      "owner_class": "vendor_openai",
+      "source_catalog": "https://github.com/openai/codex/blob/main/codex-rs/tui/src/pets/catalog.rs",
+      "declared_filename": "rocky-spritesheet-v4.webp",
+      "declared_frame_geometry": {
+        "frame_width": 192,
+        "frame_height": 208,
+        "columns": 8,
+        "rows": 9
+      },
+      "declared_sheet_geometry": {
+        "width": 1536,
+        "height": 1872
+      },
+      "binary_sha256": null,
+      "measured_geometry": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_usage_and_redistribution_review",
+      "source_status": "upstream_catalog_verified",
+      "asset_status": "not_ingested",
+      "use_policy": "source_reference_only"
+    },
+    {
+      "identity_id": "vendor.openai.codex.pet.seedy",
+      "display_name": "Seedy",
+      "upstream_id": "seedy",
+      "asset_family": "provider_sprites",
+      "owner_class": "vendor_openai",
+      "source_catalog": "https://github.com/openai/codex/blob/main/codex-rs/tui/src/pets/catalog.rs",
+      "declared_filename": "seedy-spritesheet-v4.webp",
+      "declared_frame_geometry": {
+        "frame_width": 192,
+        "frame_height": 208,
+        "columns": 8,
+        "rows": 9
+      },
+      "declared_sheet_geometry": {
+        "width": 1536,
+        "height": 1872
+      },
+      "binary_sha256": null,
+      "measured_geometry": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_usage_and_redistribution_review",
+      "source_status": "upstream_catalog_verified",
+      "asset_status": "not_ingested",
+      "use_policy": "source_reference_only"
+    },
+    {
+      "identity_id": "vendor.openai.codex.pet.stacky",
+      "display_name": "Stacky",
+      "upstream_id": "stacky",
+      "asset_family": "provider_sprites",
+      "owner_class": "vendor_openai",
+      "source_catalog": "https://github.com/openai/codex/blob/main/codex-rs/tui/src/pets/catalog.rs",
+      "declared_filename": "stacky-spritesheet-v4.webp",
+      "declared_frame_geometry": {
+        "frame_width": 192,
+        "frame_height": 208,
+        "columns": 8,
+        "rows": 9
+      },
+      "declared_sheet_geometry": {
+        "width": 1536,
+        "height": 1872
+      },
+      "binary_sha256": null,
+      "measured_geometry": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_usage_and_redistribution_review",
+      "source_status": "upstream_catalog_verified",
+      "asset_status": "not_ingested",
+      "use_policy": "source_reference_only"
+    },
+    {
+      "identity_id": "vendor.openai.codex.pet.bsod",
+      "display_name": "BSOD",
+      "upstream_id": "bsod",
+      "asset_family": "provider_sprites",
+      "owner_class": "vendor_openai",
+      "source_catalog": "https://github.com/openai/codex/blob/main/codex-rs/tui/src/pets/catalog.rs",
+      "declared_filename": "bsod-spritesheet-v4.webp",
+      "declared_frame_geometry": {
+        "frame_width": 192,
+        "frame_height": 208,
+        "columns": 8,
+        "rows": 9
+      },
+      "declared_sheet_geometry": {
+        "width": 1536,
+        "height": 1872
+      },
+      "binary_sha256": null,
+      "measured_geometry": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_usage_and_redistribution_review",
+      "source_status": "upstream_catalog_verified",
+      "asset_status": "not_ingested",
+      "use_policy": "source_reference_only"
+    },
+    {
+      "identity_id": "vendor.openai.codex.pet.null-signal",
+      "display_name": "Null Signal",
+      "upstream_id": "null-signal",
+      "asset_family": "provider_sprites",
+      "owner_class": "vendor_openai",
+      "source_catalog": "https://github.com/openai/codex/blob/main/codex-rs/tui/src/pets/catalog.rs",
+      "declared_filename": "null-signal-spritesheet-v4.webp",
+      "declared_frame_geometry": {
+        "frame_width": 192,
+        "frame_height": 208,
+        "columns": 8,
+        "rows": 9
+      },
+      "declared_sheet_geometry": {
+        "width": 1536,
+        "height": 1872
+      },
+      "binary_sha256": null,
+      "measured_geometry": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_usage_and_redistribution_review",
+      "source_status": "upstream_catalog_verified",
+      "asset_status": "not_ingested",
+      "use_policy": "source_reference_only"
+    }
+  ],
+  "local_pet_skins": [
+    {
+      "identity_id": "product.starlight-agent-pet.skin.stellaris",
+      "display_name": "Stellaris",
+      "skin_selector": "stellaris",
+      "description": "Celestial Cosmic Kitsune",
+      "asset_family": "local_pet_skins",
+      "owner_class": "product_defined",
+      "source_repository": "https://github.com/frankxai/starlight-agent-pet",
+      "source_document": "https://github.com/frankxai/starlight-agent-pet/blob/main/README.md",
+      "binary_sha256": null,
+      "sprite_sheet_file": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_per_asset_verification",
+      "source_status": "repository_documentation_verified",
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawStellaris",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
+    },
+    {
+      "identity_id": "product.starlight-agent-pet.skin.arcanea_luminor",
+      "display_name": "Arcanea Luminor",
+      "skin_selector": "arcanea_luminor",
+      "description": "Crystalline geometric companion",
+      "asset_family": "local_pet_skins",
+      "owner_class": "product_defined",
+      "source_repository": "https://github.com/frankxai/starlight-agent-pet",
+      "source_document": "https://github.com/frankxai/starlight-agent-pet/blob/main/README.md",
+      "binary_sha256": null,
+      "sprite_sheet_file": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_per_asset_verification",
+      "source_status": "repository_documentation_verified",
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawArcaneaLuminor",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
+    },
+    {
+      "identity_id": "product.starlight-agent-pet.skin.cyber_bot",
+      "display_name": "Cyber-Pulsar 2077",
+      "skin_selector": "cyber_bot",
+      "description": "Retro cyber-bot",
+      "asset_family": "local_pet_skins",
+      "owner_class": "product_defined",
+      "source_repository": "https://github.com/frankxai/starlight-agent-pet",
+      "source_document": "https://github.com/frankxai/starlight-agent-pet/blob/main/README.md",
+      "binary_sha256": null,
+      "sprite_sheet_file": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_per_asset_verification",
+      "source_status": "repository_documentation_verified",
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawCyberBot",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
+    },
+    {
+      "identity_id": "product.starlight-agent-pet.skin.kuro_neko",
+      "display_name": "Kuro-Neko Astral",
+      "skin_selector": "kuro_neko",
+      "description": "Space void cat",
+      "asset_family": "local_pet_skins",
+      "owner_class": "product_defined",
+      "source_repository": "https://github.com/frankxai/starlight-agent-pet",
+      "source_document": "https://github.com/frankxai/starlight-agent-pet/blob/main/README.md",
+      "binary_sha256": null,
+      "sprite_sheet_file": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_per_asset_verification",
+      "source_status": "repository_documentation_verified",
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawKuroNeko",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
+    },
+    {
+      "identity_id": "product.starlight-agent-pet.skin.starlight_queen",
+      "display_name": "Starlight Queen Hive-Mind",
+      "skin_selector": "starlight_queen",
+      "description": "Constellation orb",
+      "asset_family": "local_pet_skins",
+      "owner_class": "product_defined",
+      "source_repository": "https://github.com/frankxai/starlight-agent-pet",
+      "source_document": "https://github.com/frankxai/starlight-agent-pet/blob/main/README.md",
+      "binary_sha256": null,
+      "sprite_sheet_file": null,
+      "animation_state_map": null,
+      "version_approval": null,
+      "rights_status": "requires_per_asset_verification",
+      "source_status": "repository_documentation_verified",
+      "asset_status": "code_defined_procedural_render_not_discrete_sprite_sheet",
+      "use_policy": "runtime_skin_definition_not_approved_character_canon",
+      "renderer_type": "procedural_canvas_2d",
+      "renderer_function": "drawStarlightQueen",
+      "renderer_function_declared": true,
+      "renderer_source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "renderer_source_git_blob_sha": "9e23c648554946096fff36fdcff4b9a4458ac764"
+    }
+  ],
+  "reuse_controls": [
+    "Never conflate an external provider pet with a first-party Mini Me cast member.",
+    "Do not consider source declarations as downloaded or hash-verified binaries.",
+    "Do not ship or redistribute third-party sprite bytes until the licensing/use scope is reviewed.",
+    "One source sheet may yield many frame-level variations; every derivative retains immutable parent source ID and hash.",
+    "Read-only agents see references; candidate images, bad variants and personal likeness require scoped permissions.",
+    "Starlight Queen Hive-Mind skin is not a derivative of Queen portrait study unless an exact source relationship is established."
+  ],
+  "required_future_receipts": [
+    "original_byte_hash",
+    "source_license",
+    "measured_dimensions_and_alpha",
+    "frame_coordinates_and_states",
+    "animation_qa",
+    "rights_and_approval",
+    "storage_readback_hash",
+    "published_usage_location"
+  ],
+  "additional_renderer_paths": [
+    {
+      "id": "codex_bot",
+      "type": "procedural_canvas_2d",
+      "method": "drawCodexBot",
+      "branch_observed": true,
+      "method_declared": true,
+      "selector_documented_in_readme": false,
+      "source": "https://github.com/frankxai/starlight-agent-pet/blob/main/public/js/pet-canvas.js",
+      "review_state": "unverified_product_entrypoint",
+      "policy": "do_not_conflate_with_openai_codex_official_webp"
+    }
+  ],
+  "field_notes": {
+    "codex_sprite_sheet": "Eight vendor-owned external WebP declarations; no binary mirror.",
+    "starlight_skins": "Five named local product skins are drawn procedurally by Canvas code. No independent WebP master assumed.",
+    "codex_bot": "Additional renderer code branch found; not confirmed as CLI-selectable sixth named skin."
+  }
+}
