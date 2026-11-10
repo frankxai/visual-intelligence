@@ -108,3 +108,19 @@ For any website, app, landing page, dashboard, brand surface, visual asset, moti
 
 Repo-local instructions remain authoritative when stricter.
 <!-- PREMIUM-WEB-OS:END -->
+
+
+## Exact visual canon and sprite retrieval
+
+When a task concerns Mini Frank, Nilo, Brio, Riff, Starlight Queen, conductor folios, Codex pets, third-party mascots, character variants, Figma portraits, sprite sheets, or rejected image examples:
+
+1. Read `docs/character-canon/source-map.v1.json`, `docs/character-canon/sprite-origin-catalog.v1.json`, and `skills/visual-canon-retrieval/SKILL.md` **before** generating, importing, naming or publishing an asset.
+2. Query the actual VIS catalog through `get_asset_sources`, `search_assets`, `get_asset`, and `get_asset_preview` only where a verified authenticated gateway exists. A local or proposed MCP tool is not a live connected tool.
+3. Resolve private Mini Me reference bytes through the authorized skill/Library source. Public GitHub stores safe manifests and tool contracts, never private likeness masters, credentials or signed links.
+4. Identify every edition by stable identity + version + source + measured hash + owner/rights/review state. Preserve rejected editions as private learning evidence and prevent default reference reuse.
+5. Distinguish eight vendor-owned Codex WebP sprite declarations from five product-defined procedural Canvas skins. An extra `codex_bot` rendering branch exists in Starlight Agent Pet; it is **not** an approved sixth official upstream sprite.
+6. Keep Figma source-map boards, Notion visual galleries and existing Drive folders as **projections**, not second asset registries. Do not infer rights from visibility or status from file placement.
+7. When sources cannot be retrieved, stop identity-continuity generation or deliver a link-only review brief with unknown hashes. Never invent a likeness or claim archival.
+8. Record QA and release separately. Human gates for R2 writes, rights, external publication and deployment still apply through issue #41.
+
+Source verification and design-lineage work belongs in bounded issues and draft PRs. This hook does not install skills into unrelated repositories or external agents.
