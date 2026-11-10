@@ -1,0 +1,191 @@
+{
+  "schema_version": "vis.identity-source-projection.v1",
+  "generated_on": "2026-11-10",
+  "status": "source-discovery-not-an-asset-catalog",
+  "semantics": "This is a source/identity projection; VIS asset_id/version_id, SHA-256 and approval are authoritative when verified. External sprite existence does not authorize distribution.",
+  "collections": [
+    {
+      "id": "vendor.codex.builtin-pets",
+      "kind": "vendor-owned-pet-catalog",
+      "owner": "OpenAI",
+      "source": {
+        "repo": "openai/codex",
+        "file": "codex-rs/tui/src/pets/catalog.rs",
+        "observed_blob_sha": "0beb01b3e6db89f566ce4932a72f5878cf7431b1"
+      },
+      "geometry": {
+        "frame_width": 192,
+        "frame_height": 208,
+        "columns": 8,
+        "rows": 9,
+        "nominal_sheet_width": 1536,
+        "nominal_sheet_height": 1872
+      },
+      "rights_status": "external-terms-review-required",
+      "selection_status": "source-listed-not-owned",
+      "pet_ids": [
+        {
+          "id": "codex",
+          "name": "Codex",
+          "spritesheet": "codex-spritesheet-v4.webp",
+          "binary_retrieved": false
+        },
+        {
+          "id": "dewey",
+          "name": "Dewey",
+          "spritesheet": "dewey-spritesheet-v4.webp",
+          "binary_retrieved": false
+        },
+        {
+          "id": "fireball",
+          "name": "Fireball",
+          "spritesheet": "fireball-spritesheet-v4.webp",
+          "binary_retrieved": false
+        },
+        {
+          "id": "rocky",
+          "name": "Rocky",
+          "spritesheet": "rocky-spritesheet-v4.webp",
+          "binary_retrieved": false
+        },
+        {
+          "id": "seedy",
+          "name": "Seedy",
+          "spritesheet": "seedy-spritesheet-v4.webp",
+          "binary_retrieved": false
+        },
+        {
+          "id": "stacky",
+          "name": "Stacky",
+          "spritesheet": "stacky-spritesheet-v4.webp",
+          "binary_retrieved": false
+        },
+        {
+          "id": "bsod",
+          "name": "BSOD",
+          "spritesheet": "bsod-spritesheet-v4.webp",
+          "binary_retrieved": false
+        },
+        {
+          "id": "null-signal",
+          "name": "Null Signal",
+          "spritesheet": "null-signal-spritesheet-v4.webp",
+          "binary_retrieved": false
+        }
+      ]
+    },
+    {
+      "id": "starlight.desktop-pet-skins",
+      "kind": "product-implementation-skin-catalog",
+      "owner": "frankxai",
+      "source": {
+        "repo": "frankxai/starlight-agent-pet",
+        "file": "README.md",
+        "observed_blob_sha": "c8249f57b56b25430efe6b44c12c061a8e0d3f4d"
+      },
+      "rights_status": "verify-original-art-and-third-party-dependencies",
+      "selection_status": "documented-implementation-unverified-runtime",
+      "skins": [
+        {
+          "id": "stellaris",
+          "name": "Stellaris (Celestial Cosmic Kitsune)"
+        },
+        {
+          "id": "arcanea_luminor",
+          "name": "Arcanea Luminor"
+        },
+        {
+          "id": "cyber_bot",
+          "name": "Cyber-Pulsar 2077"
+        },
+        {
+          "id": "kuro_neko",
+          "name": "Kuro-Neko Astral"
+        },
+        {
+          "id": "starlight_queen",
+          "name": "Starlight Queen Hive-Mind"
+        }
+      ]
+    },
+    {
+      "id": "frankx.original-mini-me",
+      "kind": "owned-character-identity",
+      "source_note": "Private revision 2026-10-09.4; recover exact bundled images and compare hashes before use",
+      "status": "selected-original-identity-anchors-not-equivalent-to-runtime-provider-pets",
+      "characters": [
+        {
+          "id": "host.frank",
+          "name": "Mini Frank",
+          "role": "founder"
+        },
+        {
+          "id": "custom.nilo",
+          "name": "Nilo",
+          "role": "evidence scout"
+        },
+        {
+          "id": "custom.brio",
+          "name": "Brio",
+          "role": "builder"
+        },
+        {
+          "id": "custom.riff",
+          "name": "Riff",
+          "role": "creative catalyst"
+        }
+      ],
+      "restrictions": [
+        "Original Nilo/Brio/Riff are not Codex/Claude/OpenClaw official mascots.",
+        "Prior model assignments explicitly withdrawn in Oct 2026.",
+        "Do not reconstruct likeness without original model/cast sheets."
+      ]
+    },
+    {
+      "id": "starlight.twenty-character-atelier",
+      "kind": "concept-character-collection",
+      "source_note": "Existing Notion Character registry — First 20, plus 23 original PNGs in owner's private Drive",
+      "count": 20,
+      "status": "proposal-all-20-at-audited-snapshot"
+    },
+    {
+      "id": "starlight.queen-and-conductors",
+      "kind": "concept-character-folios",
+      "source_note": "Existing eleven editable Figma folios, Queen master in ChatGPT Space",
+      "count": 11,
+      "status": "working-study"
+    },
+    {
+      "id": "perplexity.infographic-crew",
+      "kind": "task-illustration-characters",
+      "source_note": "Existing five-bot Drive crew and pose directory",
+      "status": "candidate",
+      "characters": [
+        "Coder",
+        "Gatekeeper",
+        "Librarian",
+        "Retry",
+        "Engine"
+      ],
+      "new_candidates": [
+        "Scrubber",
+        "Watcher"
+      ]
+    }
+  ],
+  "policy": {
+    "default_retrieval": [
+      "exact-asset-identity",
+      "exact-version",
+      "source-sha",
+      "rights-scope",
+      "review-status",
+      "visual-reference"
+    ],
+    "rejected_reference": "private-taste-analysis-only",
+    "vendor_mascots": "rights-and-attribution-required;never-owned-ip",
+    "runtime_agent_identity": "separate-from-character-id",
+    "archive": "private-originals-with-byte-matched-retrieval",
+    "publish": "explicit-approval-for-exact-version"
+  }
+}
