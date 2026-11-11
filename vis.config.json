@@ -19,7 +19,103 @@
   },
   "placements": {
     "sites": [
-      { "label": "frankx.ai", "repo": "%USERPROFILE%/frankx-prod-sync", "ref": "origin/main", "webRoot": "public", "publicBase": "https://www.frankx.ai" }
+      {
+        "label": "frankx.ai",
+        "brand": "frankx",
+        "repo": "../frankx.ai-vercel-website",
+        "repoFallbacks": ["%USERPROFILE%/frankx-prod-sync"],
+        "ref": "origin/main",
+        "webRoot": "public",
+        "publicBase": "https://www.frankx.ai",
+        "optional": true,
+        "publicMediaDirs": ["public/images", "public/images/diagrams", "public/diagrams", "public/visuals"],
+        "diagramRegistryPath": "public/images/diagrams/registry.json",
+        "provenanceSidecar": {
+          "suffix": ".vis.provenance.json",
+          "schema": "https://frankx.ai/schemas/vis-provenance-sidecar.schema.json",
+          "requiredForGenerated": true
+        }
+      },
+      {
+        "label": "starlightintelligence.ai",
+        "brand": "sis",
+        "repo": "../starlightintelligence.ai",
+        "ref": "origin/main",
+        "webRoot": "public",
+        "publicBase": "https://starlightintelligence.ai",
+        "optional": true,
+        "publicMediaDirs": ["public/images", "public/images/diagrams", "public/diagrams", "public/visuals"],
+        "diagramRegistryPath": "public/images/diagrams/registry.json",
+        "provenanceSidecar": {
+          "suffix": ".vis.provenance.json",
+          "schema": "https://frankx.ai/schemas/vis-provenance-sidecar.schema.json",
+          "requiredForGenerated": true
+        }
+      },
+      {
+        "label": "arcanea.ai",
+        "brand": "arcanea",
+        "repo": "../arcanea-ai-app",
+        "ref": "origin/main",
+        "webRoot": "apps/web/public",
+        "publicBase": "https://arcanea.ai",
+        "optional": true,
+        "publicMediaDirs": ["apps/web/public/images", "apps/web/public/images/diagrams", "apps/web/public/diagrams", "apps/web/public/visuals"],
+        "diagramRegistryPath": "apps/web/public/images/diagrams/registry.json",
+        "provenanceSidecar": {
+          "suffix": ".vis.provenance.json",
+          "schema": "https://frankx.ai/schemas/vis-provenance-sidecar.schema.json",
+          "requiredForGenerated": true
+        }
+      },
+      {
+        "label": "ai-architect-academy",
+        "brand": "ai-coe",
+        "repo": "../ai-architect-academy",
+        "ref": "origin/main",
+        "webRoot": "site/public",
+        "publicBase": "https://aiarchitectacademy.com",
+        "optional": true,
+        "publicMediaDirs": ["site/public/images", "site/public/images/diagrams", "site/public/diagrams", "site/public/visuals"],
+        "diagramRegistryPath": "site/public/images/diagrams/registry.json",
+        "provenanceSidecar": {
+          "suffix": ".vis.provenance.json",
+          "schema": "https://frankx.ai/schemas/vis-provenance-sidecar.schema.json",
+          "requiredForGenerated": true
+        }
+      },
+      {
+        "label": "gencreator.ai",
+        "brand": "gencreator",
+        "repo": "../gencreator.ai",
+        "ref": "origin/main",
+        "webRoot": "public",
+        "publicBase": "https://gencreator.ai",
+        "optional": true,
+        "publicMediaDirs": ["public/images", "public/images/diagrams", "public/diagrams", "public/visuals"],
+        "diagramRegistryPath": "public/images/diagrams/registry.json",
+        "provenanceSidecar": {
+          "suffix": ".vis.provenance.json",
+          "schema": "https://frankx.ai/schemas/vis-provenance-sidecar.schema.json",
+          "requiredForGenerated": true
+        }
+      },
+      {
+        "label": "agenticincome.ai",
+        "brand": "agentic-income",
+        "repo": "../agenticincome",
+        "ref": "origin/main",
+        "webRoot": "public",
+        "publicBase": "https://agenticincome.ai",
+        "optional": true,
+        "publicMediaDirs": ["public/images", "public/images/diagrams", "public/diagrams", "public/visuals"],
+        "diagramRegistryPath": "public/images/diagrams/registry.json",
+        "provenanceSidecar": {
+          "suffix": ".vis.provenance.json",
+          "schema": "https://frankx.ai/schemas/vis-provenance-sidecar.schema.json",
+          "requiredForGenerated": true
+        }
+      }
     ]
   },
   "dashboardPath": "data/vis-dashboard.html",
@@ -41,8 +137,31 @@
   ],
   "scanProfiles": {
     "frank-estate": {
-      "description": "Frank's local-first VIS estate: Starlight repos, Drive creative vault, Eagle library, mobile inbox, and Music IS proof folders.",
+      "description": "Frank's local-first VIS estate across six website surfaces and publishing assets, Starlight Design Intelligence diagrams, Drive creative vault, Eagle library, and Music IS proof folders.",
+      "optionalSiblingRepos": true,
+      "diagramGlobs": [
+        "public/images/diagrams/**/*.svg",
+        "public/diagrams/**/*.svg",
+        "public/visuals/**/*.svg",
+        "apps/web/public/**/*.svg",
+        "site/public/**/*.svg",
+        "brand-image-system/examples/diagrams/**/*.svg"
+      ],
+      "provenanceSidecarGlobs": [
+        "**/*.vis.provenance.json",
+        "public/images/diagrams/**/*.vis.provenance.json",
+        "public/diagrams/**/*.vis.provenance.json",
+        "public/visuals/**/*.vis.provenance.json"
+      ],
       "mediaRoots": [
+        "../frankx.ai-vercel-website",
+        "../starlightintelligence.ai",
+        "../arcanea-ai-app",
+        "../ai-architect-academy",
+        "../gencreator.ai",
+        "../agenticincome",
+        "../publishing-house",
+        "../starlight-design-intelligence",
         "%USERPROFILE%\\starlight\\repos",
         "%USERPROFILE%\\brands\\image-system",
         "%USERPROFILE%\\Google Drive\\Starlight Creative Vault",
@@ -51,11 +170,31 @@
         "%USERPROFILE%\\starlight\\repos\\Starlight-Intelligence-System\\verticals\\music-is"
       ],
       "usageRoots": [
+        "../frankx.ai-vercel-website",
+        "../starlightintelligence.ai",
+        "../arcanea-ai-app",
+        "../ai-architect-academy",
+        "../gencreator.ai",
+        "../agenticincome",
+        "../publishing-house",
         "%USERPROFILE%\\starlight\\repos\\frankx.ai-vercel-website",
+        "%USERPROFILE%\\starlight\\repos\\starlightintelligence.ai",
         "%USERPROFILE%\\starlight\\repos\\arcanea-ai-app",
+        "%USERPROFILE%\\starlight\\repos\\ai-architect-academy",
+        "%USERPROFILE%\\starlight\\repos\\gencreator.ai",
+        "%USERPROFILE%\\starlight\\repos\\agenticincome",
+        "%USERPROFILE%\\starlight\\repos\\publishing-house",
         "%USERPROFILE%\\starlight\\repos\\Starlight-Intelligence-System"
       ],
       "allowedRoots": [
+        "../frankx.ai-vercel-website",
+        "../starlightintelligence.ai",
+        "../arcanea-ai-app",
+        "../ai-architect-academy",
+        "../gencreator.ai",
+        "../agenticincome",
+        "../publishing-house",
+        "../starlight-design-intelligence",
         "%USERPROFILE%\\starlight\\repos",
         "%USERPROFILE%\\brands\\image-system",
         "%USERPROFILE%\\Google Drive\\Starlight Creative Vault",
@@ -63,9 +202,60 @@
         "%USERPROFILE%\\OneDrive\\Starlight Creative Vault"
       ],
       "notes": [
-        "Run without --execute first; missing Drive/Eagle roots are expected until that software is installed.",
+        "Run without --execute first; optional sibling checkouts and Drive/Eagle roots are skipped gracefully when absent.",
+        "Indexes deterministic diagram SVGs (public/images/diagrams/**, public/diagrams/**, public/visuals/**) and .vis.provenance.json sidecars across six website surfaces plus publishing assets.",
         "Music IS remains canonical for release state. VIS indexes and links music media assets.",
         "Use the MCP allowlist output when installing VIS on Claude/Codex on each laptop."
+      ]
+    },
+    "multisite-estate": {
+      "description": "Portable sibling-checkout scan profile for the six website surfaces, publishing assets plus Starlight Design Intelligence diagram packs and .vis.provenance.json sidecars.",
+      "optionalSiblingRepos": true,
+      "diagramGlobs": [
+        "public/images/diagrams/**/*.svg",
+        "public/diagrams/**/*.svg",
+        "public/visuals/**/*.svg",
+        "apps/web/public/**/*.svg",
+        "site/public/**/*.svg",
+        "brand-image-system/examples/diagrams/**/*.svg"
+      ],
+      "provenanceSidecarGlobs": [
+        "**/*.vis.provenance.json",
+        "public/images/diagrams/**/*.vis.provenance.json",
+        "public/diagrams/**/*.vis.provenance.json",
+        "public/visuals/**/*.vis.provenance.json"
+      ],
+      "mediaRoots": [
+        "../frankx.ai-vercel-website",
+        "../starlightintelligence.ai",
+        "../arcanea-ai-app",
+        "../ai-architect-academy",
+        "../gencreator.ai",
+        "../agenticincome",
+        "../publishing-house",
+        "../starlight-design-intelligence"
+      ],
+      "usageRoots": [
+        "../frankx.ai-vercel-website",
+        "../starlightintelligence.ai",
+        "../arcanea-ai-app",
+        "../ai-architect-academy",
+        "../gencreator.ai",
+        "../agenticincome",
+        "../publishing-house"
+      ],
+      "allowedRoots": [
+        "../frankx.ai-vercel-website",
+        "../starlightintelligence.ai",
+        "../arcanea-ai-app",
+        "../ai-architect-academy",
+        "../gencreator.ai",
+        "../agenticincome",
+        "../publishing-house",
+        "../starlight-design-intelligence"
+      ],
+      "notes": [
+        "Sibling repositories are optional; missing sibling checkouts report under missingMediaRoots without failing vis doctor or vis audit."
       ]
     }
   },
@@ -121,8 +311,8 @@
   "budgets": {
     "minScore": 50,
     "maxTotalSizeMB": 500,
-    "maxPlaceholderCount": 0,
     "maxOversizedCount": 20,
+    "maxPlaceholderCount": 0,
     "minCoveragePercent": 30
   }
 }
