@@ -112,6 +112,8 @@ Repo-local instructions remain authoritative when stricter.
 
 ## Exact visual canon and sprite retrieval
 
+After source retrieval, read `docs/character-canon/Character-curation-and-standards.md` and `docs/character-canon/character-curation.v1.json` for the current working editorial defaults, surface-specific uses and avoid rules. This curation layer does not change identity authority, rights or publication approval. Keep held crew editions, generated poster text and vendor references out of default production-reference selection.
+
 When a task concerns Mini Frank, Nilo, Brio, Riff, Starlight Queen, conductor folios, Codex pets, third-party mascots, character variants, Figma portraits, sprite sheets, or rejected image examples:
 
 1. Read `docs/character-canon/source-map.v1.json`, `docs/character-canon/sprite-origin-catalog.v1.json`, and `skills/visual-canon-retrieval/SKILL.md` **before** generating, importing, naming or publishing an asset.
