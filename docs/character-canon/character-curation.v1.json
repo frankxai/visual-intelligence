@@ -1,0 +1,2257 @@
+{
+  "schema_version": "starlight.character-curation.v1",
+  "decision_date": "2026-11-12",
+  "decision_kind": "working_editorial_standard",
+  "source_approval_unchanged": true,
+  "principle": "Standardize identity and useful role first. Use scenes to explain work. Expand the cast only when a distinct role needs a distinct identity.",
+  "primary_specialists": [
+    {
+      "identity": "Moss",
+      "asset_id": "SL-C005-moss",
+      "role": "Memory and context",
+      "surface": "Memory Studio, context packets, knowledge curation",
+      "why": "The inhabited shell turns preservation into a distinctive physical idea; calm posture suits patient guidance.",
+      "avoid": "Do not make the terrarium a tiny status icon or add human arms. Do not substitute the larger lookdev tortoise for this exact identity."
+    },
+    {
+      "identity": "Luma",
+      "asset_id": "SL-C006-luma",
+      "role": "Design and creation",
+      "surface": "Design studio, creative kits, critique and prototypes",
+      "why": "Orchid silhouette, rose ceramic and a purposeful material study connect beauty to a visible task.",
+      "avoid": "Keep her optional and quiet in forms. Do not make every botanical worker another top-level mascot."
+    },
+    {
+      "identity": "Sable",
+      "asset_id": "SL-C004-sable",
+      "role": "Research and sources",
+      "surface": "Research briefs, source maps, evidence comparison",
+      "why": "The fox silhouette and amber optical materials communicate curiosity; an archive gives the action context.",
+      "avoid": "Never let cunning imply certainty. Avoid unlabeled generated citations or assigning Sable to a model provider."
+    },
+    {
+      "identity": "Morel",
+      "asset_id": "SL-C007-morel",
+      "role": "Capture and retrieval",
+      "surface": "Notes, personal knowledge kits, capture onboarding",
+      "why": "The compact cap, paper-fiber body and notebook action make a friendly, memorable capture worker.",
+      "avoid": "Keep him distinct from Moss: Morel captures the note; Moss curates accumulated context. Do not make retention authority part of the personality."
+    }
+  ],
+  "founder_editorial_cast": [
+    {
+      "identity": "Mini Frank / Echo lineage",
+      "asset_id": "mini-frank-model",
+      "role": "Founder and editorial host",
+      "surface": "FrankX teaching, founder stories, demonstrations",
+      "why": "The verified model sheet preserves a recognizable human author.",
+      "avoid": "Avoid using the founder likeness as a generic institutional worker or treating a new rendition as an approved likeness."
+    },
+    {
+      "identity": "Nilo",
+      "asset_id": "mini-cast-model",
+      "role": "Technical companion",
+      "surface": "Founder-led tutorials and build explanations",
+      "why": "Ivory body and twin camera eyes remain readable and already belong to the established cast.",
+      "avoid": "Keep the working name and model-provider assignment separate; never label this as the official Codex mascot."
+    },
+    {
+      "identity": "Brio",
+      "asset_id": "mini-cast-model",
+      "role": "Maker and prototyper",
+      "surface": "Workshops, build narratives and making",
+      "why": "Copper material, round goggle eyes and one ball antenna give a strong owned silhouette.",
+      "avoid": "Do not silently rename Brio/Biro variants or present the character as official Claude artwork."
+    },
+    {
+      "identity": "Riff",
+      "asset_id": "mini-cast-model",
+      "role": "Community and creative play",
+      "surface": "Community stories, music/making and informal teaching",
+      "why": "Scarlet lobster form creates contrast within the established cast without another humanoid robot.",
+      "avoid": "Avoid using Riff as the default enterprise-control identity or equating him with an official vendor mascot."
+    }
+  ],
+  "coordinator_working_direction": {
+    "identity": "Starlight Queen",
+    "asset_id": null,
+    "role": "Coordination",
+    "surface": "Mission routing, handoffs and the consequential owner decision",
+    "source": "https://www.figma.com/design/skl1Tjgu8iS7rwg5FZFTNg?node-id=3-20",
+    "working_direction": "Porcelain automaton, navy textile, open three-arc brass crown.",
+    "why": "The mask, tactile instrument and open hand make a strong institutional coordinator; the folio makes the owner decision explicit.",
+    "avoid": "Do not replace the four specialists, humanize her into the unrelated Academy edition, or use her crown as a replacement corporate logo. Working direction only; no new public canon or runtime authority."
+  },
+  "preferred_scenes": [
+    {
+      "asset_id": "SL-ECO-29",
+      "purpose": "Explain the collective",
+      "why": "Four specialists work on one artifact. Best shared-work narrative; preserve the full 3:2 composition.",
+      "application": "Product story and how-it-works; keep real interface text outside the image."
+    },
+    {
+      "asset_id": "SL-ECO-30",
+      "purpose": "Establish the world",
+      "why": "Four workrooms share one living campus. Strong horizon and community world-building.",
+      "application": "Cultural launch, long-form story or desktop section; too dense for a small avatar or first task control."
+    },
+    {
+      "asset_id": "SL-ECO-13",
+      "purpose": "Show design collaboration",
+      "why": "Distinct rose, indigo, ivory and orange roles share a physical prototype.",
+      "application": "Design team introduction and workshop materials."
+    },
+    {
+      "asset_id": "SL-ECO-06",
+      "purpose": "Memory workroom",
+      "why": "Intake, indexing and preservation are readable as different stations.",
+      "application": "Memory Studio editorial and an optional room overview."
+    },
+    {
+      "asset_id": "SL-ECO-14",
+      "purpose": "Design workroom",
+      "why": "A material table, bench and review area give the room useful organization.",
+      "application": "Creative kit cover, design workshop or studio page."
+    },
+    {
+      "asset_id": "SL-ECO-21",
+      "purpose": "Research workroom",
+      "why": "Different source stations support a common inquiry.",
+      "application": "Research story; not a literal product screenshot or evidence of integrations."
+    },
+    {
+      "asset_id": "SL-ECO-26",
+      "purpose": "Capture workflow",
+      "why": "Three workers visibly capture, connect and preserve.",
+      "application": "Capture onboarding and note-workflow teaching; Morel remains the lead."
+    },
+    {
+      "asset_id": "SL-ECO-27",
+      "purpose": "Capture workroom",
+      "why": "Cork, paper, wood and ordered stations differentiate capture from research.",
+      "application": "Knowledge kit and capture workshop; describe it as rendered concept art."
+    }
+  ],
+  "visual_standards": [
+    "One material grammar: tactile porcelain, satin brass/copper, optically convincing glass, timber, paper and restrained living ecology.",
+    "Keep identity anchors across editions: Moss shell/face; Luma orchid crown; Sable ears/tail; Morel cap/body; Nilo camera eyes; Brio goggles/antenna; Riff lobster form.",
+    "Use daylight for making, overcast garden light for memory/ecology, and controlled evening light for research. Avoid making every scene amber, ornate and crowded.",
+    "Keep Instrument Sans for interface text, Instrument Serif for selective editorial accents, IBM Plex Mono for technical labels, and current semantic UI tokens.",
+    "Write exact text, numbers, source labels, diagrams and UI in native Figma/HTML. Artwork supplies character and atmosphere.",
+    "Use a static, quiet equivalent; a character cannot block a task. Small operator surfaces show compact status and real controls before decorative scenes.",
+    "Avoid square-cropping a wide ensemble. Preserve 3:2 scene composition and select an explicitly reviewed portrait for 32/64/160 px uses.",
+    "A scene is concept art; rendered workrooms are not editable 3D models. Character appearances do not establish tool access or successful execution."
+  ],
+  "surface_policy": [
+    {
+      "surface": "Operator / product",
+      "use": "Four specialists in their relevant task; Queen only for coordination; quiet mode is available.",
+      "avoid": "Full-screen cinematic interruption, fake UI, decorative authority or another new face per control."
+    },
+    {
+      "surface": "Horizon / institution",
+      "use": "One shared mission and the campus to show a possible future with a concrete entry point.",
+      "avoid": "Using a fantasy city or environmental scene as proof of actual impact."
+    },
+    {
+      "surface": "Academy / learning",
+      "use": "Core cast and specialist demonstrations with a visible artifact and clear next action.",
+      "avoid": "Confusing role names, model providers, runtime agents and character identity."
+    },
+    {
+      "surface": "Cultural / community",
+      "use": "Riff, ensemble scenes, gardens and making narratives with more emotional range.",
+      "avoid": "Borrowed vendor identity, cross-brand canon leakage and unselected founder renditions."
+    },
+    {
+      "surface": "FrankX / founder editorial",
+      "use": "Mini Frank with Nilo, Brio and Riff from the established source sheets.",
+      "avoid": "Substituting any attractive new face or changing the cast through a generated group scene."
+    }
+  ],
+  "leverage_priorities": [
+    "Make memory/capture kits legible with Moss/Morel covers, useful editable files and one short illustrated workflow.",
+    "Use Luma in design kits and critique templates; demonstrate a before/after decision using real editable UI.",
+    "Use Sable in research briefs and evidence playbooks; citations and source ledgers supply the proof.",
+    "Use the core cast for founder teaching and workshop/community continuity. Character art supports the offer; it does not replace a useful deliverable."
+  ],
+  "asset_decisions": [
+    {
+      "asset_id": "mini-frank-model",
+      "sha256": "9a7553c440c7bf5c7a1a88a039aa42112dddf295cb29a3a0d82afdda321d5b7f",
+      "source_state": "approved_identity",
+      "figma_image_node_id": "78:98",
+      "editorial_bucket": "established_identity_anchor",
+      "recommended_for": [
+        "Identity continuity",
+        "Founder/editorial cast reference"
+      ],
+      "avoid_for": [
+        "Do not promote a rendition over the source sheet. Public-use approval remains separate."
+      ],
+      "reason": "Verified established identity/silhouette source; preserve original anchors.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "mini-cast-model",
+      "sha256": "09bb733175c5f1f2f37f88698f8e56e48ca16ad8536d70eafc1408cd82b99fb5",
+      "source_state": "approved_silhouettes_working_names",
+      "figma_image_node_id": "78:103",
+      "editorial_bucket": "established_identity_anchor",
+      "recommended_for": [
+        "Identity continuity",
+        "Founder/editorial cast reference"
+      ],
+      "avoid_for": [
+        "Do not promote a rendition over the source sheet. Public-use approval remains separate."
+      ],
+      "reason": "Verified established identity/silhouette source; preserve original anchors.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "codex-native",
+      "sha256": "0da8d540d1833fa40f44891e8bf369910bd7b5bf6e94f562fc9e5ee7a69cbb07",
+      "source_state": "official_source",
+      "figma_image_node_id": "78:108",
+      "editorial_bucket": "vendor_reference_only",
+      "recommended_for": [
+        "Attributed source comparison when allowed"
+      ],
+      "avoid_for": [
+        "Owned mascot identity",
+        "Vendor endorsement or redistribution inferred from availability"
+      ],
+      "reason": "First-party source artwork belongs to its vendor; keep it outside the owned Starlight cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "github-mona-native",
+      "sha256": "94f3aaed72946b10851a5534e331e76b2077a26177b0f315acbc6cb0ab4104cb",
+      "source_state": "official_source",
+      "figma_image_node_id": "78:113",
+      "editorial_bucket": "vendor_reference_only",
+      "recommended_for": [
+        "Attributed source comparison when allowed"
+      ],
+      "avoid_for": [
+        "Owned mascot identity",
+        "Vendor endorsement or redistribution inferred from availability"
+      ],
+      "reason": "First-party source artwork belongs to its vendor; keep it outside the owned Starlight cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "github-copilot-native",
+      "sha256": "a93a701f4ce2d99129735fee1f19812646fd06d19b4ed248b89e3e83f159d31e",
+      "source_state": "official_source",
+      "figma_image_node_id": "78:119",
+      "editorial_bucket": "vendor_reference_only",
+      "recommended_for": [
+        "Attributed source comparison when allowed"
+      ],
+      "avoid_for": [
+        "Owned mascot identity",
+        "Vendor endorsement or redistribution inferred from availability"
+      ],
+      "reason": "First-party source artwork belongs to its vendor; keep it outside the owned Starlight cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "github-ducky-native",
+      "sha256": "985614237dc5ccb47617912fba51256bbf4b7aba50ac785fe6a8e038fe64730d",
+      "source_state": "official_source",
+      "figma_image_node_id": "78:124",
+      "editorial_bucket": "vendor_reference_only",
+      "recommended_for": [
+        "Attributed source comparison when allowed"
+      ],
+      "avoid_for": [
+        "Owned mascot identity",
+        "Vendor endorsement or redistribution inferred from availability"
+      ],
+      "reason": "First-party source artwork belongs to its vendor; keep it outside the owned Starlight cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-core",
+      "sha256": "3d612b64a0e0f0cc5a56206f8a2898646ec8476f51a8e635a6a61d7b7eb29d1b",
+      "source_state": "concept_study_not_canon",
+      "figma_image_node_id": "78:129",
+      "editorial_bucket": "supporting_reference",
+      "recommended_for": [
+        "Internal review"
+      ],
+      "avoid_for": [
+        "Do not infer owner approval or runtime capability from placement."
+      ],
+      "reason": "Retain as a supporting option without expanding the lead cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-external",
+      "sha256": "8dba36afa91969ee62dd1d441a5a97252944f89d752c00c7a903da9b4e94e345",
+      "source_state": "concept_study_not_canon",
+      "figma_image_node_id": "78:134",
+      "editorial_bucket": "supporting_reference",
+      "recommended_for": [
+        "Internal review"
+      ],
+      "avoid_for": [
+        "Do not infer owner approval or runtime capability from placement."
+      ],
+      "reason": "Retain as a supporting option without expanding the lead cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-brand",
+      "sha256": "434c630de8d2544aae74fd4d671c48c7de37c852309169d906dd2d894439917d",
+      "source_state": "concept_study_not_canon",
+      "figma_image_node_id": "78:140",
+      "editorial_bucket": "supporting_reference",
+      "recommended_for": [
+        "Internal review"
+      ],
+      "avoid_for": [
+        "Do not infer owner approval or runtime capability from placement."
+      ],
+      "reason": "Retain as a supporting option without expanding the lead cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-story",
+      "sha256": "6ac72b7f0cdbe8a2da643d56c1ab514594d8f3ac5b3292034f8dea59fb696c85",
+      "source_state": "fictional_workflow_study",
+      "figma_image_node_id": "78:145",
+      "editorial_bucket": "supporting_reference",
+      "recommended_for": [
+        "Internal review"
+      ],
+      "avoid_for": [
+        "Do not infer owner approval or runtime capability from placement."
+      ],
+      "reason": "Retain as a supporting option without expanding the lead cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-core-turnaround",
+      "sha256": "2e3fe65f8bf501207761d1df2188299411a8c91075ab822c25b9a0a41656e947",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:150",
+      "editorial_bucket": "supporting_reference",
+      "recommended_for": [
+        "Internal review"
+      ],
+      "avoid_for": [
+        "Do not infer owner approval or runtime capability from placement."
+      ],
+      "reason": "Retain as a supporting option without expanding the lead cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-core-acting-refined",
+      "sha256": "d2acbd103a50200dcc1b843294aca552ccdc6d6a065d204d08f04031f650d151",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:155",
+      "editorial_bucket": "supporting_reference",
+      "recommended_for": [
+        "Internal review"
+      ],
+      "avoid_for": [
+        "Do not infer owner approval or runtime capability from placement."
+      ],
+      "reason": "Retain as a supporting option without expanding the lead cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-brand-angles",
+      "sha256": "50cfae41c4aa396f59c5b1f2f1ef446605d85cc1ad911552c003ffe8e6b1dce0",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:161",
+      "editorial_bucket": "supporting_reference",
+      "recommended_for": [
+        "Internal review"
+      ],
+      "avoid_for": [
+        "Do not infer owner approval or runtime capability from placement."
+      ],
+      "reason": "Retain as a supporting option without expanding the lead cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-campaign-keyframe",
+      "sha256": "9afab41a9effbcd34b460bed2d9b7ae9ad230635903da79423f189397de1f8c4",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:166",
+      "editorial_bucket": "supporting_reference",
+      "recommended_for": [
+        "Internal review"
+      ],
+      "avoid_for": [
+        "Do not infer owner approval or runtime capability from placement."
+      ],
+      "reason": "Retain as a supporting option without expanding the lead cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-brio-motion-plate",
+      "sha256": "8261d92ceca33fce06bcf33d41e77491525c15ed1dcd26ccd5715b5b84dbf8c9",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:171",
+      "editorial_bucket": "supporting_reference",
+      "recommended_for": [
+        "Internal review"
+      ],
+      "avoid_for": [
+        "Do not infer owner approval or runtime capability from placement."
+      ],
+      "reason": "Retain as a supporting option without expanding the lead cast.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-directions-starlight",
+      "sha256": "3849f1dee36d0b4e2971b89b35bbbc6d9f8510af93e894d1fa382787e162bddf",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:176",
+      "editorial_bucket": "brand_separated_reference",
+      "recommended_for": [
+        "The owning brand context and internal comparative research"
+      ],
+      "avoid_for": [
+        "Starlight product mascot by default",
+        "New Arcanea or Anime Legends canon inferred from ingestion"
+      ],
+      "reason": "Preserve owning-brand lineage and prior approval boundaries.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-directions-arcanea",
+      "sha256": "b50bfa8bea97fb539e09f152fda1e7b22ca94cad50d1c49b44dae51c755ab3bc",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:182",
+      "editorial_bucket": "brand_separated_reference",
+      "recommended_for": [
+        "The owning brand context and internal comparative research"
+      ],
+      "avoid_for": [
+        "Starlight product mascot by default",
+        "New Arcanea or Anime Legends canon inferred from ingestion"
+      ],
+      "reason": "Preserve owning-brand lineage and prior approval boundaries.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-directions-gencreator",
+      "sha256": "5eb65565f18b5878ccf3d35bba1e3cd05a11320d39b7d22cc90d93b5f8b50639",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:187",
+      "editorial_bucket": "brand_separated_reference",
+      "recommended_for": [
+        "The owning brand context and internal comparative research"
+      ],
+      "avoid_for": [
+        "Starlight product mascot by default",
+        "New Arcanea or Anime Legends canon inferred from ingestion"
+      ],
+      "reason": "Preserve owning-brand lineage and prior approval boundaries.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-directions-agenticincome",
+      "sha256": "400ab863483fac4f4a8359dab221c46eaacf4dda20f6458f4ddd2dd67e4ffb2d",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:192",
+      "editorial_bucket": "brand_separated_reference",
+      "recommended_for": [
+        "The owning brand context and internal comparative research"
+      ],
+      "avoid_for": [
+        "Starlight product mascot by default",
+        "New Arcanea or Anime Legends canon inferred from ingestion"
+      ],
+      "reason": "Preserve owning-brand lineage and prior approval boundaries.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-directions-realityarchitect",
+      "sha256": "a9773e8990b2ba85e8591e4d36235d2baa6b3627dbbb2d9ad9b076ad7554a028",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:197",
+      "editorial_bucket": "brand_separated_reference",
+      "recommended_for": [
+        "The owning brand context and internal comparative research"
+      ],
+      "avoid_for": [
+        "Starlight product mascot by default",
+        "New Arcanea or Anime Legends canon inferred from ingestion"
+      ],
+      "reason": "Preserve owning-brand lineage and prior approval boundaries.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "study-directions-animelegends",
+      "sha256": "a44da186aa0035cff67a5951ad15d6877ca7fdbd27d502eafd41edddb2331d13",
+      "source_state": "development_study_not_canon",
+      "figma_image_node_id": "78:203",
+      "editorial_bucket": "brand_separated_reference",
+      "recommended_for": [
+        "The owning brand context and internal comparative research"
+      ],
+      "avoid_for": [
+        "Starlight product mascot by default",
+        "New Arcanea or Anime Legends canon inferred from ingestion"
+      ],
+      "reason": "Preserve owning-brand lineage and prior approval boundaries.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "anime-akashi-native",
+      "sha256": "a76d7a17e680e37ceb1576645bb8c3770e442d503a0c2b225b1f9bd1a9da90aa",
+      "source_state": "owned_source_art",
+      "figma_image_node_id": "78:208",
+      "editorial_bucket": "brand_separated_reference",
+      "recommended_for": [
+        "The owning brand context and internal comparative research"
+      ],
+      "avoid_for": [
+        "Starlight product mascot by default",
+        "New Arcanea or Anime Legends canon inferred from ingestion"
+      ],
+      "reason": "Preserve owning-brand lineage and prior approval boundaries.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "anime-kage-native",
+      "sha256": "f20d5ad4f0181d977549dc4ab5b0459548d8a2153b6406840a7def102bc83c7d",
+      "source_state": "owned_profile_application_rasterized",
+      "figma_image_node_id": "78:213",
+      "editorial_bucket": "brand_separated_reference",
+      "recommended_for": [
+        "The owning brand context and internal comparative research"
+      ],
+      "avoid_for": [
+        "Starlight product mascot by default",
+        "New Arcanea or Anime Legends canon inferred from ingestion"
+      ],
+      "reason": "Preserve owning-brand lineage and prior approval boundaries.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "anime-mira-native",
+      "sha256": "984ac9912eeccd779cfdc4df423aea750c5d455e9b220a285ae47002e63bea42",
+      "source_state": "owned_profile_application_rasterized",
+      "figma_image_node_id": "78:218",
+      "editorial_bucket": "brand_separated_reference",
+      "recommended_for": [
+        "The owning brand context and internal comparative research"
+      ],
+      "avoid_for": [
+        "Starlight product mascot by default",
+        "New Arcanea or Anime Legends canon inferred from ingestion"
+      ],
+      "reason": "Preserve owning-brand lineage and prior approval boundaries.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-01",
+      "sha256": "3bfbcb6cc4ad9c928f52302451f9409840c1b656945e302e70b8e0e73a220511",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:226",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-02",
+      "sha256": "9daefbaafb3428dcf38c4c3c733c79839341c4dfd6e44a8695753016c9b5bd1d",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:231",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-03",
+      "sha256": "023e971c2393ed32e53096af9e8be10fd96e2943ed6b148678af4848b58ca641",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:236",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-04",
+      "sha256": "54e88efb4ee1807e0a47d0816153597f8ba19ffae2ec5a01c79f4c05455e71b4",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:241",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-05",
+      "sha256": "d60b554bc75a71805d2aeb641841c6cf94a19941a8639d120c619fb86582c959",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:247",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof",
+        "Full-body extraction: a peripheral shell or tail is tightly cropped."
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-06",
+      "sha256": "bcd089de7a8234d3b8c94a2c1bd684de0889d15efa4c40ed274eb49a5e690975",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:252",
+      "editorial_bucket": "preferred_scene",
+      "recommended_for": [
+        "Memory Studio editorial and an optional room overview."
+      ],
+      "avoid_for": [
+        "Do not use as a literal product screenshot, avatar or runtime proof."
+      ],
+      "reason": "Intake, indexing and preservation are readable as different stations.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-07",
+      "sha256": "f658f86d88536334561ac16b583bc50a9592315a78126d986f65099c0a2fcc9e",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:257",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-08",
+      "sha256": "e07413fd846e08a924e6dc96af81c9b3304a6e2b0ef63fd6c9e324eab383caf1",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:262",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-09",
+      "sha256": "807878ef826f811db3e7cd23a983a3baebfddea481441f815f54944810356ec6",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:268",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-10",
+      "sha256": "a1b9681434d5ad4be82fa085d549c2bcb216cb140fe7769922188fb216a5c202",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:273",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-11",
+      "sha256": "df0a73b9af2db3dc5baeac36072f932c0e9b0a38d1d54694b144f9a47549857e",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:278",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-12",
+      "sha256": "68e223f5c8a182ddeac6b6d1730c41ffbca82f21da4558ccdbd8813cd8db4ccf",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:283",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-13",
+      "sha256": "3e6c39a00e31789174746c1cf753cde3b7bc1b9b800dc6815e4470617898af93",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:289",
+      "editorial_bucket": "preferred_scene",
+      "recommended_for": [
+        "Design team introduction and workshop materials."
+      ],
+      "avoid_for": [
+        "Do not use as a literal product screenshot, avatar or runtime proof."
+      ],
+      "reason": "Distinct rose, indigo, ivory and orange roles share a physical prototype.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-14",
+      "sha256": "0fcf33048889768d3a85b76afb92961e96c8443f89a32ac8297ee413aea7ef2b",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:294",
+      "editorial_bucket": "preferred_scene",
+      "recommended_for": [
+        "Creative kit cover, design workshop or studio page."
+      ],
+      "avoid_for": [
+        "Do not use as a literal product screenshot, avatar or runtime proof."
+      ],
+      "reason": "A material table, bench and review area give the room useful organization.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-15",
+      "sha256": "6c3d090558d96095c1e38d7c210acfb18746a049418ab5b3d6d962936b033e0f",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:299",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-16",
+      "sha256": "9ee4e656b227c28daacb89eb2342e37b8bdc7791caed501774f8c15587bfa088",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:304",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-17",
+      "sha256": "7c3922f35cdb7f6f9bee83d72a0a8e7d577bd0958c4a5dc027b1661478d48eaa",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:310",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-18",
+      "sha256": "f1fc5ba6d19b172760dab03a02475ac336d47042eeafd6b9bd9edc1e95b2f5cf",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:315",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-19",
+      "sha256": "b34d11fe422d2bc320a3463787cb35cf2525d9c3f9f445070922d0c27ecb6671",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:320",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-20",
+      "sha256": "f5956e0455379d25556797ed48e9a933414d09c2289a7ae128f31822751f0832",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:325",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-21",
+      "sha256": "71bb0b8fe9d78f634b8fdbdca991caa61f0a62b44f7773ce2964b108d7115b7c",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:331",
+      "editorial_bucket": "preferred_scene",
+      "recommended_for": [
+        "Research story; not a literal product screenshot or evidence of integrations."
+      ],
+      "avoid_for": [
+        "Do not use as a literal product screenshot, avatar or runtime proof."
+      ],
+      "reason": "Different source stations support a common inquiry.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-22",
+      "sha256": "8da7e8b01b94505792b69e0b4b749c82cb3d198c7d6850f3754c0b5f609cba1c",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:336",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-23",
+      "sha256": "62b9c64c3f7e0260786bd6e4e55aad77558d02ad47188b22a97da705f82c704a",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:341",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-24",
+      "sha256": "492a7afbcd4068c0742f7838da416e03310c6897a13e15c68e2683e68c4f2c74",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:346",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-25",
+      "sha256": "5de54d188670da18dc5679d3c7eb5d9ef5a4d98520039c3a3300831c33250904",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:352",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof"
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-26",
+      "sha256": "e26daa2817a7e72861691cba24ff5296401c3b114667a6c45fe0470df233cd21",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:357",
+      "editorial_bucket": "preferred_scene",
+      "recommended_for": [
+        "Capture onboarding and note-workflow teaching; Morel remains the lead."
+      ],
+      "avoid_for": [
+        "Do not use as a literal product screenshot, avatar or runtime proof."
+      ],
+      "reason": "Three workers visibly capture, connect and preserve.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-27",
+      "sha256": "3a1aad154a3b312af68d572cbe9d488bd4bf2097be429efa3cc31b2b2c3a4804",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:362",
+      "editorial_bucket": "preferred_scene",
+      "recommended_for": [
+        "Knowledge kit and capture workshop; describe it as rendered concept art."
+      ],
+      "avoid_for": [
+        "Do not use as a literal product screenshot, avatar or runtime proof."
+      ],
+      "reason": "Cork, paper, wood and ordered stations differentiate capture from research.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-28",
+      "sha256": "11d56474dce6deca9dba912c0dd6e7c006044f5345dc21d9acc37be4bef6e3ac",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:367",
+      "editorial_bucket": "supporting_scene",
+      "recommended_for": [
+        "Role-specific editorial scene",
+        "Workflow teaching"
+      ],
+      "avoid_for": [
+        "Tiny avatar",
+        "Unrelated brand hero",
+        "Actual execution proof",
+        "Enoki identity reference: the evening rendition has a shorter body and a more flared cap; use SL-ECO-24 / SL-ECO-26 instead."
+      ],
+      "reason": "Useful within its family; keep the four lead specialists easy to remember.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-29",
+      "sha256": "7aa2c1f7915ca6b7cc4a6bd73a16d619b318ba8f5ee506bcfb90de409de597ed",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:373",
+      "editorial_bucket": "preferred_scene",
+      "recommended_for": [
+        "Product story and how-it-works; keep real interface text outside the image."
+      ],
+      "avoid_for": [
+        "Do not use as a literal product screenshot, avatar or runtime proof.",
+        "Full-body extraction: a peripheral shell or tail is tightly cropped."
+      ],
+      "reason": "Four specialists work on one artifact. Best shared-work narrative; preserve the full 3:2 composition.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-ECO-30",
+      "sha256": "b682ae83a8d8402e3b8757dfd8d9620a3207f34a3a8f50b00b0085a09a9ed527",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:378",
+      "editorial_bucket": "preferred_scene",
+      "recommended_for": [
+        "Cultural launch, long-form story or desktop section; too dense for a small avatar or first task control."
+      ],
+      "avoid_for": [
+        "Do not use as a literal product screenshot, avatar or runtime proof."
+      ],
+      "reason": "Four workrooms share one living campus. Strong horizon and community world-building.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-SOURCE",
+      "sha256": "fbc92639d098da7e002651c0b431869d128d523c22582a55cadcbd7bc109030f",
+      "source_state": "reference_candidate",
+      "figma_image_node_id": "78:386",
+      "editorial_bucket": "source_reference_candidate",
+      "recommended_for": [
+        "Cultural composition and warmth reference",
+        "Compare with established likeness and cast sheets"
+      ],
+      "avoid_for": [
+        "Canonical founder likeness",
+        "Owned use of floating vendor avatars",
+        "Automatic public approval"
+      ],
+      "reason": "The supplied source has strong community energy and clear relationships. Keep it as a composition reference; the exact likeness and vendor elements need separate review.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-001",
+      "sha256": "6c8eb7ec2ae16aac3eea56f89755208b65b055d2d14cb356099d8d036ef70360",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:391",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-002",
+      "sha256": "5d18d4df3793d0c5762b09e87fa670364fc78ef12cd453420bcc16090c4ba0c5",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:396",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-003",
+      "sha256": "79460681d7e86380abec0c842d3c287dc5d77611f724a551567426dcf2adca87",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:401",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-004",
+      "sha256": "6c63754d76f213d8e663ce6f1466bb0919e5e30163a783d8ce87bf714b0fccda",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:407",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-005",
+      "sha256": "b174ced7150de8999f480593895905453c61afc89a5a7e56b228abf920ab3379",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:412",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-006",
+      "sha256": "a1bc5144b537b9b54b5381a73812b3606f37911e224a925ae9f3f614febadcf3",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:417",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-007",
+      "sha256": "8cc3dcc027e96bd9d83db9b7e95ddd0296d62b0958c6cd46d29312792c6cd663",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:422",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-008",
+      "sha256": "ff0baab60a7e58cf082997fcd9f23383c1c1a78ca2a597cc34bd992e23eb3345",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:428",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-009",
+      "sha256": "f0081869b8d319457249fc8c22693b052a5e8ab785caadb5bee08d38f7339a75",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:433",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-010",
+      "sha256": "7cb9bf31ceebcbda0c6a523f9bfb1c6794155f09956a98cf3b46e25771f5ea64",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:438",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-011",
+      "sha256": "b6ff9fe5b02c98c14208a72a69cc2095a501ea27c5b1dcdb260f23b814d53060",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:443",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-012",
+      "sha256": "3b6a22a7da14702901a3911bbc1d36c42de352d07265dfa2e6a89e7ae734360e",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:449",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-013",
+      "sha256": "f8db2b5a05c5283bcf6fd8321d6b82a3fff1ecd527a8bc01770129da68ee2fb5",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:454",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-014",
+      "sha256": "d15b11758e2d417a8a90d3924188d48859a36c976b2358797fa005860c3f4adf",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:459",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-015",
+      "sha256": "11fb10e41fa83f569230556f99cb840d1e1824239bb13304d7b17d3e855eda9d",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:464",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-016",
+      "sha256": "10b2d46d9fe1e037ae9ca8f3d7fd2dbe16fadf8708772cd21924f5cbec08d024",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:470",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-017",
+      "sha256": "bd10194f64a6afa57045cc845496e8bb37e700cc27557d52883c3c2da26a6ca9",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:475",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-018",
+      "sha256": "8f690eddbaa21c65ea8c4723b18ffe9b9bb42365c757365851131f1dfa678290",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:480",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-019",
+      "sha256": "f546a8a24b8d0fda5881799ec23a5042a6357064325855380d1b2e1be84a1821",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:485",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-CREW-020",
+      "sha256": "fea80d5f3601c9b2b19634bf41c9bfb3f59d4b6f65d02b092a5fcb325681cc04",
+      "source_state": "needs_review",
+      "figma_image_node_id": "78:491",
+      "editorial_bucket": "hold_do_not_default",
+      "recommended_for": [
+        "Internal composition critique",
+        "Private learning/reference"
+      ],
+      "avoid_for": [
+        "Product screenshot",
+        "Public founder likeness master",
+        "Homepage default",
+        "Metrics or partner proof"
+      ],
+      "reason": "The recent batch contains identity drift, synthetic interface details and reconstructed prompts. No default production edition is selected.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-B003-prismatic-tide-original",
+      "sha256": "89de543c1d997096b6539df833e540e91cd3183766489c77e2fd93ce67c39c85",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:499",
+      "editorial_bucket": "family_direction",
+      "recommended_for": [
+        "Material language and family casting"
+      ],
+      "avoid_for": [
+        "A new approved identity",
+        "Publication without exact-version review"
+      ],
+      "reason": "Useful direction board; individual source portraits remain the identity reference.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-B002-living-glasshouse-original",
+      "sha256": "b9eb78fb053753ee8e006a3bca8ccd06ca6a41bc238831cf509e78e3d52daf8e",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:504",
+      "editorial_bucket": "family_direction",
+      "recommended_for": [
+        "Material language and family casting"
+      ],
+      "avoid_for": [
+        "A new approved identity",
+        "Publication without exact-version review"
+      ],
+      "reason": "Useful direction board; individual source portraits remain the identity reference.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-B001-noble-machines-original",
+      "sha256": "884c109732af6faef5f471d99adb0e159856baa5cf9de2fdf3e7c1757e295903",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:509",
+      "editorial_bucket": "family_direction",
+      "recommended_for": [
+        "Material language and family casting"
+      ],
+      "avoid_for": [
+        "A new approved identity",
+        "Publication without exact-version review"
+      ],
+      "reason": "Useful direction board; individual source portraits remain the identity reference.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C020-chord",
+      "sha256": "90818568b603e498bf346318692d90e5232c26a822dd488e3bdeb1525e092d1a",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:514",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C019-sol",
+      "sha256": "44c52b12b2921c1da43cf347799463d948bb2687ec34d8b7fc07eb88ff74aa9e",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:520",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C018-reef",
+      "sha256": "f13ad2a7df5666fb0031c30be280bc1ea7aae36301695cfaad19726c661acb7b",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:525",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C017-quill",
+      "sha256": "1786f6a1f62d74945674c806d935abc7f436302f781063fa6c9a0d39386d45f0",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:530",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C016-ember",
+      "sha256": "a56e233ed8f8f753a16027c2393765a127bcf79eecb2db16ddfee77691ea504d",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:535",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C015-bracken",
+      "sha256": "7479bd6aa2e8715419d2056078cdf262638f3612586efbb7793daa99fb3f9db3",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:541",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C014-tess",
+      "sha256": "328b06246349322feb06a36c84c2c4acadff330296c39dec1a2d6ea4ddb44f73",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:546",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C013-folio",
+      "sha256": "9b646d47ecb76877429f8d285a063392729694112d4a47ea7a8aaf382360c81a",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:551",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C012-glim",
+      "sha256": "8f69df25818cfe77debc0c54a54b38f2b9f1c3a33bc09ce4f1523debe5f5c26b",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:556",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C011-spiral",
+      "sha256": "68169409df9e778314ef186bd6e5dfea3674a0643ee435edd249e353096fd0f9",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:562",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C010-pico",
+      "sha256": "79d06d7bab47f4fddbf7fe44f4e2d1d522a084b0c2dba567804e157a31e35d56",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:567",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C009-nacre",
+      "sha256": "a26a4b277391b4a4b0814acd29e1c0c99ffd2e86dc10042a8bb415290d64faf5",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:572",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C008-cedar",
+      "sha256": "808da20ce6a1f7c2cb70b31db9097c0bfbf8cc01d6922aa518d8da142e2ae7dd",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:577",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C007-morel",
+      "sha256": "607b33ca34d81d70b878a5ecc4ae7c607f3c8b88666b7df730d2c5554cd85a19",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:583",
+      "editorial_bucket": "working_identity_default",
+      "recommended_for": [
+        "Reference for this exact identity",
+        "Notes, personal knowledge kits, capture onboarding"
+      ],
+      "avoid_for": [
+        "Keep him distinct from Moss: Morel captures the note; Moss curates accumulated context. Do not make retention authority part of the personality."
+      ],
+      "reason": "The compact cap, paper-fiber body and notebook action make a friendly, memorable capture worker.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C006-luma",
+      "sha256": "db725eccaa4c9e4f01fab81c10acc0ca63ec31e181e66861caccd6321efd0896",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:588",
+      "editorial_bucket": "working_identity_default",
+      "recommended_for": [
+        "Reference for this exact identity",
+        "Design studio, creative kits, critique and prototypes"
+      ],
+      "avoid_for": [
+        "Keep her optional and quiet in forms. Do not make every botanical worker another top-level mascot."
+      ],
+      "reason": "Orchid silhouette, rose ceramic and a purposeful material study connect beauty to a visible task.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C005-moss",
+      "sha256": "43a6f50d9976de96e4ac1c5275cdab2d3a27698921ccbdfdbea968d27d6cab1c",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:593",
+      "editorial_bucket": "working_identity_default",
+      "recommended_for": [
+        "Reference for this exact identity",
+        "Memory Studio, context packets, knowledge curation"
+      ],
+      "avoid_for": [
+        "Do not make the terrarium a tiny status icon or add human arms. Do not substitute the larger lookdev tortoise for this exact identity."
+      ],
+      "reason": "The inhabited shell turns preservation into a distinctive physical idea; calm posture suits patient guidance.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C004-sable",
+      "sha256": "06970e7f257616a2a991f9f4a2f752b5d53af25e21bed73982e6719bd11b029c",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:598",
+      "editorial_bucket": "working_identity_default",
+      "recommended_for": [
+        "Reference for this exact identity",
+        "Research briefs, source maps, evidence comparison"
+      ],
+      "avoid_for": [
+        "Never let cunning imply certainty. Avoid unlabeled generated citations or assigning Sable to a model provider."
+      ],
+      "reason": "The fox silhouette and amber optical materials communicate curiosity; an archive gives the action context.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C003-tor",
+      "sha256": "b4442ea31b72003d03268f5e4ca2b6b5d0073bc6e31a90cfdfa8db004d1eb98b",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:604",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C002-ibis",
+      "sha256": "49f32d6b83f1f151828c0bff2967b6e9199114ba8befc211a0bffd6b0e11753e",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:609",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C001-aurel",
+      "sha256": "bfd980e28be83fb76298bc4a91567b9a662cd19f53546db6ed2798f251079f4e",
+      "source_state": "proposal",
+      "figma_image_node_id": "78:614",
+      "editorial_bucket": "specialist_secondary",
+      "recommended_for": [
+        "A specific relevant specialist brief",
+        "Future expansion when the role needs it"
+      ],
+      "avoid_for": [
+        "Another global mascot",
+        "Repeated introductions before the first useful task"
+      ],
+      "reason": "Distinctive specialist option, but a larger default cast weakens navigation and identity recall.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C010-V2-explainer",
+      "sha256": "4ecbd093f701d4ebdecd6cf8705128994ff7f8baf4c4dc6689631cf86a0b4da7",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:622",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master",
+        "Final anatomy reference: inspect and repair the limb depiction before reuse."
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C010-V2-turnaround",
+      "sha256": "2875897100c8862ac2466661fc480158485106fc064c251f94d73e124d0f0712",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:627",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C009-V2-explainer",
+      "sha256": "674746290c83fdb54061d575e72f634e9c23e95c270cf0b306ef9e8ac44ed3e7",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:632",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master"
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C009-V2-turnaround",
+      "sha256": "b17f6d37b9cfea6914fd40e824d4b2b6ec8812ef61bcbad0ebdf1697627b9cda",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:637",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C008-V2-explainer",
+      "sha256": "5ebbaf65c8ed2fbda3812adf478db22d3faee5d22ea581ddd83c1b46294ceef2",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:643",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master"
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C008-V2-turnaround",
+      "sha256": "9ea0b9148677803ec9245276e24c4d302ed941b7dc5912576636fd7602574b79",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:648",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C007-V2-explainer",
+      "sha256": "a3ae6f8249adcdfc6cb7d1a3f7305e245e2a90c3c44ca955b7f8d9b7820e265b",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:653",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master"
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C007-V2-turnaround",
+      "sha256": "40ed3e3721bc840c24fe55a8e96fa6c2aa182129ab84a9fa696052c7b6d257c1",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:658",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C006-V2-explainer",
+      "sha256": "7a254c094365ce131fa5466994917867e73afaee8a4720238bf6711fc819b2d2",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:664",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master"
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C006-V2-turnaround",
+      "sha256": "7d8a99363bc0a96ed110ba088695b2d60b573e0fb961ed8872ea1fd00ae0abe6",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:669",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C005-V2-explainer",
+      "sha256": "6b9e361fb1b4f81ee284bc1ce0ed3c85d8fd116d1fc5fc1fc108b20f7a14e60f",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:674",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master"
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C005-V2-turnaround",
+      "sha256": "52e3e333278ef22cb6a1037a800596b7711870329a18ec451525d63a01e4b313",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:679",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C004-V2-explainer",
+      "sha256": "53053b8101e75d0a553fc1a0abc13abb4f483c011474165bdc7e498ee4cd5777",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:685",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master",
+        "Final anatomy reference: inspect and repair the limb depiction before reuse."
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C004-V2-turnaround",
+      "sha256": "393e5833a41529f57dd927fbc48da5c4b5cdad3546edea773583ebbb9225106a",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:690",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C003-V2-explainer",
+      "sha256": "cd53f4aa5ac37a6c975906ab3daad3b6647135fa9bf12c0512d43015ea643a8d",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:695",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master"
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C003-V2-turnaround",
+      "sha256": "22e3e3037add7b521e9a88612eadde2f3f29ef60eea47e60c8da34d08d77e486",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:700",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C002-V2-explainer",
+      "sha256": "e6dc7a74cc554e0b2f86d2431bcc7222c0ea0d3c01829b5a0318cb2e85e54cf3",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:706",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master"
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C002-V2-turnaround",
+      "sha256": "0177ab6ebc89d2154771398002b3dddcbddad3843b6abf596f7e196a9e023c31",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:711",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C001-V2-explainer",
+      "sha256": "8ed322ee8307cba930c262d29e76b9e1a7dabc259240ed732ad3073ee62b53c1",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:716",
+      "editorial_bucket": "retypeset_required",
+      "recommended_for": [
+        "Poster composition and palette reference"
+      ],
+      "avoid_for": [
+        "Final website labels",
+        "Small interface copy",
+        "Canonical anatomy master"
+      ],
+      "reason": "Keep typography editable and re-check anatomy. Generated poster text and microcopy are unsuitable as the product source.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "SL-C001-V2-turnaround",
+      "sha256": "67cb75e395986bf0b747106c475ba91e64936be1e905645f96bd62a631fe1e35",
+      "source_state": "draft_review_required",
+      "figma_image_node_id": "78:721",
+      "editorial_bucket": "development_reference",
+      "recommended_for": [
+        "Proportion, silhouette and material study"
+      ],
+      "avoid_for": [
+        "Measured orthographic manufacturing sheet",
+        "Automatically approved rear construction"
+      ],
+      "reason": "The six-view sheets are useful development constraints, with interpretive construction.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "lookdev.living-glasshouse-tortoise",
+      "sha256": "2be5d62f5f76cb08ba663ac3898bbf9847f801d8e0babc24f30f5e2ff7b34247",
+      "source_state": "recovered_reference_not_identity_approval",
+      "figma_image_node_id": "79:191",
+      "editorial_bucket": "craft_reference",
+      "recommended_for": [
+        "Materials, ecology, scale and composition"
+      ],
+      "avoid_for": [
+        "Renaming it as Moss or another established identity",
+        "Treating a giant as approved Arcanea canon"
+      ],
+      "reason": "Strong craft and world reference; it is not an exact identity replacement.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "lookdev.porcelain-maker",
+      "sha256": "475e701723e1d80e477b8f608a31e723d392cbe4d504fad210142fcf5ec1b1a1",
+      "source_state": "recovered_reference_not_identity_approval",
+      "figma_image_node_id": "79:196",
+      "editorial_bucket": "craft_reference",
+      "recommended_for": [
+        "Materials, ecology, scale and composition"
+      ],
+      "avoid_for": [
+        "Renaming it as Moss or another established identity",
+        "Treating a giant as approved Arcanea canon"
+      ],
+      "reason": "Strong craft and world reference; it is not an exact identity replacement.",
+      "approval_changed": false
+    },
+    {
+      "asset_id": "lookdev.gentle-guardian-expedition",
+      "sha256": "22942486847f96e9d9aed1e64e70fe3297d7c02ceca018ebddbeaf0c999e4a3e",
+      "source_state": "recovered_reference_not_identity_approval",
+      "figma_image_node_id": "79:201",
+      "editorial_bucket": "craft_reference",
+      "recommended_for": [
+        "Materials, ecology, scale and composition"
+      ],
+      "avoid_for": [
+        "Renaming it as Moss or another established identity",
+        "Treating a giant as approved Arcanea canon"
+      ],
+      "reason": "Strong craft and world reference; it is not an exact identity replacement.",
+      "approval_changed": false
+    }
+  ],
+  "reference_selection_contract": {
+    "default_editorial_pool": [
+      "working_identity_default",
+      "established_identity_anchor"
+    ],
+    "select_by": [
+      "owning_brand",
+      "surface_mode",
+      "functional_role",
+      "intended_use",
+      "exact_asset_sha256"
+    ],
+    "exclude_by_default": [
+      "hold_do_not_default",
+      "retypeset_required",
+      "vendor_reference_only",
+      "brand_separated_reference"
+    ],
+    "exception_rule": "Use outside the default pool only for an explicit relevant brief and preserve its source/review state.",
+    "public_release": "Requires the separate source rights and exact-version publication decision; working selection is not release approval."
+  }
+}
