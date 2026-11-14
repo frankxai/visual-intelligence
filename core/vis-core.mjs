@@ -567,6 +567,9 @@ export function listScanProfiles(config = DEFAULT_CONFIG) {
     mediaRoots: (profile.mediaRoots || []).length,
     usageRoots: (profile.usageRoots || []).length,
     allowedRoots: (profile.allowedRoots || []).length,
+    diagramGlobs: (profile.diagramGlobs || []).length,
+    provenanceSidecarGlobs: (profile.provenanceSidecarGlobs || []).length,
+    optionalSiblingRepos: Boolean(profile.optionalSiblingRepos),
   }))
 }
 
@@ -586,6 +589,9 @@ export function resolveScanProfile(root, config = loadConfig(root), profileName 
     name: profileName,
     description: profile.description || '',
     notes: profile.notes || [],
+    optionalSiblingRepos: Boolean(profile.optionalSiblingRepos),
+    diagramGlobs: [...(profile.diagramGlobs || [])],
+    provenanceSidecarGlobs: [...(profile.provenanceSidecarGlobs || [])],
     mediaRoots: media.resolved,
     existingMediaRoots: media.existing,
     missingMediaRoots: media.missing,
@@ -1700,7 +1706,7 @@ export function linkPublicAssetUsage(db, repoRoot, detectedAt = nowIso()) {
     }
   }
   walk(repo)
-  const pattern = /["'`](\/(?:assets|images)\/[^"'`\s?#]+)["'`]/g
+  const pattern = /["'`](\/(?:assets|images|diagrams|visuals)\/[^"'`\s?#]+)["'`]/g
   const insert = db.prepare(`
     INSERT OR IGNORE INTO asset_usage (usage_id, asset_id, version_id, source_file, route, usage_context, reference_text, detected_at)
     VALUES (?, ?, ?, ?, ?, 'reference', ?, ?)`)
@@ -5337,6 +5343,7 @@ export function detectSuitability(tags, mood, sizeKB, mediaType = 'image', media
 export function findPromptSidecars(filePath, config = DEFAULT_CONFIG) {
   const dir = path.dirname(filePath)
   const base = path.basename(filePath, path.extname(filePath))
+  const stem = base.replace(/\.(dark|light)$/i, '')
   const candidates = []
   for (const ext of ['.json', '.md', '.txt']) {
     candidates.push(path.join(dir, `${base}${ext}`))
@@ -5344,6 +5351,12 @@ export function findPromptSidecars(filePath, config = DEFAULT_CONFIG) {
     candidates.push(path.join(dir, `${base}.provenance${ext}`))
     candidates.push(path.join(dir, `${base}.vis.provenance${ext}`))
     candidates.push(path.join(dir, `${base}.metadata${ext}`))
+    if (stem && stem !== base) {
+      candidates.push(path.join(dir, `${stem}.vis.provenance${ext}`))
+      candidates.push(path.join(dir, `${stem}.provenance${ext}`))
+      candidates.push(path.join(dir, `${stem}.prompt${ext}`))
+      candidates.push(path.join(dir, `${stem}.metadata${ext}`))
+    }
   }
   const found = []
   for (const candidate of uniq(candidates)) {

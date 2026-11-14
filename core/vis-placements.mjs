@@ -25,14 +25,61 @@ export function createPlacementSchema(db) {
   createLibrarySchema(db)
 }
 
+export const DEFAULT_SITE_PUBLIC_MEDIA_DIRS = Object.freeze([
+  'public/images',
+  'public/images/diagrams',
+  'public/diagrams',
+  'public/visuals',
+])
+
+export const DEFAULT_PROVENANCE_SIDECAR = Object.freeze({
+  suffix: '.vis.provenance.json',
+  schema: 'https://frankx.ai/schemas/vis-provenance-sidecar.schema.json',
+  requiredForGenerated: true,
+})
+
 export function resolvePlacementSites(root, config) {
-  return ((config.placements && config.placements.sites) || []).map(site => ({
-    label: site.label,
-    repo: path.resolve(root, expandPathTokens(site.repo)),
-    ref: site.ref || 'origin/main',
-    webRoot: (site.webRoot || 'public').replace(/\\/g, '/').replace(/\/$/, ''),
-    publicBase: String(site.publicBase || '').replace(/\/$/, ''),
-  }))
+  return ((config.placements && config.placements.sites) || []).map(site => {
+    const primaryRepo = path.resolve(root, expandPathTokens(site.repo))
+    const fallbackRepos = (site.repoFallbacks || []).map(candidate =>
+      path.resolve(root, expandPathTokens(candidate)),
+    )
+    let resolvedRepo = primaryRepo
+    if (!fs.existsSync(path.join(primaryRepo, '.git'))) {
+      const existingFallback = fallbackRepos.find(candidate =>
+        fs.existsSync(path.join(candidate, '.git')),
+      )
+      if (existingFallback) resolvedRepo = existingFallback
+    }
+    const webRoot = (site.webRoot || 'public').replace(/\\/g, '/').replace(/\/$/, '')
+    const defaultMediaDirs = DEFAULT_SITE_PUBLIC_MEDIA_DIRS.map(dir => dir.replace(/^public(?=\/|$)/, webRoot))
+    const publicMediaDirs = (site.publicMediaDirs || defaultMediaDirs).map(dir =>
+      String(dir).replace(/\\/g, '/').replace(/\/$/, ''),
+    )
+    const diagramRegistryPath = String(
+      site.diagramRegistryPath || `${webRoot}/images/diagrams/registry.json`,
+    ).replace(/\\/g, '/')
+    const provenanceSidecar = {
+      ...DEFAULT_PROVENANCE_SIDECAR,
+      ...(site.provenanceSidecar || {}),
+    }
+
+    return {
+      label: site.label,
+      brand: site.brand || null,
+      repo: resolvedRepo,
+      repoInput: site.repo,
+      repoFallbacks: fallbackRepos,
+      exists: fs.existsSync(path.join(resolvedRepo, '.git')),
+      optional: site.optional !== false,
+      ref: site.ref || 'origin/main',
+      webRoot,
+      publicBase: String(site.publicBase || '').replace(/\/$/, ''),
+      publicMediaDirs,
+      diagramRegistryPath,
+      provenanceSidecar,
+    }
+  })
 }
 
 /** Plan, then (execute:true) record what each site's deploy ref serves. */
@@ -64,7 +111,14 @@ export async function observePlacements(options = {}) {
 }
 
 async function observeSite(db, site, { execute }) {
-  if (!fs.existsSync(path.join(site.repo, '.git'))) return { site: site.label, error: `not a git repository: ${site.repo}` }
+  if (!fs.existsSync(path.join(site.repo, '.git'))) {
+    return {
+      site: site.label,
+      optional: Boolean(site.optional),
+      skipped: Boolean(site.optional),
+      error: `not a git repository: ${site.repo}`,
+    }
+  }
   const git = (...args) => execFileSync('git', ['-C', site.repo, ...args], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 })
   let commit
   try { commit = git('rev-parse', '--verify', `${site.ref}^{commit}`).trim() } catch { return { site: site.label, error: `ref not found: ${site.ref}` } }
