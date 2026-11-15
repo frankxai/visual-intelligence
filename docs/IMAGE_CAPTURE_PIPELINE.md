@@ -85,10 +85,43 @@ After the provider responds, submit a second immutable batch with the same reque
 
 The adapter API is `captureImages(existingDb, manifest, {execute:true, mediaRoot})`; existing runtimes can call it directly. Callers own authentication, source pagination, generation orchestration, retry scheduling and their preflight gate. This PR supplies no unattended trigger, cross-process queue or provider-history API. Host the eventual intake endpoint behind existing authorization; do not expose this local adapter directly to the public internet.
 
+## Import runtime request and outcome records
+
+The executable bridge accepts authorized **local copies** of `starlight.imageGeneration.v1` records. It does not fetch a bucket or authenticate to a runtime. Use [`vis-runtime-image-capture-input.schema.json`](../schemas/vis-runtime-image-capture-input.schema.json) to describe a page and supply the current VIS checkpoint explicitly:
+
+```json
+{
+  "schema_version": "vis.runtime-image-capture-input.v1",
+  "batch_id": "runtime-copy-page-001",
+  "source": { "provider": "creator-command", "scope": "opaque-bucket-account" },
+  "captured_at": "2026-11-16T10:00:00Z",
+  "cursor": { "previous": null, "next": null, "revision": 0 },
+  "coverage": { "exhausted": false, "note": "Three authorized event copies; source enumeration remains open." },
+  "records": [
+    { "object_key": "media-capture/EXAMPLE_ATTEMPT/requested.json", "record_path": "requested.json" },
+    { "object_key": "media-capture/EXAMPLE_ATTEMPT/completed.json", "record_path": "completed.json", "local_path": "original.png" },
+    { "object_key": "media-capture/EXAMPLE_ATTEMPT/failed.json", "record_path": "failed.json" }
+  ]
+}
+```
+
+```sh
+node scripts/image-capture.mjs --runtime-input /private/events/page.json --records-root /private/events/records --media-root /private/originals --db /private/vis.sqlite --out /private/events/plan.json
+node scripts/image-capture.mjs --runtime-input /private/events/page.json --records-root /private/events/records --media-root /private/originals --db /private/vis.sqlite --execute --out /private/events/receipt.json
+```
+
+`projectRuntimeImageRecords(input, {recordsRoot})` returns a normalized `vis.image-capture.v1` manifest for `captureImages`. Every local JSON record is bounded to 256 KiB, the combined record reads to 4 MiB, and the projected manifest to the normal capture limits. Optional `expected_record_sha256` must match the exact JSON copy bytes. Record digests measure those local copies; they do not independently authenticate the remote origin. Original binary copies still require the separately declared media root and their own measured SHA-256.
+
+The source item ID is the immutable **event object key**, so requested, completed and failed records coexist. Full source records, request/output references, record digests, reference IDs, project IDs and phase remain in private observation metadata. The bridge never turns a request or failure into an output asset. A failure's `completed_image_ref` remains evidence of a separate completion; it does not erase that completion or automatically link failed-event bytes. The complete event's output key must identify its attempt-specific original, not a replaceable display card.
+
+When a matching request copy is supplied in the page, its measured digest must match `request_ref.sha256`; otherwise the reference remains explicitly `source-declared-only`. A failed event's completion reference is checked against a supplied completion's JSON digest and original hash; `matched-local-outcome-and-original-hashes` describes exactly those checks, not verification of auxiliary model-summary fields. Generation claims pass through with their fidelity intact. Exact resolved-model or revised-prompt claims must match the recorded provider-response field. A routed model, legacy adapter model, display projection or episode topic cannot fill a missing backend model or user prompt. Malformed UTF-8 source records are rejected rather than replacing bytes inside prompt text.
+
+The CLI protects event copies and original media from output-path aliases in addition to the database and input manifest. `--manifest` and `--runtime-input` are mutually exclusive; the latter requires `--records-root` and an explicit checkpoint revision. An external reconciler can retrieve authorized private objects and invoke this bridge after merge, with retry state owned by the existing VIS receipt/checkpoint. No scheduler or remote delivery is installed here.
+
 ## Validation
 
 ```sh
-node --test tests/image-capture.test.mjs
+node --test tests/image-capture.test.mjs tests/runtime-image-capture.test.mjs
 npm run lint
 ```
 
