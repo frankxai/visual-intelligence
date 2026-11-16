@@ -121,12 +121,16 @@ const ASSET_CATALOG = [
   { id: 'arcanea-lyria-yumiko-sight-gate', brand: 'arcanea', file: 'arcanea-lyria-yumiko-sight-gate.jpg', title: 'Lyria & Yumiko: Sight Gate (639 Hz)', subtitle: 'Intuition observatory (Yumiko form OPEN)', route: '/characters', role: 'Character Plate + Social', score: { hierarchy: 5, brandFit: 4, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
   { id: 'arcanea-draconia-draconis-fire-gate', brand: 'arcanea', file: 'arcanea-draconia-draconis-fire-gate.jpg', title: 'Draconia & Draconis: Fire Gate (396 Hz)', subtitle: 'Transformation forge study', route: '/forge', role: 'Forge Banner + Flow Keyframe', score: { hierarchy: 5, brandFit: 4, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
   { id: 'arcanea-alera-veldoria-voice-gate', brand: 'arcanea', file: 'arcanea-alera-veldoria-voice-gate.jpg', title: 'Alera & Otome: Realm of Veldoria (528 Hz)', subtitle: 'Voice Gate resonance study (Otome Whale STAGING)', route: '/lore', role: 'Lore Chapter Plate', score: { hierarchy: 5, brandFit: 4, craft: 4, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
-  { id: 'arcanea-stellaris-companion-sheet', brand: 'arcanea', file: 'arcanea-stellaris-companion-sheet.jpg', title: 'Stellaris Companion Concept Draft', subtitle: 'Regen queued from verbatim STELLARIS.md Panda-Koala-Cat spec', route: '/characters', role: 'Character Concept (Regen Required)', preserveFrame: true, qaNotes: 'Needs regeneration against STELLARIS.md (emerald eyes, jade paws, 12 whiskers).', score: { hierarchy: 5, brandFit: 2, craft: 4, accessibility: 5, provenanceAndArtifacts: 4, surfaceUsefulness: 4 } },
+  { id: 'arcanea-stellaris-companion-sheet', brand: 'arcanea', file: 'arcanea-stellaris-companion-sheet.jpg', title: 'Stellaris Companion Turnaround Sheet', subtitle: 'Canonical 3-view Panda-Koala-Cat turnaround (STELLARIS.md v2)', route: '/characters', role: 'Character Turnaround Sheet (Canon v2)', preserveFrame: true, score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
+  { id: 'arcanea-academy-ten-gates-atrium', brand: 'arcanea', file: 'arcanea-academy-ten-gates-atrium.jpg', title: 'Arcanea Academy Grand Atrium', subtitle: 'Seven vaulted crystal alcoves & suspended astrolabe', route: '/academy', role: 'Academy Hub Banner', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
 
-  { id: 'animelegends-akashi-turnaround', brand: 'animelegends', file: 'animelegends-akashi-turnaround.jpg', title: 'AKASHI Character Turnaround & Expressions', subtitle: 'Aligned with AnimeLegends/mascots/akashi/character-sheet.md', route: '/atlas', role: 'Character Turnaround + Flow Ingredient', preserveFrame: true, score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
-  { id: 'animelegends-kage-turnaround', brand: 'animelegends', file: 'animelegends-kage-turnaround.jpg', title: 'KAGE Tactical Turnaround Sheet', subtitle: 'Aligned with AnimeLegends/mascots/kage/character-sheet.md', route: '/atlas', role: 'Character Turnaround Sheet', preserveFrame: true, score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
-  { id: 'animelegends-mira-turnaround', brand: 'animelegends', file: 'animelegends-mira-turnaround.jpg', title: 'MIRA Atlas Scholar Turnaround', subtitle: 'Aligned with AnimeLegends/mascots/mira/character-sheet.md', route: '/atlas', role: 'Character Turnaround Sheet', preserveFrame: true, score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
-  { id: 'animelegends-threshold-standoff', brand: 'animelegends', file: 'animelegends-threshold-standoff-hero.jpg', title: 'Threshold Monolith Sakuga Keyframe', subtitle: 'Ep-01 concept study (non-canon mascot preview)', route: '/', role: 'Website Concept Hero + Trailer Keyframe', preserveFrame: true, qaNotes: 'Ep-01 monolith concept study; confirm final character silhouette against Akashi/Kage canonical anime sheets.', score: { hierarchy: 5, brandFit: 3, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 4 } },
+  { id: 'animelegends-akashi-turnaround', brand: 'animelegends', file: 'animelegends-akashi-turnaround.jpg', title: 'AKASHI Ep-01 Human Concept Sheet', subtitle: 'Ep-01 alternate human concept study (non-canon exploratory)', route: '/episodes', role: 'Quarantined Concept Exploration (Non-Canon)', preserveFrame: true, qaNotes: 'Non-canon human swordsman study; excluded from canonical mascot placement until canon-locked.', score: { hierarchy: 5, brandFit: 2, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 3 } },
+  { id: 'animelegends-kage-turnaround', brand: 'animelegends', file: 'animelegends-kage-turnaround.jpg', title: 'KAGE Ep-01 Strategist Concept Sheet', subtitle: 'Ep-01 alternate human concept study (non-canon exploratory)', route: '/episodes', role: 'Quarantined Concept Exploration (Non-Canon)', preserveFrame: true, qaNotes: 'Non-canon human strategist study; canonical KAGE android keyframe is animelegends-kage-canon-keyframe.', score: { hierarchy: 5, brandFit: 2, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 3 } },
+  { id: 'animelegends-mira-turnaround', brand: 'animelegends', file: 'animelegends-mira-turnaround.jpg', title: 'MIRA Ep-01 Scholar Concept Sheet', subtitle: 'Ep-01 alternate human concept study (non-canon exploratory)', route: '/episodes', role: 'Quarantined Concept Exploration (Non-Canon)', preserveFrame: true, qaNotes: 'Non-canon human scholar study; canonical MIRA droid keyframe is animelegends-mira-canon-keyframe.', score: { hierarchy: 5, brandFit: 2, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 3 } },
+  { id: 'animelegends-threshold-standoff', brand: 'animelegends', file: 'animelegends-threshold-standoff-hero.jpg', title: 'Threshold Monolith Sakuga Concept', subtitle: 'Ep-01 alternate human concept study (non-canon exploratory)', route: '/episodes', role: 'Quarantined Concept Exploration (Non-Canon)', preserveFrame: true, qaNotes: 'Ep-01 alternate human standoff concept; canonical Akashi cosmic entity is animelegends-akashi-canon-keyframe.', score: { hierarchy: 5, brandFit: 2, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 3 } },
+  { id: 'animelegends-akashi-canon-keyframe', brand: 'animelegends', file: 'animelegends-akashi-canon-keyframe.webp', title: 'AKASHI — The Threshold (Canon Keyframe)', subtitle: 'Canonical cosmic hooded entity with orbiting gold sigils & nebula eyes', route: '/', role: 'Canonical Website Hero Keyframe', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
+  { id: 'animelegends-kage-canon-keyframe', brand: 'animelegends', file: 'animelegends-kage-cel-flow-still.webp', title: 'KAGE — The Ledger (Canon Cel Keyframe)', subtitle: 'Chrome & matte-black android with single red optical sensor', route: '/forge', role: 'Canonical Forge Keyframe', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 4 } },
+  { id: 'animelegends-mira-canon-keyframe', brand: 'animelegends', file: 'animelegends-mira-cel-flow-still.webp', title: 'MIRA — The Spark (Canon Cel Keyframe)', subtitle: 'Floating cream-white & pale arctic-blue companion droid with core orb', route: '/atlas', role: 'Canonical Atlas Keyframe', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
 
   { id: 'sis-horizon-observatory', brand: 'sis', file: 'starlight-horizon-observatory-hero.jpg', title: 'Starlight Horizon Observatory', subtitle: 'Institutional arrival scene (Horizon mode)', route: '/', role: 'Website Hero + Reduced-Motion Poster', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
   { id: 'sis-queen-cultural-portrait', brand: 'sis', file: 'starlight-queen-cultural-portrait.jpg', title: 'Starlight Cultural Mode Portrait', subtitle: 'Warm nocturnal glass observatory', route: '/playbooks', role: 'Cultural Editorial Feature', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 4 } },
@@ -134,19 +138,24 @@ const ASSET_CATALOG = [
 
   { id: 'gencreator-edition-workbench', brand: 'gencreator', file: 'gencreator-edition-workbench-hero.jpg', title: 'Signed Edition Creation Workbench', subtitle: 'Turn knowledge into authored artifacts', route: '/', role: 'Website Hero + Pack Cover', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
   { id: 'gencreator-director-portrait', brand: 'gencreator', file: 'gencreator-creator-director-character.jpg', title: 'Creator Studio Director Reference', subtitle: 'Territory B editorial proof plate', route: '/studio', role: 'Course + Studio Portrait', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
+  { id: 'gencreator-editions-monograph-shelf', brand: 'gencreator', file: 'gencreator-editions-monograph-shelf.jpg', title: 'Linen & Vermilion Monograph Shelf', subtitle: 'Tactile numbered print & studio artifact edition', route: '/editions', role: 'Editions Archive Plate', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
 
   { id: 'frankx-command-modular-engine', brand: 'frankx', file: 'frankx-command-modular-engine-hero.jpg', title: 'Agentic Command Optical Engine', subtitle: 'Physical system architecture metaphor', route: '/ai-architecture', role: 'Website Hero + ACOS Plate', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
   { id: 'frankx-golden-age-book', brand: 'frankx', file: 'frankx-golden-age-book-art.jpg', title: 'The Golden Age of Intelligence', subtitle: 'Museum edition cover base art', route: '/books', role: 'Book Cover + Edition Plate', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
   { id: 'frankx-wordless-laws-book', brand: 'frankx', file: 'frankx-wordless-laws-book-art.jpg', title: 'The Wordless Laws', subtitle: 'Harmonic resonance architectural cover plate', route: '/books', role: 'Book Cover + Essay Header', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
 
   { id: 'agentic-income-precision-relay', brand: 'agentic-income', file: 'agentic-income-precision-relay-hero.jpg', title: 'Precision Compounding Relay', subtitle: 'Earn, automate, compound visual anchor', route: '/', role: 'Website Hero + $67 Blueprint Cover', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
+  { id: 'agentic-income-pack-workbench', brand: 'agentic-income', file: 'agentic-income-pack-workbench.jpg', title: 'Modular Brass Relay Pack Workbench', subtitle: 'Three relay cartridges with emerald optical prism', route: '/pack', role: 'Pack Product Specimen', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
+  { id: 'agentic-income-diagnostic-ledger', brand: 'agentic-income', file: 'agentic-income-diagnostic-ledger.jpg', title: 'Calibration Balance & Archival Folios', subtitle: 'Measured unit economics & audit desk still life', route: '/diagnostic', role: 'Diagnostic & Audit Hero', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
 
   { id: 'sacred-visions-manuscript', brand: 'sacred-visions', file: 'sacred-visions-illuminated-manuscript-hero.jpg', title: 'Illuminated Archive Frontispiece', subtitle: 'Text, Tradition, Visualization museum plate', route: '/', role: 'Exhibition Hero + Monograph Plate', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
   { id: 'sacred-visions-cathedral-motion', brand: 'sacred-visions', file: 'sacred-visions-cathedral-light-motion-base.jpg', title: 'Visions in Motion: Cloister Study', subtitle: 'Vertical 9:16 contemplative anchor', route: '/motion', role: 'Reels / Shorts Start-Frame', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
 
   { id: 'reality-architect-sundial', brand: 'reality-architect', file: 'reality-architect-sundial-compass-hero.jpg', title: 'Five-Move Architectural Compass', subtitle: 'Decision geometry & system diagnostics', route: '/', role: 'Diagnostic Funnel Hero', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
+  { id: 'reality-architect-vault-matrix', brand: 'reality-architect', file: 'reality-architect-vault-matrix.jpg', title: 'Suspended Dodecahedron Vault Matrix', subtitle: 'Obsidian chamber & collimated sapphire alignment', route: '/vault', role: 'Vault Entry Banner', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
 
   { id: 'vibeclubs-sonic-sanctuary', brand: 'vibeclubs', file: 'vibeclubs-sonic-sanctuary-hero.jpg', title: 'Nocturnal Acoustic Listening Room', subtitle: 'Focus & listening club session opener', route: '/', role: 'Session Room Hero', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
+  { id: 'vibeclubs-live-session-desk', brand: 'vibeclubs', file: 'vibeclubs-live-session-desk.jpg', title: 'Analog Vacuum-Tube Session Console', subtitle: 'Live listening room console & rotary attenuators', route: '/sessions', role: 'Live Session Schedule Card', score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 5 } },
 ]
 
 function escXml(str) {
@@ -413,21 +422,17 @@ export async function compileCampaignPack({ jobRoot = DEFAULT_JOB_ROOT, marksDir
   )
 
   const FLOW_QA_OVERRIDES = {
-    'arcanea-crown-gate-flow-still': {
-      score: { hierarchy: 5, brandFit: 2, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 4 },
-      notes: 'Exploratory Crown Gate sentinel + golden dragon concept; do not label Aiyami/Sol canon.',
+    'animelegends-akashi-cel-flow-still': {
+      score: { hierarchy: 5, brandFit: 4, craft: 5, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 4 },
+      notes: 'Stylized youthful Akashi keyframe with amber galaxy eyes & gold sigils; hooded Threshold canon supplied by Veo clip & akashi-canon-keyframe.',
     },
-    'arcanea-crown-gate-flow-motion': {
-      score: { hierarchy: 5, brandFit: 2, craft: 5, accessibility: 4, provenanceAndArtifacts: 5, surfaceUsefulness: 4 },
-      notes: 'Exploratory Crown Gate citadel sentinel motion study; queue Aiyami + Sol Sun Lion pass.',
+    'vibeclubs-sanctuary-flow-motion': {
+      score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 4, provenanceAndArtifacts: 4, surfaceUsefulness: 5 },
+      notes: 'Nocturnal vinyl platter & vacuum-tube glow motion clip; minor faint faceplate micro-lettering.',
     },
-    'animelegends-akashi-flow-still': {
-      score: { hierarchy: 5, brandFit: 2, craft: 4, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 3 },
-      notes: 'Non-canon live-action Ep-01 exploratory frame; canonical anime Akashi turnaround stays in Atlas.',
-    },
-    'animelegends-akashi-flow-motion': {
-      score: { hierarchy: 5, brandFit: 2, craft: 4, accessibility: 5, provenanceAndArtifacts: 5, surfaceUsefulness: 3 },
-      notes: 'Non-canon live-action Ep-01 motion study; queue celestial dark-fantasy cel-shaded pass.',
+    'reality-architect-compass-flow-motion': {
+      score: { hierarchy: 5, brandFit: 5, craft: 5, accessibility: 5, provenanceAndArtifacts: 4, surfaceUsefulness: 5 },
+      notes: 'Precision 5-ring obsidian-brass armillary compass & collimated sapphire laser; tiny ring engraving.',
     },
   }
 
@@ -545,6 +550,11 @@ export async function compileCampaignPack({ jobRoot = DEFAULT_JOB_ROOT, marksDir
     }
   }
 
+  const rejectedManifestPath = path.join(jobRoot, 'rejected-manifest.json')
+  const rejectedArchive = fs.existsSync(rejectedManifestPath)
+    ? JSON.parse(fs.readFileSync(rejectedManifestPath, 'utf8')).items || []
+    : []
+
   const allLifecycleRecords = [...lifecycleAssets, ...flowLifecycleAssets]
   const r2Plan = buildR2DamPlan(allLifecycleRecords)
   const manifest = {
@@ -558,12 +568,14 @@ export async function compileCampaignPack({ jobRoot = DEFAULT_JOB_ROOT, marksDir
       derivativeRenditionsCount: derivativeCount,
       flowClipsCount: flowFiles.length,
       totalDeliverables: lifecycleAssets.length + derivativeCount + flowFiles.length,
+      rejectedArchiveCount: rejectedArchive.length,
       qaPassCount: allLifecycleRecords.filter((a) => a.qa?.decision === 'pass').length,
       qaIterateCount: allLifecycleRecords.filter((a) => a.qa?.decision !== 'pass').length,
     },
     brandMeta: BRAND_META,
     assets: lifecycleAssets,
     flowClips: flowFiles,
+    rejectedArchive,
   }
 
   fs.writeFileSync(path.join(jobRoot, 'asset-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
