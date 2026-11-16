@@ -7,6 +7,7 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { pathToFileURL } from 'url'
 
 const DEFAULT_JOB_ROOT =
   process.env.VIS_JOB_ROOT ||
@@ -329,7 +330,7 @@ export function exportDomainPlacementPacks({ jobRoot = DEFAULT_JOB_ROOT } = {}) 
   }
 }
 
-if (import.meta.url === `file:///${process.argv[1].replaceAll('\\', '/')}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const res = exportDomainPlacementPacks()
   console.log(JSON.stringify(res, null, 2))
 }

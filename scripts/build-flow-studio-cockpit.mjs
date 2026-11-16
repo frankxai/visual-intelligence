@@ -6,6 +6,7 @@
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
+import { pathToFileURL } from 'url'
 
 const DEFAULT_JOB_ROOT =
   process.env.VIS_JOB_ROOT ||
@@ -615,7 +616,7 @@ renderAll();
   return outPath
 }
 
-if (import.meta.url === `file:///${process.argv[1].replaceAll('\\', '/')}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const out = generateStudioCockpitHtml()
   console.log(`Generated cockpit: ${out}`)
 }

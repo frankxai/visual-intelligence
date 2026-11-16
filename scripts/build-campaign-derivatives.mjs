@@ -10,6 +10,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { execFileSync } from 'child_process'
+import { pathToFileURL } from 'url'
 import {
   advanceLifecycleStage,
   buildProvenanceSidecar,
@@ -583,7 +584,7 @@ export async function compileCampaignPack({ jobRoot = DEFAULT_JOB_ROOT, marksDir
   return { manifest, r2Plan }
 }
 
-if (import.meta.url === `file:///${process.argv[1].replaceAll('\\', '/')}`) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const { manifest, r2Plan } = await compileCampaignPack()
   console.log(
     JSON.stringify(
