@@ -1,6 +1,6 @@
 {
   "schema_version": "visual-canon-source-map/v1",
-  "as_of": "2026-11-10",
+  "as_of": "2026-11-17",
   "status": "source-discovery-only",
   "authority": "VIS asset identity; living-design character contracts",
   "entries": [
@@ -72,5 +72,12 @@
     "Do not equate vendor/model names with owned characters.",
     "Do not publish source manifests containing private bytes or signed URLs.",
     "All exact-version approval and archive claims require receipts."
-  ]
+  ],
+  "coverage_note": "Entries below are the historical discovery subset, not the complete character estate. Use the related projections for the 121 recovered source records and exact Figma placements. No original bytes were rehashed in this update.",
+  "related_records": {
+    "curation": "docs/character-canon/character-curation.v1.json",
+    "figma_receipt": "docs/character-canon/figma-ingestion-2026-11-12.json",
+    "sprite_sources": "docs/character-canon/sprite-origin-catalog.v1.json",
+    "site_evolution": "docs/character-canon/VISUAL_TRUTHS_AND_SITE_EVOLUTION.md"
+  }
 }
