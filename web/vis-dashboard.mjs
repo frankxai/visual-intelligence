@@ -1,3 +1,4 @@
+import { renderVisualTruths, visualTruthStyles } from './visual-truths.mjs'
 import fs from 'fs'
 import http from 'http'
 import path from 'path'
@@ -115,6 +116,7 @@ export function generateDashboard(root, options = {}) {
     })
     const facets = deriveDashboardFacets(normalizedAssets, duplicates, orphans, similar)
     const payload = {
+      visualTruthsEnabled: config.characterSourceReview === "frank-estate",
       generatedAt: new Date().toISOString(),
       catalogueSeenAt,
       readOnly: Boolean(options.readOnly),
@@ -891,6 +893,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   .asset,.asset-open{min-height:202px}
   .kv{grid-template-columns:1fr}
 }
+${visualTruthStyles}
 </style>
 </head>
 <body>
@@ -904,6 +907,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       </div>
     </div>
     <section class="rail-section">
+      ${data.visualTruthsEnabled ? '<a class="truth-nav" href="#visual-truths">Visual truths · characters and sources</a>' : ''}
       <h2>Estate</h2>
       <div class="metric"><span>Assets</span><strong id="mAssets">0</strong></div>
       <div class="metric"><span>Versions</span><strong id="mVersions">0</strong></div>
@@ -970,6 +974,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       </div>
     </div>
     <div class="workspace">
+      ${data.visualTruthsEnabled ? renderVisualTruths() : ''}
       <section class="band">
         <h2>Asset library</h2>
         <p id="brief"></p>
