@@ -19,3 +19,29 @@ export async function resolveVisualIdentity(request) {
     return { status: 'unresolved', reason: 'estate_resolver_unavailable', publish_authorized: false }
   }
 }
+
+// The loopback review surface may show a raster preview. Never send the master or its absolute path.
+export async function identityPreview(request) {
+  const r = await resolveVisualIdentity(request)
+  if (r.status !== 'resolved') return null
+  const { readFile, realpath } = await import('node:fs/promises')
+  const { relative, sep } = await import('node:path')
+  const { createHash } = await import('node:crypto')
+  const roots = {
+    'mini-me-storyboard': process.env.VIS_FOLIO_ROOT,
+    'starlight-estate': process.env.VIS_ESTATE_ROOT,
+    'starlightintelligence.ai': process.env.VIS_STARLIGHT_SITE_ROOT,
+  }
+  const mount = roots[r.source_authority]
+  if (!mount || !r.source_path || !request.expected_sha256 || !request.expected_version) return null
+  try {
+    const root = await realpath(mount)
+    const path = await realpath(join(root, r.source_path))
+    const local = relative(root, path)
+    if (!local || local === '..' || local.startsWith('..' + sep) || isAbsolute(local)) return null
+    const bytes = await readFile(path)
+    if (createHash('sha256').update(bytes).digest('hex') !== r.sha256) return null
+    const { default: sharp } = await import('sharp')
+    return await sharp(bytes, {limitInputPixels: 48_000_000}).resize({width:720,height:480,fit:'inside',withoutEnlargement:true}).webp().toBuffer()
+  } catch { return null }
+}

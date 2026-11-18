@@ -15,7 +15,7 @@ CREATE TABLE public.vis_identity_decisions (
   parent_version_id text NOT NULL,
   object_key text NOT NULL CHECK(length(object_key) BETWEEN 1 AND 1024),
   parent_object_key text NOT NULL CHECK(length(parent_object_key) BETWEEN 1 AND 1024),
-  action text NOT NULL CHECK(action IN ('approve_use','request_revision','reject','revoke','archive')),
+  action text NOT NULL CHECK(action IN ('approve_use','request_revision','reject','revoke','archive','recover')),
   reviewer text NOT NULL CHECK(length(trim(reviewer)) > 0),
   evidence_ref text NOT NULL CHECK(length(trim(evidence_ref)) > 0),
   rights_basis text NOT NULL CHECK(length(trim(rights_basis)) > 0),
@@ -42,7 +42,7 @@ WITH latest AS (
  ORDER BY workspace_id,source_id,brand,identity_id,variant,intended_use,channel,decision_id DESC
 )
 SELECT d.workspace_id,d.source_id,d.brand,d.identity_id,d.variant,d.intended_use,d.channel,
-       d.asset_id,d.version_id,d.object_key,d.parent_object_key,d.reviewer,d.decision_id,d.rights_basis,
+       d.asset_id,d.version_id,d.parent_asset_id,d.parent_version_id,d.object_key,d.parent_object_key,d.reviewer,d.decision_id,d.rights_basis,
        v.sha256,p.sha256 AS parent_sha256,d.expires_at
 FROM latest d
 JOIN public.vis_catalog_versions v USING(workspace_id,source_id,asset_id,version_id)
@@ -50,7 +50,7 @@ JOIN public.vis_catalog_versions p ON (p.workspace_id,p.source_id,p.asset_id,p.v
  (d.workspace_id,d.source_id,d.parent_asset_id,d.parent_version_id)
 JOIN public.vis_catalog_assets a ON (a.workspace_id,a.source_id,a.asset_id)=(d.workspace_id,d.source_id,d.asset_id)
 JOIN public.vis_catalog_assets parent ON (parent.workspace_id,parent.source_id,parent.asset_id)=(d.workspace_id,d.source_id,d.parent_asset_id)
-WHERE d.identity_id=ANY(parent.characters) AND d.action='approve_use' AND d.expires_at>now() AND a.brand=d.brand AND d.identity_id=ANY(a.characters)
+WHERE d.identity_id=ANY(parent.characters) AND d.action IN ('approve_use','recover') AND d.expires_at>now() AND a.brand=d.brand AND parent.brand=d.brand AND d.identity_id=ANY(a.characters)
  AND v.approval_status='approved' AND p.approval_status='approved'
  AND v.rights_status IN ('owned','licensed','generated-owned') AND p.rights_status IN ('owned','licensed','generated-owned');
 REVOKE ALL ON public.vis_current_identity_use FROM PUBLIC,anon,authenticated;

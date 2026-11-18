@@ -64,7 +64,7 @@ export function createSupabaseWorkspaceCatalog(config) {
     describe,
     async identity(args,context) {
       await describe(context)
-      const params = {...scope(context), limit:2, select:'brand,identity_id,variant,intended_use,channel,asset_id,version_id,sha256,parent_sha256,object_key,parent_object_key,reviewer,rights_basis'}
+      const params = {...scope(context), limit:2, select:'brand,identity_id,variant,intended_use,channel,asset_id,version_id,sha256,parent_sha256,object_key,parent_object_key,reviewer,rights_basis,expires_at,parent_asset_id,parent_version_id'}
       for (const field of ['brand','identity_id','variant','intended_use','channel']) params[field] = 'eq.' + args[field]
       return read('vis_current_identity_use',params)
     },

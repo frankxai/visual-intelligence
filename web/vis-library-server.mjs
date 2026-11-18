@@ -7,7 +7,7 @@
  * the publish gate is closed; placements are recorded through the CLI (Phase 5).
  */
 
-import { resolveVisualIdentity } from '../core/visual-identity.mjs'
+import { identityPreview, resolveVisualIdentity } from '../core/visual-identity.mjs'
 import fs from 'fs'
 import http from 'http'
 import path from 'path'
@@ -47,6 +47,22 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
       const url = new URL(req.url, 'http://local')
       const parts = url.pathname.split('/').filter(Boolean)
 
+      if (req.method === 'GET' && url.pathname === '/identity-decisions') {
+        res.setHeader('Referrer-Policy', 'no-referrer')
+        res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self' https://*.supabase.co; img-src blob:; form-action 'none'; frame-ancestors 'none'; base-uri 'none'")
+        return sendFile(res, path.join(__dirname,'identity-decisions.html'), 'text/html; charset=utf-8','no-store')
+      }
+      if (req.method === 'GET' && url.pathname === '/identity-decisions.mjs') {
+        return sendFile(res, path.join(__dirname,'identity-decisions.mjs'), 'text/javascript; charset=utf-8','no-store')
+      }
+      if (req.method === 'GET' && url.pathname === '/api/identity/reviewer-config') {
+        const project = process.env.VIS_REVIEW_PROJECT_URL || ''
+        const key = process.env.VIS_REVIEW_PUBLISHABLE_KEY || ''
+        if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(project) || !/^sb_publishable_[a-zA-Z0-9_-]+$/.test(key)) {
+          return json(res,409,{status:'unconfigured'})
+        }
+        return json(res,200,{project,key})
+      }
       if (req.method === 'GET' && url.pathname === '/identities') {
         return sendFile(res, path.join(__dirname, 'identity-review.html'), 'text/html; charset=utf-8', 'no-store')
       }
@@ -95,6 +111,12 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
       if (req.method === 'POST') {
         if (req.headers['x-vis-operator'] !== '1' || !sameOrigin(req)) return json(res, 403, { error: 'operator header and same origin required' })
         const body = await readJson(req)
+        if (url.pathname === '/api/identity/preview') {
+          const bytes = await identityPreview(body)
+          if (!bytes) return json(res, 409, {status:'unresolved', reason:'verified_preview_unavailable'})
+          res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
+          return send(res, 200, bytes, 'image/webp')
+        }
         if (url.pathname === '/api/placement-compare') {
           return json(res, 200, compareAssetPlacements(db, {
             frameId: body.frameId || body.frame || 'frankx-hero',

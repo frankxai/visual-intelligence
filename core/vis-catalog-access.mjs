@@ -76,9 +76,16 @@ export function createCatalogAccess({ sourcesForContext }) {
         catch { return { ...refused, reason:'source_unavailable' } }
         if (rows.length !== 1) return refused
         const r = rows[0]
+        const fields = ['brand','identity_id','variant','intended_use','channel']
+        if (!r || fields.some(field => r[field] !== args[field]) ||
+            !['asset_id','version_id','parent_asset_id','parent_version_id','object_key','parent_object_key','reviewer','rights_basis']
+              .every(field => typeof r[field] === 'string' && r[field].trim()) ||
+            ![r.sha256,r.parent_sha256].every(hash => /^[0-9a-f]{64}$/.test(hash)) ||
+            !(Date.parse(r.expires_at) > Date.now())) return refused
         return {...refused,status:'pending_byte_verification',brand:r.brand,identity_id:r.identity_id,variant:r.variant,
           intended_use:r.intended_use,channel:r.channel,asset_id:r.asset_id,approved_version:r.version_id,
-          sha256:r.sha256,parent_sha256:r.parent_sha256,object_key:r.object_key,parent_object_key:r.parent_object_key,
+          sha256:r.sha256,parent_sha256:r.parent_sha256,parent_asset_id:r.parent_asset_id,parent_version_id:r.parent_version_id,
+          immutable_master:'urn:sha256:'+r.parent_sha256,source_authority:'vis_current_identity_use',expires_at:r.expires_at,object_key:r.object_key,parent_object_key:r.parent_object_key,
           reviewer:r.reviewer,approval_state:'approved_derivative',rights:{basis:r.rights_basis,permitted_uses:[r.intended_use]}}
       }
       if (name === 'get_asset_sources' || name === 'search_assets') {

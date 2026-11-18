@@ -28,3 +28,18 @@ test('operator HTTP and CLI both refuse missing or untrusted authority', async t
   const cli=spawnSync(process.execPath,['bin/vis-identity.mjs'],{input:JSON.stringify(q),encoding:'utf8',env:{...process.env,VIS_ESTATE_ROOT:''}})
   assert.equal(cli.status,3)
 })
+
+test('private previews require the operator header and reject foreign origins', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'vis-preview-'))
+  writeFileSync(join(root, 'vis.config.json'), '{}')
+  const {server, url} = await serveLibrary(root, {port:0})
+  t.after(() => { server.close(); rmSync(root, {recursive:true, force:true}) })
+  for (const headers of [{}, {'x-vis-operator':'1', origin:'https://elsewhere.invalid'}]) {
+    const response = await fetch(url + 'api/identity/preview', {method:'POST', headers, body:'{}'})
+    assert.equal(response.status, 403)
+  }
+  const denied = await fetch(url + 'api/identity/preview', {
+    method:'POST', headers:{'x-vis-operator':'1', 'content-type':'application/json'}, body:JSON.stringify(q)
+  })
+  assert.equal(denied.status, 409)
+})

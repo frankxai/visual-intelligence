@@ -172,3 +172,22 @@ test('origin, protocol, size bounds and per-principal rate limits apply over HTT
   assert.equal((await limited.rpc('tools/list')).status,429)
   assert.equal((await limited.rpc('tools/list',{},'bob')).status,200)
 })
+
+test('HTTP MCP requires a scoped fresh decision matching the requested identity and use', async t => {
+  const args={brand:'fixture',identity_id:'fox',variant:'editorial-card',intended_use:'episode preview',channel:'unlisted-review',required_approval:'asset-use'}
+  let row={...args,asset_id:'card',version_id:'v1',parent_asset_id:'folio',parent_version_id:'v1',object_key:'card.jpg',parent_object_key:'folio.png',sha256:'a'.repeat(64),parent_sha256:'b'.repeat(64),reviewer:'fixture-owner',rights_basis:'fixture use',expires_at:new Date(Date.now()+60000).toISOString()}
+  const access=createCatalogAccess({sourcesForContext:()=>[{id:'owned',adapter:{identity:async()=>[row]}}]})
+  const f=await fixture(t,{access})
+  const call=scope=>token('alice',{scope}).then(jwt=>f.rpc('tools/call',{name:'visual.identity.resolve',arguments:args},'alice',{},jwt))
+  assert.equal((await call('catalog:read')).body.result.isError,true)
+  const scoped='catalog:read identity:resolve'
+  const receipt=(await call(scoped)).body.result.structuredContent
+  assert.equal(receipt.status,'pending_byte_verification')
+  assert.equal(receipt.publish_authorized,false)
+  for(const patch of [{identity_id:'turtle'},{brand:'other'},{parent_sha256:'invalid'},{expires_at:'2001-01-01'}]) {
+    const previous=row
+    row={...row,...patch}
+    assert.equal((await call(scoped)).body.result.structuredContent.status,'unresolved')
+    row=previous
+  }
+})
