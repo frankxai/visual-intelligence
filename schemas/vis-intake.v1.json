@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest",
+    "signature"
+  ],
+  "properties": {
+    "manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspace",
+        "brand",
+        "sourceKind",
+        "sourceRef",
+        "sourceVersion",
+        "sourceOwner",
+        "title",
+        "sha256",
+        "bytes",
+        "mime",
+        "parent",
+        "run",
+        "actor",
+        "model",
+        "costMicros",
+        "currency",
+        "rightsRef",
+        "consentRef",
+        "folioRef",
+        "promptRef"
+      ],
+      "properties": {
+        "schema": {
+          "const": "vis.intake.v1"
+        },
+        "workspace": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "brand": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "sourceKind": {
+          "enum": [
+            "chatgpt-image",
+            "figma-export",
+            "creator-media",
+            "diagram",
+            "video",
+            "original"
+          ]
+        },
+        "sourceRef": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sourceVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "sourceOwner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 134217728
+        },
+        "mime": {
+          "enum": [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/svg+xml",
+            "video/mp4"
+          ]
+        },
+        "parent": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "run": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "costMicros": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "currency": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "rightsRef": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "consentRef": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "folioRef": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "promptRef": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    }
+  }
+}

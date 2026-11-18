@@ -1425,7 +1425,12 @@ ${result.note}`)
   }
   if (sub === 'serve') {
     const { serveLibrary } = await import('../web/vis-library-server.mjs')
-    const server = await serveLibrary(root, { port: Number(getFlag('--port', 4323)), host: getFlag('--host', '127.0.0.1') })
+    const policyPath = getFlag('--review-policy')
+    if (hasFlag('--review-policy') && !policyPath) throw Error('Reviewer policy path required')
+    const loadReviewPolicy = policyPath ? () => JSON.parse(fs.readFileSync(policyPath, 'utf8')) : undefined
+    const reviewPolicy = loadReviewPolicy?.()
+    if (policyPath && !reviewPolicy?.workspace) throw Error('Workspace policy required')
+    const server = await serveLibrary(root, { port: Number(getFlag('--port', 4323)), host: getFlag('--host', '127.0.0.1'), reviewPolicy, loadReviewPolicy })
     console.log(`VIS library on ${server.url}`)
     return new Promise(() => {})
   }
