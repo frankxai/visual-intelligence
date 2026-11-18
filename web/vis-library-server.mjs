@@ -7,6 +7,7 @@
  * the publish gate is closed; placements are recorded through the CLI (Phase 5).
  */
 
+import { resolveVisualIdentity } from '../core/visual-identity.mjs'
 import fs from 'fs'
 import http from 'http'
 import path from 'path'
@@ -46,6 +47,14 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
       const url = new URL(req.url, 'http://local')
       const parts = url.pathname.split('/').filter(Boolean)
 
+      if (req.method === 'GET' && url.pathname === '/identities') {
+        return sendFile(res, path.join(__dirname, 'identity-review.html'), 'text/html; charset=utf-8', 'no-store')
+      }
+      if (req.method === 'GET' && url.pathname === '/api/identity/resolve') {
+        const request = Object.fromEntries(url.searchParams)
+        const result = await resolveVisualIdentity(request)
+        return json(res, result.status === 'resolved' ? 200 : 409, result)
+      }
       if (req.method === 'GET' && url.pathname === '/') return send(res, 200, renderHtml(), 'text/html; charset=utf-8')
       if (req.method === 'GET' && url.pathname === '/vendor/thumbhash.js') {
         if (!fs.existsSync(THUMBHASH_JS)) return json(res, 404, { error: 'thumbhash not installed' })
@@ -269,6 +278,7 @@ ul.events{list-style:none;padding:0;margin:0;font-size:12px;color:var(--soft)}
     <button role="tab" id="tab-queue" aria-selected="false" aria-controls="view-queue">Proposals <span id="qcount"></span></button>
     <button role="tab" id="tab-studio" aria-selected="false" aria-controls="view-studio">Placement Studio <span id="scount"></span></button>
   </nav>
+  <a href="/identities" style="color:var(--accent)">Identity review</a>
   <label class="sr" for="q">Search</label>
   <input type="search" id="q" placeholder="Search path, title, tag">
   <label class="sr" for="rights">Rights</label>
@@ -469,7 +479,7 @@ async function renderStudio(){
       + (compareSet.size ? '<button id="clear-compare">Clear selection (' + compareSet.size + ')</button>' : '<span style="font-size:12px;color:var(--muted)">Showing top candidates (press C on any asset to pin)</span>')
       + '</div>'
     if (!cmp.candidates.length) {
-      view.innerHTML = bar + '<p class="state">No candidate assets available to compare yet.</p>'
+      view.innerHTML = bar + '<p class="state">' + (cmp.not_found.length ? 'Requested asset unresolved: ' + esc(cmp.not_found.join(', ')) : 'No candidate assets available to compare yet.') + '</p>'
     } else {
       const cards = cmp.candidates.map(c => {
         const isWinner = cmp.winner && cmp.winner.asset_id === c.asset_id

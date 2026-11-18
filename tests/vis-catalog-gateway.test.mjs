@@ -71,7 +71,8 @@ test('HTTP initialize, discovery, search, exact version and preview use existing
   const init = await f.rpc('initialize', { protocolVersion: '2025-11-25', capabilities: {}, clientInfo: { name: 'fresh-adopter', version: '1' } })
   assert.equal(init.body.result.protocolVersion, '2025-11-25')
   const tools = (await f.rpc('tools/list')).body.result.tools
-  assert.equal(tools.length, 4)
+  assert.equal(tools.length, 5)
+  assert.ok(tools.some(t => t.name === 'visual.identity.resolve'))
   assert.ok(tools.every(x => x.annotations.readOnlyHint && !x.annotations.destructiveHint))
   const found = (await f.call('search_assets', { query: 'copper fox', brand: 'fixture', character: 'fox', approval_status: 'approved', aspect: 'square' })).body.result
   assert.equal(found.structuredContent.assets.length, 1)

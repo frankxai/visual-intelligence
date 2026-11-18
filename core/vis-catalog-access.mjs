@@ -6,6 +6,7 @@ export class CatalogError extends Error {
 const id = { type: 'string', minLength: 1, maxLength: 160 }
 const object = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false })
 export const catalogTools = [
+  { name: 'visual.identity.resolve', description: 'Resolve a scoped approved derivative decision. The requesting adapter must verify the original and derivative bytes before use.', inputSchema: object({brand:id,identity_id:id,variant:id,intended_use:id,channel:id,required_approval:{enum:['asset-use']}}, ['brand','identity_id','variant','intended_use','channel','required_approval']) },
   { name: 'search_assets', description: 'Find visual references in the signed-in workspace. Returns stable asset/version identities, measured dimensions, recorded approval state, and source coverage. Missing or unavailable sources are explicit. Metadata retrieval, not semantic visual similarity.', inputSchema: object({ query: { type: 'string', maxLength: 500 }, brand: id, character: id, approval_status: { enum: ['candidate', 'approved', 'rejected', 'archived'] }, aspect: { enum: ['square', 'landscape', 'portrait'] }, limit: { type: 'integer', minimum: 1, maximum: 24 } }) },
   { name: 'get_asset', description: 'Read one version of an asset from an authorized workspace catalog. Returns bounded provenance and recorded rights/approval state. Local paths, credentials, master bytes, and private prompts are excluded.', inputSchema: object({ source_id: id, asset_id: id, version_id: id }, ['source_id', 'asset_id']) },
   { name: 'get_asset_preview', description: 'Load one existing thumbnail or preview for an exact asset version in the signed-in workspace. Does not generate, upload, approve, publish, or serve original masters. An absent rendition is reported explicitly.', inputSchema: object({ source_id: id, asset_id: id, version_id: id }, ['source_id', 'asset_id', 'version_id']) },
@@ -65,6 +66,21 @@ export function createCatalogAccess({ sourcesForContext }) {
       // The host chooses sources after authentication. No workspace/path/provider URL argument exists.
       const sources = await sourcesForContext(context)
       if (!Array.isArray(sources) || sources.length > 8 || new Set(sources.map(s => s.id)).size !== sources.length) throw new CatalogError('catalog_configuration_invalid', 503)
+      if (name === 'visual.identity.resolve') {
+        const refused = {workspace_id:context.workspaceId, status:'unresolved', publish_authorized:false}
+        if (!context.scopes.includes('identity:resolve')) throw new CatalogError('insufficient_scope',403)
+        // Sources that are offline could contain a competing or superseding decision.
+        if (!sources.length || sources.some(s => !s.adapter?.identity)) return refused
+        let rows
+        try { rows = (await Promise.all(sources.map(s => s.adapter.identity(args,context)))).flat() }
+        catch { return { ...refused, reason:'source_unavailable' } }
+        if (rows.length !== 1) return refused
+        const r = rows[0]
+        return {...refused,status:'pending_byte_verification',brand:r.brand,identity_id:r.identity_id,variant:r.variant,
+          intended_use:r.intended_use,channel:r.channel,asset_id:r.asset_id,approved_version:r.version_id,
+          sha256:r.sha256,parent_sha256:r.parent_sha256,object_key:r.object_key,parent_object_key:r.parent_object_key,
+          reviewer:r.reviewer,approval_state:'approved_derivative',rights:{basis:r.rights_basis,permitted_uses:[r.intended_use]}}
+      }
       if (name === 'get_asset_sources' || name === 'search_assets') {
         const results = [], coverage = []
         for (const source of sources) {

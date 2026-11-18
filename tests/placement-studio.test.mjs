@@ -151,3 +151,18 @@ test('web operator screen exposes /api/placement-frames, /api/placement-compare,
   assert.equal(cmpPost.frame.id, 'gencreator-product-box')
   assert.equal(cmpPost.handoff.mcp_artifacts_tool.arguments.namespace, 'GenCreator')
 })
+
+test('explicit missing or fuzzy references cannot acquire a substitute or handoff', async t => {
+  const { project, heroId } = await createStudioFixture()
+  const db = openLibraryDatabase(project, loadConfig(project))
+  t.after(() => db.close())
+  for (const ref of ['missing-master', 'hero-native', '%']) {
+    const result = compareAssetPlacements(db, { assetIds: [ref] })
+    assert.deepEqual(result.candidates, [])
+    assert.deepEqual(result.not_found, [ref])
+    assert.equal(result.handoff, null)
+  }
+  const partial = compareAssetPlacements(db, { assetIds: [heroId, 'absent'] })
+  assert.equal(partial.winner, null)
+  assert.equal(partial.handoff, null)
+})
