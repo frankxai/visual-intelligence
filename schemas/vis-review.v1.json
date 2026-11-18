@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "decision",
+    "signature"
+  ],
+  "properties": {
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "workspace",
+        "actor",
+        "action",
+        "asset",
+        "version",
+        "sha256",
+        "revision",
+        "destination",
+        "campaign",
+        "consentRef",
+        "rightsRef",
+        "replaces",
+        "note",
+        "issuedAt",
+        "expiresAt",
+        "nonce"
+      ],
+      "properties": {
+        "schema": {
+          "const": "vis.review.v1"
+        },
+        "workspace": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "actor": {
+          "type": "string",
+          "pattern": "^human:[A-Za-z0-9_.-]+$"
+        },
+        "action": {
+          "enum": [
+            "comment",
+            "approve_use",
+            "approve_identity",
+            "approve_canon",
+            "authorize_publication",
+            "replace_canonical",
+            "archive",
+            "delete",
+            "restore",
+            "revoke_rights"
+          ]
+        },
+        "asset": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "destination": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "campaign": {
+          "type": "string"
+        },
+        "consentRef": {
+          "type": "string"
+        },
+        "rightsRef": {
+          "type": "string"
+        },
+        "replaces": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1500
+        },
+        "issuedAt": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expiresAt": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nonce": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    }
+  }
+}

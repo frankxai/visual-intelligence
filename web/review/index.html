@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Asset review · Visual Intelligence</title>
+    <link rel="stylesheet" href="/review/style.css" />
+  </head>
+  <body>
+    <header><strong>Visual Intelligence</strong><span>Asset review</span><span id="workspace"></span></header>
+    <main>
+      <div class="heading">
+        <div>
+          <p class="kicker">VIS LIBRARY</p>
+          <h1>Review desk</h1>
+        </div>
+        <label>Asset<select id="asset"></select></label>
+      </div>
+      <section class="desk" aria-label="Comparison">
+        <div class="bar">
+          <h2 id="title">Loading asset…</h2>
+          <div class="statebar"><strong id="eligibility"></strong><span id="state"></span></div>
+        </div>
+        <div class="tools">
+          <label>Compare with<select id="reference"></select></label>
+          <fieldset>
+            <legend>View</legend>
+            <button id="side" aria-pressed="true">Compare</button
+            ><button id="overlay" aria-pressed="false">Overlay</button>
+          </fieldset>
+          <label id="mix" hidden
+            >Reference opacity <input id="opacity" type="range" min="0" max="100" value="50"
+          /></label>
+        </div>
+        <div id="plates">
+          <figure>
+            <figcaption>Candidate</figcaption>
+            <img id="candidate" alt="Candidate rendition" /><span class="missing">Preview unavailable</span>
+          </figure>
+          <figure id="referencePlate">
+            <figcaption id="comparisonLabel">Comparison asset</figcaption>
+            <img id="referenceImage" alt="Selected comparison asset" /><span class="missing"
+              >Select a reference</span
+            >
+          </figure>
+        </div>
+      </section>
+      <div class="lower">
+        <section>
+          <h2>Evidence</h2>
+          <dl id="facts"></dl>
+        </section>
+        <section>
+          <h2>Lineage &amp; placements</h2>
+          <div id="lineage"></div>
+        </section>
+        <section>
+          <h2>Review history</h2>
+          <div id="history"></div>
+          <h3>Advisory evaluation</h3>
+          <div id="evaluation"></div>
+        </section>
+      </div>
+      <section id="decisions">
+        <h2>Record a decision</h2>
+        <p>
+          Download the scope, sign it with your enrolled reviewer key, then load the signed decision. Recovery
+          requires a restore decision.
+        </p>
+        <div class="tools">
+          <label>Action<select id="action"></select></label><button id="template">Download scope</button
+          ><label>Signed decision<input id="signed" type="file" accept=".json,application/json" /></label
+          ><button id="submit" disabled>Record signed decision</button>
+        </div>
+        <pre id="inspect" hidden></pre>
+      </section>
+      <p id="status" role="status" aria-live="polite"></p>
+    </main>
+    <script type="module" src="/review/app.js"></script>
+  </body>
+</html>
