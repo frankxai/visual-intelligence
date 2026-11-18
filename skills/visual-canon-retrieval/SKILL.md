@@ -7,6 +7,10 @@ description: Retrieve exact owned character art before creating cross-platform i
 
 Use the existing VIS catalog, not a new character database. This is a portable workflow contract, **not a deployed Perplexity integration**.
 
+## Portfolio experience review
+
+Load the [Frontier Experience Constitution](https://github.com/Starlight-Intelligence/starlight-design-intelligence/blob/e25fab4c5a0dac2ea8c7b91e9397972f5af4b454/portfolio/frontier-experience-constitution.md) when this adapter runs outside a repository checkout. Attach the resolved source revision to the existing retrieval receipt.
+
 ## Before producing anything
 
 1. Read `docs/character-canon/source-map.v1.json`. Identify brand, role, lineage, intended placement and requested exact identity.
