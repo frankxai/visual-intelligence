@@ -3820,6 +3820,11 @@ export function recordPublication(dbOrRoot, args = {}) {
   try {
     const assetId = resolveAssetId(db, args.assetId || args.asset_id || args.asset || args.path || args.uri)
     if (!assetId) throw new Error('Asset not found for publication record')
+    if ((args.execute === true || args.dryRun === false)
+      && db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='vis_review_intake'").get()
+      && db.prepare('SELECT 1 FROM vis_review_intake WHERE asset_id=?').get(assetId)) {
+      throw new Error('Enrolled versions require a signed VIS review publication receipt')
+    }
     const asset = getAsset(db, assetId, { compact: true })
     const publishGate = assetPublishGate(asset, { intendedUse: `${args.platform || 'unknown'} publication record` })
     const payload = {

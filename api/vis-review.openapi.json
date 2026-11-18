@@ -1,0 +1,185 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "VIS local review operator",
+    "version": "1.0.0",
+    "description": "Loopback-only, one enrolled tenant per process. Decision signatures and preconditions enforced by server. See schemas/vis-review-decision.schema.json."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:4323"
+    }
+  ],
+  "paths": {
+    "/api/library": {
+      "get": {
+        "summary": "Page through enrolled editions",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-scoped result"
+          },
+          "404": {
+            "description": "Unavailable edition or rendition"
+          }
+        }
+      }
+    },
+    "/api/review/{id}": {
+      "get": {
+        "summary": "Read an exact edition, rights, custody, lineage and signed decision history",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-scoped result"
+          },
+          "404": {
+            "description": "Unavailable edition or rendition"
+          }
+        }
+      }
+    },
+    "/r/{id}/{kind}": {
+      "get": {
+        "summary": "Verified WebP rendition bound to the supplied original digest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sha",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-scoped result"
+          },
+          "404": {
+            "description": "Unavailable edition or rendition"
+          }
+        }
+      }
+    },
+    "/api/review/{id}/decision": {
+      "post": {
+        "summary": "Apply one externally signed instruction",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action",
+                  "token",
+                  "comment"
+                ],
+                "properties": {
+                  "action": {
+                    "enum": [
+                      "comment",
+                      "critique",
+                      "clear_rights",
+                      "verify_scan",
+                      "revoke_rights",
+                      "approve_asset",
+                      "approve_identity",
+                      "approve_canon",
+                      "replace_canonical",
+                      "publish",
+                      "publication_receipt",
+                      "archive",
+                      "delete",
+                      "recover"
+                    ]
+                  },
+                  "token": {
+                    "type": "string",
+                    "maxLength": 16384
+                  },
+                  "comment": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "destination": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated review and revision"
+          },
+          "403": {
+            "description": "Origin, authorization, evidence or state check failed"
+          }
+        }
+      }
+    }
+  }
+}
