@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><link rel="icon" href="data:,">
+<link rel="stylesheet" href="/review/workbench.css"><title>Edition review · VIS Library</title>
+<script type="module" src="/review/workbench.js"></script>
+</head>
+<body>
+<header><strong>VIS Library</strong><span class="rule"></span><span>Visual review</span><span id="environment">Local operator</span></header>
+<main>
+<div class="heading"><div><h1>Edition review</h1><p id="summary" role="status">Loading enrolled editions…</p></div>
+<div class="picker"><label for="asset">Review queue</label><select id="asset" disabled><option>Loading…</option></select><button id="more" hidden>Load more</button></div></div>
+<section id="desk" aria-label="Selected edition" hidden>
+<div class="columns"><div class="comparison">
+<div class="section-head"><h2>Comparison</h2><div class="switch" role="group" aria-label="Comparison mode"><button id="pair" aria-pressed="true">Side by side</button><button id="overlay" aria-pressed="false">Overlay</button></div></div>
+<div id="stage">
+<figure id="reference-frame"><div class="canvas"><img id="reference-image" alt="" hidden><span class="missing">Choose a reference</span></div><figcaption><span>Reference</span><strong id="reference-caption">Unselected</strong></figcaption></figure>
+<figure id="candidate-frame"><div class="canvas"><img id="candidate-image" alt="" hidden><img id="ghost" alt="" hidden><span class="missing">Preview unavailable</span></div><figcaption><span>Under review</span><strong id="candidate-caption"></strong></figcaption></figure>
+</div>
+<div id="blend" hidden><label for="opacity">Reference opacity</label><input type="range" min="0" max="100" value="50" id="opacity"><output for="opacity" id="percent">50%</output></div>
+<div class="ref-picker"><label for="reference">Compare against</label><select id="reference"><option value="">Choose an enrolled edition</option></select></div>
+</div>
+<section class="record"><div class="section-head"><h2>Version record</h2></div>
+<dl><dt>Review status</dt><dd><span id="status" class="status"></span></dd><dt>Rights declaration</dt><dd id="rights"></dd><dt>Effective rights</dt><dd id="effective-rights"></dd><dt>Consent declaration</dt><dd id="consent"></dd><dt>Original custody</dt><dd id="custody"></dd><dt>Technical validation</dt><dd id="technical"></dd><dt>Version</dt><dd id="version"></dd><dt>SHA-256 · source bytes</dt><dd><code id="digest"></code></dd></dl>
+</section></div>
+<div class="lower"><section><div class="section-head"><h2>Review history</h2><button id="open-decision">Record decision</button></div><ol id="events"></ol></section>
+<section><div class="section-head"><h2>Source lineage</h2></div><div id="parents"></div></section></div>
+</section>
+<div id="unavailable" hidden><h2>Review unavailable</h2><p></p><button id="retry">Retry</button></div>
+</main>
+<dialog id="decision"><form id="decision-form">
+<div class="section-head"><h2>Signed decision</h2><button type="button" id="close-dialog" aria-label="Close decision">Close</button></div>
+<p class="muted">Use the single-use authorization issued for this version.</p>
+<p>Review instance <code id="audience"></code></p>
+<label for="action">Action</label><select id="action"></select>
+<label for="token">Signed authorization</label><textarea spellcheck="false" id="token" autocomplete="off" required rows="3"></textarea>
+<dl id="token-summary" aria-live="polite"></dl><p id="decision-error" role="alert"></p>
+<button type="submit" id="submit-decision" disabled>Record decision</button>
+</form></dialog>
+</body></html>

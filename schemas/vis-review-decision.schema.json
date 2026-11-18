@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Private VIS decision claims v1",
+  "type": "object",
+  "properties": {
+    "kid": {
+      "type": "string",
+      "minLength": 1
+    },
+    "audience": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant": {
+      "type": "string",
+      "minLength": 1
+    },
+    "actor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "comment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nonce": {
+      "type": "string",
+      "minLength": 1
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority_revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reference_asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reference_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "previous_asset_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "previous_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scanner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1
+    },
+    "receipt_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authorization_nonce": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reference_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "previous_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "iat": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "exp": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "occurred_at": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "valid_until": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "protocol": {
+      "const": "vis.review/1"
+    },
+    "action": {
+      "enum": [
+        "comment",
+        "critique",
+        "clear_rights",
+        "verify_scan",
+        "revoke_rights",
+        "approve_asset",
+        "approve_identity",
+        "approve_canon",
+        "replace_canonical",
+        "publish",
+        "publication_receipt",
+        "archive",
+        "delete",
+        "recover"
+      ]
+    },
+    "destination": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "rights": {
+      "enum": [
+        "owned",
+        "generated-owned",
+        "licensed"
+      ]
+    },
+    "consent": {
+      "enum": [
+        "granted",
+        "not-required"
+      ]
+    },
+    "scan_result": {
+      "const": "clean"
+    },
+    "identity_usage": {
+      "enum": [
+        "none",
+        "brand_mark",
+        "character"
+      ]
+    }
+  },
+  "required": [
+    "protocol",
+    "audience",
+    "tenant",
+    "kid",
+    "actor",
+    "asset_id",
+    "version",
+    "sha256",
+    "revision",
+    "action",
+    "destination",
+    "comment",
+    "iat",
+    "exp",
+    "nonce"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "clear_rights"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "rights",
+          "consent",
+          "evidence_ref",
+          "valid_until"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "verify_scan"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "scanner",
+          "scan_result",
+          "evidence_ref",
+          "valid_until"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "approve_asset"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "identity_usage"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "publication_receipt"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "occurred_at",
+          "provider",
+          "receipt_ref",
+          "authorization_nonce"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "approve_identity"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "subject",
+          "authority_source",
+          "authority_revision",
+          "reference_asset_id",
+          "reference_version",
+          "reference_sha256"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "approve_canon"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "subject",
+          "authority_source",
+          "authority_revision",
+          "reference_asset_id",
+          "reference_version",
+          "reference_sha256"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "replace_canonical"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "subject",
+          "authority_source",
+          "authority_revision",
+          "reference_asset_id",
+          "reference_version",
+          "reference_sha256",
+          "previous_asset_id",
+          "previous_version",
+          "previous_sha256"
+        ]
+      }
+    }
+  ]
+}

@@ -109,6 +109,7 @@ function getAllFlags(name) {
 }
 
 const VALUE_FLAGS = new Set([
+  '--tenant', '--actor', '--store', '--manifest', '--original', '--package-dir', '--private-key', '--public-key',
   '--root', '-r', '--media-root', '--asset-root', '--usage-root', '--output', '-o', '--limit',
   '--tag', '--mood', '--category', '--media-type', '--asset', '--asset-id',
   '--path', '--uri', '--assets', '--ids', '--platform', '--url', '--route', '--caption', '--campaign',
@@ -1370,6 +1371,34 @@ async function cmdLibrary() {
   const execute = hasFlag('--execute')
   const limit = getFlag('--limit')
 
+  if (['review-init','review-intake','review-export','review-import','review-storage-audit'].includes(sub)) {
+    if (sub !== 'review-storage-audit' && !execute) throw new Error('Review operations require --execute and an explicit --tenant')
+    const {initializeReviewWorkspace, ingestReviewAsset, exportReviewAsset, importReviewAsset,
+      readReviewInput, readReviewManifest, auditReviewStorage} = await import('../core/vis-review-intake.mjs')
+    const required = name => {
+      const value = getFlag(name)
+      if (!value || value.startsWith('--')) throw new Error('Missing ' + name)
+      return value
+    }
+    const tenant = required('--tenant')
+    const db = openLibraryDatabase(root,config)
+    try {
+      if (sub === 'review-storage-audit') return printJson(auditReviewStorage(db,{tenant,storageDir:required('--store')}))
+      if (sub === 'review-init') {
+        initializeReviewWorkspace(db,tenant)
+        return printJson({workspace:tenant,initialized:true})
+      }
+      if (sub === 'review-intake') {
+        return printJson(await ingestReviewAsset(db,{root,tenant,actor:required('--actor'),storageDir:required('--store'),
+          manifest:readReviewManifest(required('--manifest')),bytes:readReviewInput(required('--original'))}))
+      }
+      const packageDir = required('--package-dir')
+      if (sub === 'review-import') return printJson(await importReviewAsset(db,{root,tenant,actor:required('--actor'),
+        storageDir:required('--store'),packageDir,publicKey:fs.readFileSync(required('--public-key'))}))
+      return printJson(exportReviewAsset(db,{tenant,packageDir,assetId:required('--asset'),
+        privateKey:fs.readFileSync(required('--private-key'))}))
+    } finally { db.close() }
+  }
   if (sub === 'ingest') {
     const result = await ingestLibrary({ root, execute, limit: limit ? Number(limit) : undefined })
     if (hasFlag('--json')) return printJson(result)
@@ -1676,6 +1705,11 @@ Commands:
   vis upload-ipfs [--execute]      Pin NFT collections and ERC-721 metadata to IPFS
   vis storage-stats                Print multi-cloud sync status and breakdown
   vis optimize                     Dry-run oversized asset report
+  vis library review-storage-audit --tenant ID --store DIR
+  vis library review-init --tenant ID --execute
+  vis library review-intake --tenant ID --store DIR --actor ACTOR --manifest JSON --original FILE --execute
+  vis library review-export --tenant ID --asset ID --package-dir DIR --private-key PEM --execute
+  vis library review-import --tenant ID --store DIR --actor ACTOR --package-dir DIR --public-key PEM --execute
   vis library <command>            Watched library: ingest, watch, list, propose, decide, serve
   vis doctor                       Check local install, graph, dashboard, MCP info
   vis mcp-info                     Print MCP install info

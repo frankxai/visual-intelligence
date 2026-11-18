@@ -30,6 +30,11 @@ import {
   listPlacementFrames,
 } from '../core/placement-studio.mjs'
 
+import { readReviewRendition } from '../core/vis-review-intake.mjs'
+import {
+  applyReviewDecision, assertReviewTenant, initializeReviewLedger, listReviewQueue, loadReviewContext, readReview,
+} from '../core/vis-review.mjs'
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const THUMBHASH_JS = path.resolve(__dirname, '..', 'node_modules', 'thumbhash', 'thumbhash.js')
 const RIGHTS = ['unknown', 'needs-review', 'owned', 'generated-owned', 'licensed', 'blocked']
@@ -40,12 +45,33 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
   const operator = options.operator || 'operator-screen'
   const renditionsDir = expandPathTokens(libraryConfig(config).renditionsDir)
 
+  const reviewEnabled = process.env.VIS_REVIEW_WORKBENCH === '1'
+  if (!reviewEnabled && db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='vis_review_workspace'").get()
+      && db.prepare('SELECT 1 FROM vis_review_workspace LIMIT 1').get()) {
+    db.close()
+    throw new Error('This database requires the tenant-bound review workbench')
+  }
+  let reviewContext
+  if (reviewEnabled) {
+    try {
+      reviewContext = options.reviewContext ?? loadReviewContext(process.env.VIS_REVIEW_CONFIG)
+      assertReviewTenant(db, reviewContext)
+      initializeReviewLedger(db, reviewContext)
+    } catch (error) {
+      db.close()
+      throw error
+    }
+  }
+
   const server = http.createServer(async (req, res) => {
     try {
       if (!loopbackHost(req)) return json(res, 403, { error: 'host not allowed' })
       const url = new URL(req.url, 'http://local')
       const parts = url.pathname.split('/').filter(Boolean)
 
+      if (reviewEnabled) {
+        return await handleReview({ req, res, url, parts, db, root, reviewContext })
+      }
       if (req.method === 'GET' && url.pathname === '/') return send(res, 200, renderHtml(), 'text/html; charset=utf-8')
       if (req.method === 'GET' && url.pathname === '/vendor/thumbhash.js') {
         if (!fs.existsSync(THUMBHASH_JS)) return json(res, 404, { error: 'thumbhash not installed' })
@@ -121,6 +147,53 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
   return server
 }
 
+// The tenant-bound operator uses an allowlist. The legacy operator's mutation
+// routes never receive requests while the workbench is enabled.
+const reviewFiles = new Map([
+  ['/', ['vis-review.html', 'text/html; charset=utf-8']],
+  ['/review', ['vis-review.html', 'text/html; charset=utf-8']],
+  ['/review/workbench.css', ['vis-review.css', 'text/css; charset=utf-8']],
+  ['/review/workbench.js', ['vis-review.js', 'text/javascript; charset=utf-8']],
+])
+
+async function handleReview({ req, res, url, parts, db, root, reviewContext }) {
+  res.setHeader('content-security-policy', "default-src 'none'; img-src 'self' data:; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+  res.setHeader('referrer-policy', 'no-referrer')
+  res.setHeader('cross-origin-resource-policy', 'same-origin')
+  if (req.method === 'GET') {
+    const file = reviewFiles.get(url.pathname)
+    if (file) return sendFile(res, path.join(__dirname, file[0]), file[1], 'no-store')
+    if (url.pathname === '/api/library') {
+      return json(res, 200, listReviewQueue(db, reviewContext, {
+        limit: url.searchParams.get('limit') ?? 100, offset: url.searchParams.get('offset') ?? 0,
+      }))
+    }
+    const details = parts.length === 3 && parts[0] === 'api' && parts[1] === 'review'
+    const image = parts.length === 3 && parts[0] === 'r' && ['thumb', 'preview'].includes(parts[2])
+    if (details || image) {
+      const id = decodeURIComponent(details ? parts[2] : parts[1])
+      try {
+        if (details) return json(res, 200, readReview(db, reviewContext, id))
+        const bytes = readReviewRendition(db, {tenant:reviewContext.tenant,assetId:id,kind:parts[2],sha256:url.searchParams.get('sha'),root})
+        return bytes ? send(res, 200, bytes, 'image/webp') : json(res, 404, {error:'Verified rendition unavailable'})
+      } catch { return json(res, 404, {error:'Enrolled edition or verified rendition unavailable'}) }
+    }
+  }
+  if (req.method === 'POST' && parts.length === 4 && parts[0] === 'api' && parts[1] === 'review' && parts[3] === 'decision') {
+    if (req.headers.origin !== 'http://' + req.headers.host ||
+        req.headers['content-type']?.split(';')[0].trim() !== 'application/json') {
+      return json(res, 403, {error:'Same-origin JSON decision required'})
+    }
+    try {
+      const body = await readJson(req)
+      return json(res, 200, applyReviewDecision(db, reviewContext, decodeURIComponent(parts[2]), body))
+    } catch {
+      return json(res, 403, {error:'Decision refused. Check signature, current revision, scope, and prerequisites.'})
+    }
+  }
+  return json(res, 404, {error:'Route unavailable in review mode'})
+}
+
 const LOOPBACK_BIND = new Set(['127.0.0.1', 'localhost', '::1'])
 
 export function serveLibrary(root, options = {}) {
@@ -157,6 +230,7 @@ function readJson(req) {
   return new Promise((resolve, reject) => {
     let raw = ''
     req.on('data', chunk => {
+      if (raw.length > 64 * 1024) return
       raw += chunk
       if (raw.length > 64 * 1024) reject(new Error('body too large'))
     })

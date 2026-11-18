@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:vis:review-intake:v1",
+  "title": "VIS verified original intake",
+  "description": "Input to vis library review-intake. All rights, maker and runtime metadata are source declarations. The authenticated caller and customer-owned store are supplied independently. Null cost means unknown.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "source_uri",
+    "source_version",
+    "title",
+    "brand",
+    "maker",
+    "sha256",
+    "mime_type"
+  ],
+  "properties": {
+    "kind": {
+      "enum": [
+        "chatgpt-image",
+        "figma-export",
+        "creator-media",
+        "diagram",
+        "video",
+        "original"
+      ]
+    },
+    "source_uri": {
+      "type": "string",
+      "pattern": "^(?:https:|urn:)",
+      "maxLength": 4096,
+      "description": "Durable source pointer. Expiring links and credential-bearing URLs are rejected."
+    },
+    "source_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "brand": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "maker": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "mime_type": {
+      "enum": [
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/gif",
+        "image/svg+xml",
+        "video/mp4",
+        "video/webm",
+        "audio/wav",
+        "audio/flac",
+        "application/pdf"
+      ]
+    },
+    "rights": {
+      "enum": [
+        "unknown",
+        "needs-review",
+        "owned",
+        "generated-owned",
+        "licensed",
+        "blocked"
+      ]
+    },
+    "owner": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "licence_ref": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "consent": {
+      "enum": [
+        "unknown",
+        "granted",
+        "not-required",
+        "denied"
+      ]
+    },
+    "consent_ref": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "rights_expires_at": {
+      "type": [
+        "null",
+        "string"
+      ],
+      "format": "date-time"
+    },
+    "parents": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "asset_id",
+          "version",
+          "sha256"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requested_model": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolved_model": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prompt_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cost_micros": {
+          "type": [
+            "null",
+            "integer"
+          ],
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "currency": {
+          "type": [
+            "null",
+            "string"
+          ],
+          "pattern": "^[A-Z]{3}$"
+        },
+        "input_tokens": {
+          "type": [
+            "null",
+            "integer"
+          ],
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "output_tokens": {
+          "type": [
+            "null",
+            "integer"
+          ],
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    }
+  }
+}
