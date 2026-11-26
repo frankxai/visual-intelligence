@@ -1,6 +1,6 @@
 ---
 name: visual-canon-retrieval
-description: Retrieve exact owned character art before creating cross-platform infographics or Mini Me stories.
+description: Retrieve historical brand marks, identity families and exact owned character art before producing new visuals.
 ---
 
 # Visual canon retrieval — ChatGPT / Perplexity / Codex adapter
@@ -10,6 +10,12 @@ Use the existing VIS catalog, not a new character database. This is a portable w
 ## Portfolio experience review
 
 Load the [Frontier Experience Constitution](https://github.com/Starlight-Intelligence/starlight-design-intelligence/blob/e25fab4c5a0dac2ea8c7b91e9397972f5af4b454/portfolio/frontier-experience-constitution.md) when this adapter runs outside a repository checkout. Attach the resolved source revision to the existing retrieval receipt.
+
+## Brand identity recovery
+
+For established marks, retrieve VIS asset/version records and original bytes before a new treatment. Use the [local archive comparator](../../scripts/search-brand-archive.py) on authorized raster roots. Supply the reviewed ONNX Model Zoo SqueezeNet 1.1-7 file and its pinned SHA-256, plus an output path; `--vectors` persists numeric descriptors and `--ocr` enables local Tesseract. Python dependencies are Pillow, NumPy and OpenCV DNN. Keep the report and artwork private. Byte and decoded-pixel matches are measured relations. Nearest neighbors require a visual review to distinguish crop/export, material variation, shared family and separate concept. Rerun visual checks on native-size artwork and on reduced proofs.
+
+Bind each retained asset to its source, rights and independent founder decision. Use the owning logo-system reference checker before generation. For identity-only work, continue with the owning brand sources; the character-specific checklist below applies to character work.
 
 ## Before producing anything
 
