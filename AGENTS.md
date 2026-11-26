@@ -7,6 +7,10 @@
 
 `visual-intelligence` (VIS) is the **asset record** for the FrankX / Arcanea / GenCreator estate. Every file is known by its hash, keeps rights at `unknown` until a person sets them, and records where it was placed. Agents search and propose. People set rights and publish.
 
+## Portfolio experience review
+
+For a review screen or proposed placement, load the [Frontier Experience Constitution](https://github.com/Starlight-Intelligence/starlight-design-intelligence/blob/e25fab4c5a0dac2ea8c7b91e9397972f5af4b454/portfolio/frontier-experience-constitution.md). Carry the reviewed revision, intended use, exact asset digest and the existing VIS rights record into the placement evidence. A matching thumbnail or a successful visual check grants no publication rights.
+
 ## Who works here
 
 Several agents on two machines work in this repo **at the same time**:
