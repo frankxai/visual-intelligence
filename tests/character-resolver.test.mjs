@@ -224,3 +224,19 @@ test('rejected lineage match handles underscore-joined and file-name forms', asy
   assert.deepEqual(r.rejected_lineages.map(e => e.sha256).sort(), names.map(n => sha('bad:' + n)).sort())
   assert.deepEqual(r.positive_references.map(e => e.sha256).sort(), ok.map(n => sha('ok:' + n)).sort())
 })
+
+test('rejected lineage: intended forms match, near-miss words do not', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-m-'))
+  const p = join(dir, 'm.json')
+  const bad = ['Arcanea Fire v1', 'Arcanea Fire v2', 'Arcanea Unity v1', 'Arcanea Unity V2', 'Arcanea Fire-', 'Arcanea_Fire_v1', 'Arcanea Fire']
+  const ok = ['Arcanea Firefly', 'Arcanea Fireside', 'Arcanea Unityx', 'Arcanea Guardian']
+  const row = o => ({ identity_name: 'Test Ox', stable_id: 'test.char.ox', drive_file_id: 'D', status: 'original', ...o })
+  writeFileSync(p, JSON.stringify([
+    ...bad.map(n => row({ family: n, sha256: sha('bad:' + n) })),
+    ...ok.map(n => row({ family: n, sha256: sha('ok:' + n) })),
+    row({ family: 'Arcanea', edition: 'Unity v1', sha256: sha('bad:joined') }),
+  ]))
+  const r = await resolveCharacter({ name: 'Test Ox' }, { manifestPath: p, cache: { dir } })
+  assert.deepEqual(r.rejected_lineages.map(e => e.sha256).sort(), [...bad.map(n => sha('bad:' + n)), sha('bad:joined')].sort())
+  assert.deepEqual(r.positive_references.map(e => e.sha256).sort(), ok.map(n => sha('ok:' + n)).sort())
+})
