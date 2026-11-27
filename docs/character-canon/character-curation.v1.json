@@ -1,9 +1,9 @@
 {
   "schema_version": "starlight.character-curation.v1",
-  "decision_date": "2026-11-12",
-  "decision_kind": "working_editorial_standard",
+  "decision_date": "2026-11-17",
+  "decision_kind": "working_editorial_recommendations_not_canon_approval",
   "source_approval_unchanged": true,
-  "principle": "Standardize identity and useful role first. Use scenes to explain work. Expand the cast only when a distinct role needs a distinct identity.",
+  "principle": "Recover the full existing cast before inventing identities. Keep source identity, proposed role, edition, rights, runtime binding and live placement as independent facts.",
   "primary_specialists": [
     {
       "identity": "Moss",
@@ -11,7 +11,8 @@
       "role": "Memory and context",
       "surface": "Memory Studio, context packets, knowledge curation",
       "why": "The inhabited shell turns preservation into a distinctive physical idea; calm posture suits patient guidance.",
-      "avoid": "Do not make the terrarium a tiny status icon or add human arms. Do not substitute the larger lookdev tortoise for this exact identity."
+      "avoid": "Do not make the terrarium a tiny status icon or add human arms. Do not substitute the larger lookdev tortoise for this exact identity.",
+      "role_status": "proposed_not_approved"
     },
     {
       "identity": "Luma",
@@ -19,7 +20,8 @@
       "role": "Design and creation",
       "surface": "Design studio, creative kits, critique and prototypes",
       "why": "Orchid silhouette, rose ceramic and a purposeful material study connect beauty to a visible task.",
-      "avoid": "Keep her optional and quiet in forms. Do not make every botanical worker another top-level mascot."
+      "avoid": "Keep her optional and quiet in forms. Do not make every botanical worker another top-level mascot.",
+      "role_status": "proposed_not_approved"
     },
     {
       "identity": "Sable",
@@ -27,7 +29,8 @@
       "role": "Research and sources",
       "surface": "Research briefs, source maps, evidence comparison",
       "why": "The fox silhouette and amber optical materials communicate curiosity; an archive gives the action context.",
-      "avoid": "Never let cunning imply certainty. Avoid unlabeled generated citations or assigning Sable to a model provider."
+      "avoid": "Never let cunning imply certainty. Avoid unlabeled generated citations or assigning Sable to a model provider.",
+      "role_status": "proposed_not_approved"
     },
     {
       "identity": "Morel",
@@ -35,7 +38,8 @@
       "role": "Capture and retrieval",
       "surface": "Notes, personal knowledge kits, capture onboarding",
       "why": "The compact cap, paper-fiber body and notebook action make a friendly, memorable capture worker.",
-      "avoid": "Keep him distinct from Moss: Morel captures the note; Moss curates accumulated context. Do not make retention authority part of the personality."
+      "avoid": "Keep him distinct from Moss: Morel captures the note; Moss curates accumulated context. Do not make retention authority part of the personality.",
+      "role_status": "proposed_not_approved"
     }
   ],
   "founder_editorial_cast": [
@@ -2235,7 +2239,6 @@
   ],
   "reference_selection_contract": {
     "default_editorial_pool": [
-      "working_identity_default",
       "established_identity_anchor"
     ],
     "select_by": [
@@ -2252,6 +2255,15 @@
       "brand_separated_reference"
     ],
     "exception_rule": "Use outside the default pool only for an explicit relevant brief and preserve its source/review state.",
-    "public_release": "Requires the separate source rights and exact-version publication decision; working selection is not release approval."
-  }
+    "public_release": "Requires the separate source rights and exact-version publication decision; working selection is not release approval.",
+    "proposal_pool": [
+      "working_identity_default",
+      "specialist_secondary",
+      "family_direction",
+      "preferred_scene"
+    ],
+    "proposal_rule": "These historical bucket names describe editorial recommendations, not selected identities or founder-approved roles. Show the full recovered specialist family in review; require exact-version selection before production use."
+  },
+  "role_assignment_status": "editorial_proposal_not_founder_approved",
+  "verification_scope": "Historical hashes and Figma placements retained from 12 November receipt; original bytes not rehashed on 17 November."
 }

@@ -1,8 +1,8 @@
-# Character curation — Working standard, 12 November 2026
+# Character curation — Working recommendations, 17 November 2026
 
-Standardize around a small memorable cast with clear work. The internal editorial default is Moss for memory, Luma for design, Sable for research and Morel for capture. Keep Mini Frank / Nilo / Brio / Riff as the founder/editorial cast. Use the porcelain/navy three-arc Queen study as the working coordination direction; it does not replace the specialists or select a new public master.
+Recover the full existing cast before selecting a surface-specific ensemble. Moss for memory, Luma for design, Sable for research and Morel for capture are editorial proposals, not founder-approved role assignments. The historical `working_identity_default` bucket must not be interpreted as canon approval. Keep Mini Frank / Nilo / Brio / Riff as the founder/editorial cast. Use the porcelain/navy three-arc Queen study as the working coordination direction; it does not replace the specialists or select a new public master.
 
-These are design decisions for future briefs and reference selection. Existing identity authority, rights and publication states are unchanged. No audience study, brand-recognition test or commercial performance result is claimed.
+These are recommendations for future briefs and reference selection. Existing identity authority, rights and publication states are unchanged. No audience study, brand-recognition test or commercial performance result is claimed.
 
 ## Exact identity standards
 
@@ -91,3 +91,13 @@ Every one of the 121 recovered assets has a source hash, Figma image node, edito
 | retypeset_required | 10 |
 | development_reference | 10 |
 | craft_reference | 3 |
+
+## Complete cast and central review
+
+The four proposed leads do not exhaust the estate. The original specialist sources also include Aurel, Ibis, Tor, Cedar, Nacre, Pico, Spiral, Glim, Folio, Tess, Bracken, Ember, Quill, Reef, Sol and Chord. Review all twenty through their existing `SL-C` asset IDs, preserving original portraits and V2 editions separately. Names inferred from those IDs are source labels, not new naming decisions.
+
+The same review surface includes Mini Frank/Nilo/Brio/Riff, Queen folios, the thirty Living Collective scenes, source studies, three material-family boards, held crew editions, look development, and brand-separated Akashi/Kage/Mira references. Vendor artwork remains a separate comparison group.
+
+Other remembered names (including Omega, Fern, Pebble, Delta, Reed, Vesper, Enoki and Chanterelle) are a recovery queue until an exact source/version is linked. Do not alias them to the twenty specialists or infer identity from an ensemble scene. Preserve this uncertainty rather than inventing new asset IDs or thumbnails.
+
+See [the central-surface evolution plan](VISUAL_TRUTHS_AND_SITE_EVOLUTION.md). Historical image hashes and Figma placements are retained; no master-byte re-verification or new identity approval is claimed in this update.
