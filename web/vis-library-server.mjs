@@ -7,6 +7,7 @@
  * the publish gate is closed; placements are recorded through the CLI (Phase 5).
  */
 
+import { identityPreview, resolveVisualIdentity } from '../core/visual-identity.mjs'
 import fs from 'fs'
 import http from 'http'
 import path from 'path'
@@ -87,6 +88,30 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
         if (req.method !== 'GET' || parts.length !== 3 || parts[0] !== 'r') return json(res,404,{error:'Review route not found'})
       }
 
+      if (req.method === 'GET' && url.pathname === '/identity-decisions') {
+        res.setHeader('Referrer-Policy', 'no-referrer')
+        res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; script-src 'self'; connect-src 'self' https://*.supabase.co; img-src blob:; form-action 'none'; frame-ancestors 'none'; base-uri 'none'")
+        return sendFile(res, path.join(__dirname,'identity-decisions.html'), 'text/html; charset=utf-8','no-store')
+      }
+      if (req.method === 'GET' && url.pathname === '/identity-decisions.mjs') {
+        return sendFile(res, path.join(__dirname,'identity-decisions.mjs'), 'text/javascript; charset=utf-8','no-store')
+      }
+      if (req.method === 'GET' && url.pathname === '/api/identity/reviewer-config') {
+        const project = process.env.VIS_REVIEW_PROJECT_URL || ''
+        const key = process.env.VIS_REVIEW_PUBLISHABLE_KEY || ''
+        if (!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(project) || !/^sb_publishable_[a-zA-Z0-9_-]+$/.test(key)) {
+          return json(res,409,{status:'unconfigured'})
+        }
+        return json(res,200,{project,key})
+      }
+      if (req.method === 'GET' && url.pathname === '/identities') {
+        return sendFile(res, path.join(__dirname, 'identity-review.html'), 'text/html; charset=utf-8', 'no-store')
+      }
+      if (req.method === 'GET' && url.pathname === '/api/identity/resolve') {
+        const request = Object.fromEntries(url.searchParams)
+        const result = await resolveVisualIdentity(request)
+        return json(res, result.status === 'resolved' ? 200 : 409, result)
+      }
       if (req.method === 'GET' && url.pathname === '/') return send(res, 200, renderHtml(), 'text/html; charset=utf-8')
       if (req.method === 'GET' && url.pathname === '/vendor/thumbhash.js') {
         if (!fs.existsSync(THUMBHASH_JS)) return json(res, 404, { error: 'thumbhash not installed' })
@@ -127,6 +152,12 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
       if (req.method === 'POST') {
         if (req.headers['x-vis-operator'] !== '1' || !sameOrigin(req)) return json(res, 403, { error: 'operator header and same origin required' })
         const body = await readJson(req)
+        if (url.pathname === '/api/identity/preview') {
+          const bytes = await identityPreview(body)
+          if (!bytes) return json(res, 409, {status:'unresolved', reason:'verified_preview_unavailable'})
+          res.setHeader('Cross-Origin-Resource-Policy', 'same-origin')
+          return send(res, 200, bytes, 'image/webp')
+        }
         if (url.pathname === '/api/placement-compare') {
           return json(res, 200, compareAssetPlacements(db, {
             frameId: body.frameId || body.frame || 'frankx-hero',
@@ -311,6 +342,7 @@ ul.events{list-style:none;padding:0;margin:0;font-size:12px;color:var(--soft)}
     <button role="tab" id="tab-queue" aria-selected="false" aria-controls="view-queue">Proposals <span id="qcount"></span></button>
     <button role="tab" id="tab-studio" aria-selected="false" aria-controls="view-studio">Placement Studio <span id="scount"></span></button>
   </nav>
+  <a href="/identities" style="color:var(--accent)">Identity review</a>
   <label class="sr" for="q">Search</label>
   <input type="search" id="q" placeholder="Search path, title, tag">
   <label class="sr" for="rights">Rights</label>
@@ -511,7 +543,7 @@ async function renderStudio(){
       + (compareSet.size ? '<button id="clear-compare">Clear selection (' + compareSet.size + ')</button>' : '<span style="font-size:12px;color:var(--muted)">Showing top candidates (press C on any asset to pin)</span>')
       + '</div>'
     if (!cmp.candidates.length) {
-      view.innerHTML = bar + '<p class="state">No candidate assets available to compare yet.</p>'
+      view.innerHTML = bar + '<p class="state">' + (cmp.not_found.length ? 'Requested asset unresolved: ' + esc(cmp.not_found.join(', ')) : 'No candidate assets available to compare yet.') + '</p>'
     } else {
       const cards = cmp.candidates.map(c => {
         const isWinner = cmp.winner && cmp.winner.asset_id === c.asset_id
