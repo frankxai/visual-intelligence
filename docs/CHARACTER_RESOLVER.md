@@ -6,7 +6,7 @@ Read-only resolver from a character name or alias to an immutable identity ID, w
 
 | Variable | Purpose |
 | --- | --- |
-| `VIS_CHARACTER_MANIFEST` | Path to the authorised harvest manifest (JSON array, `{"rows":[...]}` or JSONL). Never committed. |
+| `VIS_CHARACTER_MANIFEST` | Path to the authorised harvest manifest (JSON array, an object with `rows`, `records` or `items`, or JSONL; the harvest manifest uses `items` beside metadata keys). Never committed. |
 | `VIS_CHARACTER_CACHE` | Optional directory for the content-addressed cache (`<aa>/<sha256>`). `core/character-cache.mjs` `ensureCached` fetches only on a miss and verifies the hash before storing. |
 
 Manifest fields: `identity_name, aliases, stable_id, edition, file_name, sha256, width, height, drive_file_id, status (original|proposal|rejected|not accessible), family, depicted_characters, duplicate_sha256_group, source_type`. Optional locators `figma_node_id` and `r2_key` are passed through when present. The repo ships only a synthetic fixture, `tests/fixtures/character-manifest.synthetic.json`.

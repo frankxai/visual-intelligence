@@ -297,3 +297,35 @@ test('lineage rejected: family Arcanea + edition Fire', () => lineageCheck({ fam
 for (const n of ['Arcanea Firefly', 'Arcanea Fireside', 'Arcanea Unityx', 'Unity v10', 'Unity v1a', 'Arcanea Guardian']) {
   test(`lineage stays positive: ${n}`, () => lineageCheck({ family: n }, false))
 }
+
+test('loads a harvest-shaped manifest: metadata keys plus pretty-printed items', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-m-'))
+  const p = join(dir, 'harvest.json')
+  const row = o => ({ identity_name: 'Test Fox', stable_id: 'test.char.fox', edition: 'v1', file_name: 'f.png', width: 8, height: 8, drive_file_id: 'SYN', status: 'original', family: 'Test Family', duplicate_sha256_group: '', source_type: 'synthetic', ...o })
+  writeFileSync(p, JSON.stringify({
+    project: 'synthetic-harvest', state: 'draft', interpretation: 'synthetic only', identity_naming_warning: 'synthetic',
+    items: [
+      row({ aliases: 'Foxy;Tfx', depicted_characters: 'Test Fox', sha256: sha('i1') }),
+      row({ edition: 'v2', aliases: ['Foxy', 'Reynard'], depicted_characters: 'Test Fox; Test Owl', sha256: sha('i2') }),
+      row({ edition: 'v3', aliases: '', depicted_characters: '', sha256: sha('i3') }),
+      row({ edition: 'v4', aliases: [], sha256: sha('i4') }),
+    ],
+  }, null, 2) + '\n')
+  const r = await resolveCharacter({ name: 'Reynard' }, { manifestPath: p, cache: { dir } })
+  assert.equal(r.status, 'resolved'); assert.equal(r.identity_id, 'test.char.fox')
+  assert.equal(r.editions.length, 4)
+  assert.deepEqual(r.editions[1].depicted_characters, ['Test Fox', 'Test Owl'])
+  assert.deepEqual(r.aliases.map(a => a.alias).sort(), ['Foxy', 'Reynard', 'Tfx'])
+})
+
+test('manifest fails closed with a named reason when no row array exists or content is invalid', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-m-'))
+  const write = (n, t) => { const p = join(dir, n); writeFileSync(p, t); return p }
+  const run = p => resolveCharacter({ name: 'Test Fox' }, { manifestPath: p, cache: { dir } })
+  assert.equal((await run(write('a.json', JSON.stringify({ project: 'x', items: { not: 'array' } })))).reason, 'manifest_rows_missing')
+  assert.equal((await run(write('b.json', '{"items": [1, 2]}'))).reason, 'manifest_invalid')
+  assert.equal((await run(write('c.json', '{not json'))).reason, 'manifest_invalid')
+  const line = o => JSON.stringify({ identity_name: 'Test Fox', stable_id: 'test.char.fox', drive_file_id: 'D', status: 'original', ...o })
+  const jsonl = write('d.jsonl', line({ sha256: sha('j') }) + '\n' + line({ edition: 'v2', sha256: sha('k') }) + '\n')
+  assert.equal((await run(jsonl)).status, 'resolved')
+})

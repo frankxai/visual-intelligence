@@ -37,16 +37,18 @@ export async function loadManifest(path = process.env.VIS_CHARACTER_MANIFEST) {
   if (!path) return { ok: false, reason: 'manifest_unavailable' }
   let text
   try { text = await readFile(path, 'utf8') } catch { return { ok: false, reason: 'manifest_unreadable' } }
-  try {
-    let rows
-    const t = text.trim()
-    if (t.startsWith('[') || t.startsWith('{') && !t.includes('\n{')) {
-      const j = JSON.parse(t)
-      rows = Array.isArray(j) ? j : j.rows ?? j.records
-    } else rows = t.split('\n').filter(Boolean).map(l => JSON.parse(l))
-    if (!Array.isArray(rows)) throw new Error('not rows')
-    return { ok: true, rows, manifest_sha256: createHash('sha256').update(text).digest('hex') }
-  } catch { return { ok: false, reason: 'manifest_invalid' } }
+  const hash = createHash('sha256').update(text).digest('hex')
+  let parsed
+  try { parsed = JSON.parse(text) } catch {
+    // Not one JSON document: accept JSONL, fail closed on any bad line.
+    try { parsed = text.split('\n').filter(l => l.trim()).map(l => JSON.parse(l)) } catch { return { ok: false, reason: 'manifest_invalid' } }
+  }
+  // Row containers, in order: bare array, then `rows`, `records`, `items` (the harvest manifest uses `items`).
+  const rows = Array.isArray(parsed) ? parsed
+    : [parsed?.rows, parsed?.records, parsed?.items].find(Array.isArray)
+  if (!rows) return { ok: false, reason: 'manifest_rows_missing' }
+  if (!rows.every(r => r && typeof r === 'object' && !Array.isArray(r))) return { ok: false, reason: 'manifest_invalid' }
+  return { ok: true, rows, manifest_sha256: hash }
 }
 
 function buildIndex(rows) {
