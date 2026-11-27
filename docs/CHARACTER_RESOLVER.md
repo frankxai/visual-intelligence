@@ -9,6 +9,14 @@ Read-only resolver from a character name or alias to an immutable identity ID, w
 | `VIS_CHARACTER_MANIFEST` | Path to the authorised harvest manifest (JSON array, an object with `rows`, `records` or `items`, or JSONL; the harvest manifest uses `items` beside metadata keys). Never committed. |
 | `VIS_CHARACTER_CACHE` | Optional directory for the content-addressed cache (`<aa>/<sha256>`). `core/character-cache.mjs` `ensureCached` fetches only on a miss and verifies the hash before storing. |
 
+Accepted manifest shapes (anything else fails closed, never guessed):
+
+1. A bare JSON array of row objects.
+2. A JSON object (pretty-printed or not) whose rows are in a top-level array under `rows`, `records` or `items`, checked in that order. Other keys (`project`, `date`, `state`, `intake_folder`, `interpretation`, and so on) are metadata and ignored. The harvest manifest uses `items`.
+3. JSONL, one row object per line, two or more rows.
+
+Failure reasons: `manifest_unavailable` (no path), `manifest_unreadable`, `manifest_invalid` (unparseable, or a row that is not an object), `manifest_rows_missing` (no known key holds an array). `aliases` and `depicted_characters` may be an array, a `;` or `|` separated string, or null or empty. A `not accessible` row may have a null `sha256`; it is reported as missing, never positive. Identity is taken from `identity_name` only, so an ensemble row (several `depicted_characters`) stays under its own identity and never changes how another name resolves. A synthetic harvest-shaped fixture is `tests/fixtures/character-manifest.harvest.synthetic.json`.
+
 Manifest fields: `identity_name, aliases, stable_id, edition, file_name, sha256, width, height, drive_file_id, status (original|proposal|rejected|not accessible), family, depicted_characters, duplicate_sha256_group, source_type`. Optional locators `figma_node_id` and `r2_key` are passed through when present. The repo ships only a synthetic fixture, `tests/fixtures/character-manifest.synthetic.json`.
 
 ## Rules

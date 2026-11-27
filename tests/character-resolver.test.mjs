@@ -329,3 +329,44 @@ test('manifest fails closed with a named reason when no row array exists or cont
   const jsonl = write('d.jsonl', line({ sha256: sha('j') }) + '\n' + line({ edition: 'v2', sha256: sha('k') }) + '\n')
   assert.equal((await run(jsonl)).status, 'resolved')
 })
+
+// Harvest-shaped fixture: metadata keys plus pretty-printed `items`; aliases and depicted_characters as arrays, strings or null.
+const HARVEST = { manifestPath: new URL('./fixtures/character-manifest.harvest.synthetic.json', import.meta.url).pathname, cache: { dir: mkdtempSync(join(tmpdir(), 'vis-char-cache-')) } }
+
+test('harvest fixture: resolves by name with positive, proposal and missing entries', async () => {
+  const r = await resolveCharacter({ name: 'Test Fox' }, HARVEST)
+  assert.equal(r.status, 'resolved'); assert.equal(r.identity_id, 'test.char.fox')
+  assert.deepEqual(r.positive_references.map(e => e.edition), ['v1'])
+  assert.deepEqual(r.proposals.map(e => e.edition), ['v2'])
+  assert.ok(r.missing_references.some(m => m.type === 'not_accessible' && m.edition === 'v3'))
+  assert.equal(r.editions.find(e => e.edition === 'v3').sha256, null)
+  assert.deepEqual(r.editions.find(e => e.edition === 'v2').depicted_characters, ['Test Fox'])
+  assert.deepEqual(r.editions.find(e => e.edition === 'v3').depicted_characters, [])
+  assert.deepEqual(r.aliases.map(a => a.alias).sort(), ['Foxy Test', 'Tfx'])
+})
+
+test('harvest fixture: resolves by alias given as array and as string', async () => {
+  const a = await resolveCharacter({ name: 'Tfx' }, HARVEST)
+  assert.equal(a.identity_id, 'test.char.fox'); assert.equal(a.matched_alias, 'Tfx')
+  const b = await resolveCharacter({ name: 'hooty test' }, HARVEST)
+  assert.equal(b.identity_id, 'test.char.owl'); assert.equal(b.identity_name, 'Test Owl')
+})
+
+test('harvest fixture: rejected lineage row is rejected, not positive', async () => {
+  const r = await resolveCharacter({ name: 'Harey' }, HARVEST)
+  assert.equal(r.status, 'resolved'); assert.equal(r.identity_id, 'test.char.hare')
+  assert.deepEqual(r.rejected_lineages.map(e => e.edition), ['Fire v1'])
+  assert.deepEqual(r.positive_references.map(e => e.edition), ['v1'])
+})
+
+test('harvest fixture: ensemble rows do not change which identity a name resolves to', async () => {
+  const fox = await resolveCharacter({ name: 'Test Fox' }, HARVEST)
+  assert.ok(!fox.editions.some(e => e.edition === 'ensemble'))
+  const owl = await resolveCharacter({ name: 'Test Owl' }, HARVEST)
+  assert.equal(owl.identity_id, 'test.char.owl')
+  const ens = owl.positive_references.find(e => e.edition === 'ensemble')
+  assert.deepEqual(ens.depicted_characters, ['Test Owl', 'Test Fox', 'Test Hare'])
+  const hare = await resolveCharacter({ name: 'Test Hare' }, HARVEST)
+  assert.ok(!hare.editions.some(e => e.edition === 'ensemble'))
+  assert.equal((await resolveCharacter({ name: 'Test Giraffe' }, HARVEST)).status, 'not_found')
+})
