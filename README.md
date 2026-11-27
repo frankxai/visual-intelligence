@@ -304,3 +304,7 @@ See [docs/OPEN_SOURCE_TECH_RADAR.md](docs/OPEN_SOURCE_TECH_RADAR.md) before abso
 - Every public asset needs rights status: `owned`, `generated-owned`, `licensed`, `unknown`, `blocked`, or `needs-review`.
 
 See [docs/SECURITY.md](docs/SECURITY.md).
+
+### Scoped asset review
+
+Open the existing library in single-customer review mode with `vis library serve --review-policy POLICY.json`. The operator can compare renditions, inspect source and placement evidence, and record externally signed, version-specific decisions. See [setup, wire contracts and staging migration](docs/review/SCOPED-REVIEW.md).

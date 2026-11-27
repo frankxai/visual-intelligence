@@ -62,6 +62,12 @@ export function createSupabaseWorkspaceCatalog(config) {
   const project = row => ({ ...row, last_seen_at:row.observed_at, preview_available:false })
   return {
     describe,
+    async identity(args,context) {
+      await describe(context)
+      const params = {...scope(context), limit:2, select:'brand,identity_id,variant,intended_use,channel,asset_id,version_id,sha256,parent_sha256,object_key,parent_object_key,reviewer,rights_basis,expires_at,parent_asset_id,parent_version_id'}
+      for (const field of ['brand','identity_id','variant','intended_use','channel']) params[field] = 'eq.' + args[field]
+      return read('vis_current_identity_use',params)
+    },
     async search(args,context) {
       const filters = { ...scope(context), select:fields, limit:(args.limit || 12) + 1, order:'observed_at.desc,asset_id.asc' }
       if (args.query?.trim()) filters.search_document = 'plfts(simple).' + args.query.trim()

@@ -1,4 +1,5 @@
 {
+  "characterSourceReview": "frank-estate",
   "imagesDir": "public/images",
   "mediaRoots": null,
   "indexPath": "data/vis.sqlite",

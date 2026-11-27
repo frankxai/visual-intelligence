@@ -307,6 +307,18 @@ function pruneMissingFiles(db, missing) {
   }
 }
 
+export function recordRenditions(db, root, entry, renditions, ts = nowIso()) {
+  for (const r of renditions) {
+    db.prepare(`
+INSERT OR IGNORE INTO asset_rendition (rendition_id, asset_id, sha256, kind, storage, path, data_text, mime_type, width, height, byte_size, created_at)
+VALUES (?, ?, ?, ?, 'local', ?, ?, ?, ?, ?, ?, ?)`).run(
+      stableId('rnd', `${entry.sha256}:${r.kind}:local`), entry.assetId, entry.sha256, r.kind,
+      r.path ? slash(path.relative(root, r.path)) : null, r.data || null, r.mime || null,
+      r.width || null, r.height || null, r.bytes || null, ts,
+    )
+  }
+}
+
 async function ingestOne(db, { root, config, lib, item, renditionsDir, runId }) {
   const entry = buildAssetEntry(item.root.path, item.root.path, item.file, config)
   if (!entry) throw new Error('not a supported media file')
@@ -319,15 +331,7 @@ async function ingestOne(db, { root, config, lib, item, renditionsDir, runId }) 
   db.exec('BEGIN')
   try {
     upsertAssetGraph(db, entry, config)
-    for (const r of renditions) {
-      db.prepare(`
-INSERT OR IGNORE INTO asset_rendition (rendition_id, asset_id, sha256, kind, storage, path, data_text, mime_type, width, height, byte_size, created_at)
-VALUES (?, ?, ?, ?, 'local', ?, ?, ?, ?, ?, ?, ?)`).run(
-        stableId('rnd', `${entry.sha256}:${r.kind}:local`), entry.assetId, entry.sha256, r.kind,
-        r.path ? slash(path.relative(root, r.path)) : null, r.data || null, r.mime || null,
-        r.width || null, r.height || null, r.bytes || null, ts,
-      )
-    }
+    recordRenditions(db, root, entry, renditions, ts)
     db.prepare(`
 INSERT INTO library_file_state (absolute_path, root_label, byte_size, mtime_ms, sha256, asset_id, seen_at)
 VALUES (?, ?, ?, ?, ?, ?, ?)

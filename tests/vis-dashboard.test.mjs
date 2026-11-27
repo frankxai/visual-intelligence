@@ -34,6 +34,15 @@ test('generates a PWA-ready dashboard shell and local media server', async () =>
     assert.ok(fs.existsSync(path.join(path.dirname(out.outputPath), 'vis-icon.svg')))
 
     const html = fs.readFileSync(out.outputPath, 'utf8')
+    assert.doesNotMatch(html, /id="visual-truths"/)
+    const configPath = path.join(root, 'vis.config.json')
+    const estateConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+    estateConfig.characterSourceReview = 'frank-estate'
+    fs.writeFileSync(configPath, JSON.stringify(estateConfig))
+    const estateOut = generateDashboard(root, { limit: 25 })
+    assert.match(fs.readFileSync(estateOut.outputPath, 'utf8'), /id="visual-truths"/)
+    delete estateConfig.characterSourceReview
+    fs.writeFileSync(configPath, JSON.stringify(estateConfig))
     assert.match(html, /rel="manifest"/)
     assert.match(html, /serviceWorker\.register/)
     assert.match(html, /__vis_media/)

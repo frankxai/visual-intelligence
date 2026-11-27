@@ -1,0 +1,1255 @@
+{
+  "schema_version": "vis.figma-projection-receipt.v1",
+  "as_of": "2026-11-12",
+  "tracking_issue": 77,
+  "figma_file_key": "m2wi20fAoCgFOKGXkJJGAm",
+  "archive_node_id": "78:90",
+  "handoff_node_id": "83:138",
+  "assets_placed": 121,
+  "character_components_filled": 34,
+  "presence_component_sets": 4,
+  "original_binaries_committed": false,
+  "vis_private_catalog_registration": "not_performed_no_authenticated_gateway_available",
+  "public_release_approval": "not_granted_by_ingestion",
+  "brand_constitution": {
+    "repository": "Starlight-Intelligence/starlight-design-intelligence",
+    "path": "brand-packs/sis/BRAND.md",
+    "observed_blob_sha": "e6397ccd99cf8ec56ba630e8ce19419a8fe89f3b"
+  },
+  "delivery": {
+    "repository": "frankxai/starlightintelligence.ai",
+    "vercel_project": "starlightintelligence-ai",
+    "vercel_project_id": "prj_ftKChFdlU15okomAnqWj7FufsEQM",
+    "production_state": "READY",
+    "production_commit": "7989bbb4350c0c56af75bcacf93504b755e47e40",
+    "production_deployment": "dpl_CzY8pHWdQtEnoLMv64hMdDLiSqvS",
+    "recent_preview_states": [
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED"
+    ],
+    "new_deployment_created": false
+  },
+  "assets": [
+    {
+      "id": "mini-frank-model",
+      "group": "Core cast and source studies",
+      "state": "approved_identity",
+      "sha256": "9a7553c440c7bf5c7a1a88a039aa42112dddf295cb29a3a0d82afdda321d5b7f",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:98",
+      "approval_inherited": false
+    },
+    {
+      "id": "mini-cast-model",
+      "group": "Core cast and source studies",
+      "state": "approved_silhouettes_working_names",
+      "sha256": "09bb733175c5f1f2f37f88698f8e56e48ca16ad8536d70eafc1408cd82b99fb5",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:103",
+      "approval_inherited": false
+    },
+    {
+      "id": "codex-native",
+      "group": "Core cast and source studies",
+      "state": "official_source",
+      "sha256": "0da8d540d1833fa40f44891e8bf369910bd7b5bf6e94f562fc9e5ee7a69cbb07",
+      "width": 80,
+      "height": 80,
+      "figma_image_node_id": "78:108",
+      "approval_inherited": false,
+      "display_rendition": {
+        "sha256": "4f4c488e050f90851ca068fdab2eef23903c607e4e1eea0febb81c410a912f98",
+        "method": "lossless PNG container conversion; decoded RGBA pixels equal to source",
+        "source_sha256": "0da8d540d1833fa40f44891e8bf369910bd7b5bf6e94f562fc9e5ee7a69cbb07"
+      }
+    },
+    {
+      "id": "github-mona-native",
+      "group": "Core cast and source studies",
+      "state": "official_source",
+      "sha256": "94f3aaed72946b10851a5534e331e76b2077a26177b0f315acbc6cb0ab4104cb",
+      "width": 1600,
+      "height": 844,
+      "figma_image_node_id": "78:113",
+      "approval_inherited": false
+    },
+    {
+      "id": "github-copilot-native",
+      "group": "Core cast and source studies",
+      "state": "official_source",
+      "sha256": "a93a701f4ce2d99129735fee1f19812646fd06d19b4ed248b89e3e83f159d31e",
+      "width": 1600,
+      "height": 844,
+      "figma_image_node_id": "78:119",
+      "approval_inherited": false
+    },
+    {
+      "id": "github-ducky-native",
+      "group": "Core cast and source studies",
+      "state": "official_source",
+      "sha256": "985614237dc5ccb47617912fba51256bbf4b7aba50ac785fe6a8e038fe64730d",
+      "width": 1600,
+      "height": 794,
+      "figma_image_node_id": "78:124",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-core",
+      "group": "Core cast and source studies",
+      "state": "concept_study_not_canon",
+      "sha256": "3d612b64a0e0f0cc5a56206f8a2898646ec8476f51a8e635a6a61d7b7eb29d1b",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:129",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-external",
+      "group": "Core cast and source studies",
+      "state": "concept_study_not_canon",
+      "sha256": "8dba36afa91969ee62dd1d441a5a97252944f89d752c00c7a903da9b4e94e345",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:134",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-brand",
+      "group": "Core cast and source studies",
+      "state": "concept_study_not_canon",
+      "sha256": "434c630de8d2544aae74fd4d671c48c7de37c852309169d906dd2d894439917d",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:140",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-story",
+      "group": "Core cast and source studies",
+      "state": "fictional_workflow_study",
+      "sha256": "6ac72b7f0cdbe8a2da643d56c1ab514594d8f3ac5b3292034f8dea59fb696c85",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:145",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-core-turnaround",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "2e3fe65f8bf501207761d1df2188299411a8c91075ab822c25b9a0a41656e947",
+      "width": 1312,
+      "height": 1199,
+      "figma_image_node_id": "78:150",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-core-acting-refined",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "d2acbd103a50200dcc1b843294aca552ccdc6d6a065d204d08f04031f650d151",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:155",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-brand-angles",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "50cfae41c4aa396f59c5b1f2f1ef446605d85cc1ad911552c003ffe8e6b1dce0",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:161",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-campaign-keyframe",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "9afab41a9effbcd34b460bed2d9b7ae9ad230635903da79423f189397de1f8c4",
+      "width": 1672,
+      "height": 941,
+      "figma_image_node_id": "78:166",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-brio-motion-plate",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "8261d92ceca33fce06bcf33d41e77491525c15ed1dcd26ccd5715b5b84dbf8c9",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:171",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-directions-starlight",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "3849f1dee36d0b4e2971b89b35bbbc6d9f8510af93e894d1fa382787e162bddf",
+      "width": 1774,
+      "height": 887,
+      "figma_image_node_id": "78:176",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-directions-arcanea",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "b50bfa8bea97fb539e09f152fda1e7b22ca94cad50d1c49b44dae51c755ab3bc",
+      "width": 1784,
+      "height": 882,
+      "figma_image_node_id": "78:182",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-directions-gencreator",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "5eb65565f18b5878ccf3d35bba1e3cd05a11320d39b7d22cc90d93b5f8b50639",
+      "width": 1774,
+      "height": 887,
+      "figma_image_node_id": "78:187",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-directions-agenticincome",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "400ab863483fac4f4a8359dab221c46eaacf4dda20f6458f4ddd2dd67e4ffb2d",
+      "width": 1774,
+      "height": 887,
+      "figma_image_node_id": "78:192",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-directions-realityarchitect",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "a9773e8990b2ba85e8591e4d36235d2baa6b3627dbbb2d9ad9b076ad7554a028",
+      "width": 1774,
+      "height": 887,
+      "figma_image_node_id": "78:197",
+      "approval_inherited": false
+    },
+    {
+      "id": "study-directions-animelegends",
+      "group": "Core cast and source studies",
+      "state": "development_study_not_canon",
+      "sha256": "a44da186aa0035cff67a5951ad15d6877ca7fdbd27d502eafd41edddb2331d13",
+      "width": 1672,
+      "height": 941,
+      "figma_image_node_id": "78:203",
+      "approval_inherited": false
+    },
+    {
+      "id": "anime-akashi-native",
+      "group": "Core cast and source studies",
+      "state": "owned_source_art",
+      "sha256": "a76d7a17e680e37ceb1576645bb8c3770e442d503a0c2b225b1f9bd1a9da90aa",
+      "width": 1672,
+      "height": 941,
+      "figma_image_node_id": "78:208",
+      "approval_inherited": false,
+      "display_rendition": {
+        "sha256": "d32a68f8bf9e34d03682fd3e680cbc9bf896457c19486f345aeb3d8286bc883c",
+        "method": "lossless PNG container conversion; decoded RGBA pixels equal to source",
+        "source_sha256": "a76d7a17e680e37ceb1576645bb8c3770e442d503a0c2b225b1f9bd1a9da90aa"
+      }
+    },
+    {
+      "id": "anime-kage-native",
+      "group": "Core cast and source studies",
+      "state": "owned_profile_application_rasterized",
+      "sha256": "f20d5ad4f0181d977549dc4ab5b0459548d8a2153b6406840a7def102bc83c7d",
+      "width": 600,
+      "height": 800,
+      "figma_image_node_id": "78:213",
+      "approval_inherited": false
+    },
+    {
+      "id": "anime-mira-native",
+      "group": "Core cast and source studies",
+      "state": "owned_profile_application_rasterized",
+      "sha256": "984ac9912eeccd779cfdc4df423aea750c5d455e9b220a285ae47002e63bea42",
+      "width": 600,
+      "height": 800,
+      "figma_image_node_id": "78:218",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-01",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "3bfbcb6cc4ad9c928f52302451f9409840c1b656945e302e70b8e0e73a220511",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:226",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-02",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "9daefbaafb3428dcf38c4c3c733c79839341c4dfd6e44a8695753016c9b5bd1d",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:231",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-03",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "023e971c2393ed32e53096af9e8be10fd96e2943ed6b148678af4848b58ca641",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:236",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-04",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "54e88efb4ee1807e0a47d0816153597f8ba19ffae2ec5a01c79f4c05455e71b4",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:241",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-05",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "d60b554bc75a71805d2aeb641841c6cf94a19941a8639d120c619fb86582c959",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:247",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-06",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "bcd089de7a8234d3b8c94a2c1bd684de0889d15efa4c40ed274eb49a5e690975",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:252",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-07",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "f658f86d88536334561ac16b583bc50a9592315a78126d986f65099c0a2fcc9e",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:257",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-08",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "e07413fd846e08a924e6dc96af81c9b3304a6e2b0ef63fd6c9e324eab383caf1",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:262",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-09",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "807878ef826f811db3e7cd23a983a3baebfddea481441f815f54944810356ec6",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:268",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-10",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "a1b9681434d5ad4be82fa085d549c2bcb216cb140fe7769922188fb216a5c202",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:273",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-11",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "df0a73b9af2db3dc5baeac36072f932c0e9b0a38d1d54694b144f9a47549857e",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:278",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-12",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "68e223f5c8a182ddeac6b6d1730c41ffbca82f21da4558ccdbd8813cd8db4ccf",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:283",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-13",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "3e6c39a00e31789174746c1cf753cde3b7bc1b9b800dc6815e4470617898af93",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:289",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-14",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "0fcf33048889768d3a85b76afb92961e96c8443f89a32ac8297ee413aea7ef2b",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:294",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-15",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "6c3d090558d96095c1e38d7c210acfb18746a049418ab5b3d6d962936b033e0f",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:299",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-16",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "9ee4e656b227c28daacb89eb2342e37b8bdc7791caed501774f8c15587bfa088",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:304",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-17",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "7c3922f35cdb7f6f9bee83d72a0a8e7d577bd0958c4a5dc027b1661478d48eaa",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:310",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-18",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "f1fc5ba6d19b172760dab03a02475ac336d47042eeafd6b9bd9edc1e95b2f5cf",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:315",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-19",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "b34d11fe422d2bc320a3463787cb35cf2525d9c3f9f445070922d0c27ecb6671",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:320",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-20",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "f5956e0455379d25556797ed48e9a933414d09c2289a7ae128f31822751f0832",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:325",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-21",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "71bb0b8fe9d78f634b8fdbdca991caa61f0a62b44f7773ce2964b108d7115b7c",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:331",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-22",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "8da7e8b01b94505792b69e0b4b749c82cb3d198c7d6850f3754c0b5f609cba1c",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:336",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-23",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "62b9c64c3f7e0260786bd6e4e55aad77558d02ad47188b22a97da705f82c704a",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:341",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-24",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "492a7afbcd4068c0742f7838da416e03310c6897a13e15c68e2683e68c4f2c74",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:346",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-25",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "5de54d188670da18dc5679d3c7eb5d9ef5a4d98520039c3a3300831c33250904",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:352",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-26",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "e26daa2817a7e72861691cba24ff5296401c3b114667a6c45fe0470df233cd21",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:357",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-27",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "3a1aad154a3b312af68d572cbe9d488bd4bf2097be429efa3cc31b2b2c3a4804",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:362",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-28",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "11d56474dce6deca9dba912c0dd6e7c006044f5345dc21d9acc37be4bef6e3ac",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:367",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-29",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "7aa2c1f7915ca6b7cc4a6bd73a16d619b318ba8f5ee506bcfb90de409de597ed",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:373",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-ECO-30",
+      "group": "Living collective",
+      "state": "proposal",
+      "sha256": "b682ae83a8d8402e3b8757dfd8d9620a3207f34a3a8f50b00b0085a09a9ed527",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:378",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-SOURCE",
+      "group": "Crew explorations",
+      "state": "reference_candidate",
+      "sha256": "fbc92639d098da7e002651c0b431869d128d523c22582a55cadcbd7bc109030f",
+      "width": 615,
+      "height": 768,
+      "figma_image_node_id": "78:386",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-001",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "6c8eb7ec2ae16aac3eea56f89755208b65b055d2d14cb356099d8d036ef70360",
+      "width": 1672,
+      "height": 941,
+      "figma_image_node_id": "78:391",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-002",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "5d18d4df3793d0c5762b09e87fa670364fc78ef12cd453420bcc16090c4ba0c5",
+      "width": 1672,
+      "height": 941,
+      "figma_image_node_id": "78:396",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-003",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "79460681d7e86380abec0c842d3c287dc5d77611f724a551567426dcf2adca87",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:401",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-004",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "6c63754d76f213d8e663ce6f1466bb0919e5e30163a783d8ce87bf714b0fccda",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:407",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-005",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "b174ced7150de8999f480593895905453c61afc89a5a7e56b228abf920ab3379",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:412",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-006",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "a1bc5144b537b9b54b5381a73812b3606f37911e224a925ae9f3f614febadcf3",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:417",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-007",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "8cc3dcc027e96bd9d83db9b7e95ddd0296d62b0958c6cd46d29312792c6cd663",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:422",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-008",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "ff0baab60a7e58cf082997fcd9f23383c1c1a78ca2a597cc34bd992e23eb3345",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:428",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-009",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "f0081869b8d319457249fc8c22693b052a5e8ab785caadb5bee08d38f7339a75",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:433",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-010",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "7cb9bf31ceebcbda0c6a523f9bfb1c6794155f09956a98cf3b46e25771f5ea64",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:438",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-011",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "b6ff9fe5b02c98c14208a72a69cc2095a501ea27c5b1dcdb260f23b814d53060",
+      "width": 1672,
+      "height": 941,
+      "figma_image_node_id": "78:443",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-012",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "3b6a22a7da14702901a3911bbc1d36c42de352d07265dfa2e6a89e7ae734360e",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:449",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-013",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "f8db2b5a05c5283bcf6fd8321d6b82a3fff1ecd527a8bc01770129da68ee2fb5",
+      "width": 1123,
+      "height": 1401,
+      "figma_image_node_id": "78:454",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-014",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "d15b11758e2d417a8a90d3924188d48859a36c976b2358797fa005860c3f4adf",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:459",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-015",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "11fb10e41fa83f569230556f99cb840d1e1824239bb13304d7b17d3e855eda9d",
+      "width": 1193,
+      "height": 1318,
+      "figma_image_node_id": "78:464",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-016",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "10b2d46d9fe1e037ae9ca8f3d7fd2dbe16fadf8708772cd21924f5cbec08d024",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:470",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-017",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "bd10194f64a6afa57045cc845496e8bb37e700cc27557d52883c3c2da26a6ca9",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:475",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-018",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "8f690eddbaa21c65ea8c4723b18ffe9b9bb42365c757365851131f1dfa678290",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:480",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-019",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "f546a8a24b8d0fda5881799ec23a5042a6357064325855380d1b2e1be84a1821",
+      "width": 1122,
+      "height": 1402,
+      "figma_image_node_id": "78:485",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-CREW-020",
+      "group": "Crew explorations",
+      "state": "needs_review",
+      "sha256": "fea80d5f3601c9b2b19634bf41c9bfb3f59d4b6f65d02b092a5fcb325681cc04",
+      "width": 1199,
+      "height": 1312,
+      "figma_image_node_id": "78:491",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-B003-prismatic-tide-original",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "89de543c1d997096b6539df833e540e91cd3183766489c77e2fd93ce67c39c85",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:499",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-B002-living-glasshouse-original",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "b9eb78fb053753ee8e006a3bca8ccd06ca6a41bc238831cf509e78e3d52daf8e",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:504",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-B001-noble-machines-original",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "884c109732af6faef5f471d99adb0e159856baa5cf9de2fdf3e7c1757e295903",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:509",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C020-chord",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "90818568b603e498bf346318692d90e5232c26a822dd488e3bdeb1525e092d1a",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:514",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C019-sol",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "44c52b12b2921c1da43cf347799463d948bb2687ec34d8b7fc07eb88ff74aa9e",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:520",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C018-reef",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "f13ad2a7df5666fb0031c30be280bc1ea7aae36301695cfaad19726c661acb7b",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:525",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C017-quill",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "1786f6a1f62d74945674c806d935abc7f436302f781063fa6c9a0d39386d45f0",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:530",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C016-ember",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "a56e233ed8f8f753a16027c2393765a127bcf79eecb2db16ddfee77691ea504d",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:535",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C015-bracken",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "7479bd6aa2e8715419d2056078cdf262638f3612586efbb7793daa99fb3f9db3",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:541",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C014-tess",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "328b06246349322feb06a36c84c2c4acadff330296c39dec1a2d6ea4ddb44f73",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:546",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C013-folio",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "9b646d47ecb76877429f8d285a063392729694112d4a47ea7a8aaf382360c81a",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:551",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C012-glim",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "8f69df25818cfe77debc0c54a54b38f2b9f1c3a33bc09ce4f1523debe5f5c26b",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:556",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C011-spiral",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "68169409df9e778314ef186bd6e5dfea3674a0643ee435edd249e353096fd0f9",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:562",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C010-pico",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "79d06d7bab47f4fddbf7fe44f4e2d1d522a084b0c2dba567804e157a31e35d56",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:567",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C009-nacre",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "a26a4b277391b4a4b0814acd29e1c0c99ffd2e86dc10042a8bb415290d64faf5",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:572",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C008-cedar",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "808da20ce6a1f7c2cb70b31db9097c0bfbf8cc01d6922aa518d8da142e2ae7dd",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:577",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C007-morel",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "607b33ca34d81d70b878a5ecc4ae7c607f3c8b88666b7df730d2c5554cd85a19",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:583",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C006-luma",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "db725eccaa4c9e4f01fab81c10acc0ca63ec31e181e66861caccd6321efd0896",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:588",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C005-moss",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "43a6f50d9976de96e4ac1c5275cdab2d3a27698921ccbdfdbea968d27d6cab1c",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:593",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C004-sable",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "06970e7f257616a2a991f9f4a2f752b5d53af25e21bed73982e6719bd11b029c",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:598",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C003-tor",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "b4442ea31b72003d03268f5e4ca2b6b5d0073bc6e31a90cfdfa8db004d1eb98b",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:604",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C002-ibis",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "49f32d6b83f1f151828c0bff2967b6e9199114ba8befc211a0bffd6b0e11753e",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:609",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C001-aurel",
+      "group": "Original character atlas",
+      "state": "proposal",
+      "sha256": "bfd980e28be83fb76298bc4a91567b9a662cd19f53546db6ed2798f251079f4e",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:614",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C010-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "4ecbd093f701d4ebdecd6cf8705128994ff7f8baf4c4dc6689631cf86a0b4da7",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:622",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C010-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "2875897100c8862ac2466661fc480158485106fc064c251f94d73e124d0f0712",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:627",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C009-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "674746290c83fdb54061d575e72f634e9c23e95c270cf0b306ef9e8ac44ed3e7",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:632",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C009-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "b17f6d37b9cfea6914fd40e824d4b2b6ec8812ef61bcbad0ebdf1697627b9cda",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:637",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C008-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "5ebbaf65c8ed2fbda3812adf478db22d3faee5d22ea581ddd83c1b46294ceef2",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:643",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C008-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "9ea0b9148677803ec9245276e24c4d302ed941b7dc5912576636fd7602574b79",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:648",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C007-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "a3ae6f8249adcdfc6cb7d1a3f7305e245e2a90c3c44ca955b7f8d9b7820e265b",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:653",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C007-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "40ed3e3721bc840c24fe55a8e96fa6c2aa182129ab84a9fa696052c7b6d257c1",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:658",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C006-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "7a254c094365ce131fa5466994917867e73afaee8a4720238bf6711fc819b2d2",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:664",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C006-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "7d8a99363bc0a96ed110ba088695b2d60b573e0fb961ed8872ea1fd00ae0abe6",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:669",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C005-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "6b9e361fb1b4f81ee284bc1ce0ed3c85d8fd116d1fc5fc1fc108b20f7a14e60f",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:674",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C005-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "52e3e333278ef22cb6a1037a800596b7711870329a18ec451525d63a01e4b313",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:679",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C004-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "53053b8101e75d0a553fc1a0abc13abb4f483c011474165bdc7e498ee4cd5777",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:685",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C004-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "393e5833a41529f57dd927fbc48da5c4b5cdad3546edea773583ebbb9225106a",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:690",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C003-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "cd53f4aa5ac37a6c975906ab3daad3b6647135fa9bf12c0512d43015ea643a8d",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:695",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C003-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "22e3e3037add7b521e9a88612eadde2f3f29ef60eea47e60c8da34d08d77e486",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:700",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C002-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "e6dc7a74cc554e0b2f86d2431bcc7222c0ea0d3c01829b5a0318cb2e85e54cf3",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:706",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C002-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "0177ab6ebc89d2154771398002b3dddcbddad3843b6abf596f7e196a9e023c31",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:711",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C001-V2-explainer",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "8ed322ee8307cba930c262d29e76b9e1a7dabc259240ed732ad3073ee62b53c1",
+      "width": 1024,
+      "height": 1536,
+      "figma_image_node_id": "78:716",
+      "approval_inherited": false
+    },
+    {
+      "id": "SL-C001-V2-turnaround",
+      "group": "Character editions",
+      "state": "draft_review_required",
+      "sha256": "67cb75e395986bf0b747106c475ba91e64936be1e905645f96bd62a631fe1e35",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "78:721",
+      "approval_inherited": false
+    },
+    {
+      "id": "lookdev.living-glasshouse-tortoise",
+      "group": "Recovered look development",
+      "state": "recovered_reference_not_identity_approval",
+      "sha256": "2be5d62f5f76cb08ba663ac3898bbf9847f801d8e0babc24f30f5e2ff7b34247",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "79:191",
+      "approval_inherited": false
+    },
+    {
+      "id": "lookdev.porcelain-maker",
+      "group": "Recovered look development",
+      "state": "recovered_reference_not_identity_approval",
+      "sha256": "475e701723e1d80e477b8f608a31e723d392cbe4d504fad210142fcf5ec1b1a1",
+      "width": 1536,
+      "height": 1024,
+      "figma_image_node_id": "79:196",
+      "approval_inherited": false
+    },
+    {
+      "id": "lookdev.gentle-guardian-expedition",
+      "group": "Recovered look development",
+      "state": "recovered_reference_not_identity_approval",
+      "sha256": "22942486847f96e9d9aed1e64e70fe3297d7c02ceca018ebddbeaf0c999e4a3e",
+      "width": 1672,
+      "height": 941,
+      "figma_image_node_id": "79:201",
+      "approval_inherited": false
+    }
+  ]
+}

@@ -9,6 +9,7 @@
  * them on for a session and off again.
  */
 
+import { identitySchema, resolveVisualIdentity } from '../core/visual-identity.mjs'
 import { createInterface } from 'readline'
 import path from 'path'
 import {
@@ -788,6 +789,7 @@ const TOOL_HANDLERS = {
   library_decide_proposal: toolLibraryDecideProposal,
   list_placement_frames: toolListPlacementFrames,
   compare_asset_placements: toolCompareAssetPlacements,
+  'visual.identity.resolve': resolveVisualIdentity,
   search_assets: toolSearchAssets,
   get_asset: toolGetAsset,
   trace_asset: toolTraceAsset,
@@ -842,6 +844,7 @@ const TOOL_HANDLERS = {
 }
 
 const TOOLS = [
+  { name: 'visual.identity.resolve', description: 'Resolve the exact owned master for a named use and channel. Unresolved blocks the workflow. Read only.', inputSchema: identitySchema },
   tool('library_search', 'Search the watched library (declared roots only). Returns hash, rights, rank, ThumbHash, location count, and open proposals. Read-only.', {
     query: stringProp('Match title, path, or tag'),
     rights: stringProp('unknown, needs-review, owned, generated-owned, licensed, blocked'),

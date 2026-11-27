@@ -1,11 +1,21 @@
 ---
 name: visual-canon-retrieval
-description: Retrieve exact owned character art before creating cross-platform infographics or Mini Me stories.
+description: Retrieve historical brand marks, identity families and exact owned character art before producing new visuals.
 ---
 
 # Visual canon retrieval — ChatGPT / Perplexity / Codex adapter
 
 Use the existing VIS catalog, not a new character database. This is a portable workflow contract, **not a deployed Perplexity integration**.
+
+## Portfolio experience review
+
+Load the [Frontier Experience Constitution](https://github.com/Starlight-Intelligence/starlight-design-intelligence/blob/e25fab4c5a0dac2ea8c7b91e9397972f5af4b454/portfolio/frontier-experience-constitution.md) when this adapter runs outside a repository checkout. Attach the resolved source revision to the existing retrieval receipt.
+
+## Brand identity recovery
+
+For established marks, retrieve VIS asset/version records and original bytes before a new treatment. Use the [local archive comparator](../../scripts/search-brand-archive.py) on authorized raster roots. Supply the reviewed ONNX Model Zoo SqueezeNet 1.1-7 file and its pinned SHA-256, plus an output path; `--vectors` persists numeric descriptors and `--ocr` enables local Tesseract. Python dependencies are Pillow, NumPy and OpenCV DNN. Keep the report and artwork private. Byte and decoded-pixel matches are measured relations. Nearest neighbors require a visual review to distinguish crop/export, material variation, shared family and separate concept. Rerun visual checks on native-size artwork and on reduced proofs.
+
+Bind each retained asset to its source, rights and independent founder decision. Use the owning logo-system reference checker before generation. For identity-only work, continue with the owning brand sources; the character-specific checklist below applies to character work.
 
 ## Before producing anything
 
@@ -29,3 +39,11 @@ If VIS or private skill is unavailable, use exact source links as a **reference 
 ```json
 {"character_id":null,"lineage":null,"source_uri":null,"source_sha256":null,"hash_verified":false,"approval":"unverified","rights":"unknown","output_uri":null,"qa_score":null,"published":false}
 ```
+
+## Required runtime preflight
+
+On the VIS host mount the reviewed estate implementation read-only and set `VIS_ESTATE_ROOT` to its absolute path. Set `VIS_FOLIO_ROOT` to the private installed character bundle for internal folio reviews. The stdio tool is `visual.identity.resolve`. For clients without this MCP connection, pipe the same request to `node bin/vis-identity.mjs`; on the operator host the same API is available at `GET /api/identity/resolve` with query parameters. ChatGPT Work, Claude Code, Gemini, Antigravity and OpenCode must record which adapter actually responded. A disconnected client returns unresolved.
+
+    {"identity_id":"custom.nilo","variant":"reference-sheet","intended_use":"identity reference","channel":"internal","required_approval":"identity"}
+
+Record identity ID and variant alongside asset ID, version, and digest. Three characters can share a sheet. Resolve each character and attach every required anchor before drafting. A new scene needs a separate human comparison against the named character. Composite the exact verified logo file in website, deck, editorial, newsletter and social layouts. Verify the actual compositor input bytes immediately before use. Retry with the saved version and measured input digest. A nonzero CLI exit, unresolved receipt or missing field blocks the identity slot. Export and public release require separate scoped decisions.

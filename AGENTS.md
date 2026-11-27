@@ -7,6 +7,10 @@
 
 `visual-intelligence` (VIS) is the **asset record** for the FrankX / Arcanea / GenCreator estate. Every file is known by its hash, keeps rights at `unknown` until a person sets them, and records where it was placed. Agents search and propose. People set rights and publish.
 
+## Portfolio experience review
+
+For a review screen or proposed placement, load the [Frontier Experience Constitution](https://github.com/Starlight-Intelligence/starlight-design-intelligence/blob/e25fab4c5a0dac2ea8c7b91e9397972f5af4b454/portfolio/frontier-experience-constitution.md). Carry the reviewed revision, intended use, exact asset digest and the existing VIS rights record into the placement evidence. A matching thumbnail or a successful visual check grants no publication rights.
+
 ## Who works here
 
 Several agents on two machines work in this repo **at the same time**:
@@ -112,6 +116,8 @@ Repo-local instructions remain authoritative when stricter.
 
 ## Exact visual canon and sprite retrieval
 
+After source retrieval, read `docs/character-canon/Character-curation-and-standards.md` and `docs/character-canon/character-curation.v1.json` for the current working editorial defaults, surface-specific uses and avoid rules. This curation layer does not change identity authority, rights or publication approval. Keep held crew editions, generated poster text and vendor references out of default production-reference selection.
+
 When a task concerns Mini Frank, Nilo, Brio, Riff, Starlight Queen, conductor folios, Codex pets, third-party mascots, character variants, Figma portraits, sprite sheets, or rejected image examples:
 
 1. Read `docs/character-canon/source-map.v1.json`, `docs/character-canon/sprite-origin-catalog.v1.json`, and `skills/visual-canon-retrieval/SKILL.md` **before** generating, importing, naming or publishing an asset.
@@ -124,3 +130,5 @@ When a task concerns Mini Frank, Nilo, Brio, Riff, Starlight Queen, conductor fo
 8. Record QA and release separately. Human gates for R2 writes, rights, external publication and deployment still apply through issue #41.
 
 Source verification and design-lineage work belongs in bounded issues and draft PRs. This hook does not install skills into unrelated repositories or external agents.
+
+For an owned identity slot, call `visual.identity.resolve` before generation, editing or delivery. Use the scoped example and fallback CLI in `skills/visual-canon-retrieval/SKILL.md`. A catalog search, previous screenshot, shared cast-sheet hash or gallery recommendation cannot authorize an individual candidate rendition.

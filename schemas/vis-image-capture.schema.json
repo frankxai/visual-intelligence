@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/vis-image-capture.schema.json",
+  "title": "VIS image source capture page",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "batch_id", "source", "mode", "captured_at", "cursor", "coverage", "items"],
+  "properties": {
+    "schema_version": { "const": "vis.image-capture.v1" },
+    "batch_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "source": { "$ref": "#/$defs/source" },
+    "mode": { "enum": ["backfill", "event"] },
+    "captured_at": { "type": "string", "format": "date-time" },
+    "cursor": {
+      "type": "object", "additionalProperties": false, "required": ["previous", "next"],
+      "properties": {
+        "previous": { "type": ["string", "null"], "minLength": 1, "maxLength": 8192 },
+        "next": { "type": ["string", "null"], "minLength": 1, "maxLength": 8192 },
+        "revision": { "type": "integer", "minimum": 0, "maximum": 9007199254740990, "default": 0, "description": "Expected committed source revision; 0 only for an unstarted scope. Each committed page increments it, including null-to-null event pages." }
+      }
+    },
+    "coverage": {
+      "type": "object", "additionalProperties": false, "required": ["exhausted", "note"],
+      "properties": {
+        "exhausted": { "type": "boolean", "description": "Only the explicitly named source scope/query is exhausted; never proof of all historical images." },
+        "note": { "type": "string", "minLength": 1, "maxLength": 4096 }
+      }
+    },
+    "items": { "type": "array", "maxItems": 250, "items": { "$ref": "#/$defs/item" } }
+  },
+  "$defs": {
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["provider", "scope"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "scope": { "type": "string", "minLength": 1, "maxLength": 1024, "description": "Opaque account/folder plus stable query scope; no credentials." }
+      }
+    },
+    "claim": {
+      "type": "object", "additionalProperties": false, "required": ["value", "status", "evidence_ref"],
+      "properties": {
+        "value": { "type": ["string", "null"], "minLength": 1, "maxLength": 65536 },
+        "status": { "enum": ["unknown", "exact", "reconstructed", "inferred"] },
+        "evidence_ref": { "type": ["string", "null"], "minLength": 1, "maxLength": 8192 }
+      },
+      "allOf": [{
+        "if": { "properties": { "status": { "const": "unknown" } } },
+        "then": { "properties": { "value": { "type": "null" }, "evidence_ref": { "type": "null" } } },
+        "else": { "properties": { "value": { "type": "string" }, "evidence_ref": { "type": "string" } } }
+      }]
+    },
+    "labels": { "type": "array", "maxItems": 100, "items": { "type": "string", "minLength": 1, "maxLength": 512 } },
+    "item": {
+      "type": "object", "additionalProperties": false, "required": ["source_item_id", "discovered_at"],
+      "properties": {
+        "source_item_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "source_uri": { "type": ["string", "null"], "minLength": 1, "maxLength": 8192 },
+        "filename": { "type": ["string", "null"], "minLength": 1, "maxLength": 1024 },
+        "mime_type": { "type": ["string", "null"], "minLength": 1, "maxLength": 256 },
+        "created_at": { "type": ["string", "null"], "format": "date-time" },
+        "discovered_at": { "type": "string", "format": "date-time" },
+        "local_path": { "type": ["string", "null"], "minLength": 1, "maxLength": 4096 },
+        "expected_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "generation": {
+          "type": ["object", "null"], "additionalProperties": false,
+          "properties": {
+            "user_prompt": { "$ref": "#/$defs/claim" },
+            "effective_prompt": { "$ref": "#/$defs/claim" },
+            "revised_prompt": { "$ref": "#/$defs/claim" },
+            "requested_model": { "$ref": "#/$defs/claim" },
+            "resolved_model": { "$ref": "#/$defs/claim" },
+            "model": { "$ref": "#/$defs/claim", "description": "Compatibility alias for resolved_model; conflicting aliases are rejected by the adapter." },
+            "provider": { "$ref": "#/$defs/claim" },
+            "reason": { "$ref": "#/$defs/claim" }
+          }
+        },
+        "concept": {
+          "type": ["object", "null"], "additionalProperties": false,
+          "properties": {
+            "summary": { "$ref": "#/$defs/claim" },
+            "characters": { "$ref": "#/$defs/labels" },
+            "stories": { "$ref": "#/$defs/labels" },
+            "worlds": { "$ref": "#/$defs/labels" },
+            "intended_uses": { "$ref": "#/$defs/labels" }
+          }
+        },
+        "relations": {
+          "type": ["array", "null"], "maxItems": 100,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["type", "source_item_id", "evidence_ref"],
+            "properties": {
+              "type": { "enum": ["edit-of", "variation-of", "derived-from", "references"] },
+              "source_item_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+              "source": { "anyOf": [{ "$ref": "#/$defs/source" }, { "type": "null" }] },
+              "evidence_ref": { "type": "string", "minLength": 1, "maxLength": 8192 }
+            }
+          }
+        },
+        "metadata": { "type": ["object", "null"], "description": "Source-specific evidence, request/project/reference IDs and generation phase. Never public by default." }
+      }
+    }
+  }
+}
