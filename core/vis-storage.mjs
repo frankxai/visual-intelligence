@@ -39,7 +39,7 @@ export function sha256File(filePath) {
 // Write to a temp file, verify the hash, then rename. A mismatch never leaves a file at destPath.
 async function writeVerified(destPath, sha, write) {
   fs.mkdirSync(path.dirname(destPath), { recursive: true })
-  const tmp = `${destPath}.partial-${process.pid}-${Date.now()}`
+  const tmp = `${destPath}.partial-${process.pid}-${crypto.randomUUID()}`
   try {
     await write(tmp)
     if (sha256File(tmp) !== sha) throw new Error('master bytes do not match sha256')
@@ -63,7 +63,19 @@ export function createLocalStorage({ dir, urlBase = '/r' }) {
     async putMaster(sha, filePath) {
       check(sha)
       if (sha256File(filePath) !== sha) throw new Error('master bytes do not match sha256')
-      return copy(filePath, masterKey(sha))
+      const key = masterKey(sha)
+      const dest = target(key)
+      fs.mkdirSync(path.dirname(dest), { recursive: true })
+      const temp = dest + '.partial-' + crypto.randomUUID()
+      try {
+        fs.copyFileSync(filePath,temp,fs.constants.COPYFILE_EXCL)
+        if (sha256File(temp) !== sha) throw Error('Source changed while copying')
+        try { fs.linkSync(temp,dest) } catch (err) {
+          if (err.code !== 'EEXIST') throw err
+          if (sha256File(dest) !== sha) throw Error('Existing master failed integrity check')
+        }
+        return {key,bytes:fs.statSync(dest).size}
+      } finally { fs.rmSync(temp,{force:true}) }
     },
     async getMaster(sha, destPath) {
       check(sha)

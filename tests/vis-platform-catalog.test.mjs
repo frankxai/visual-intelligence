@@ -63,6 +63,18 @@ test('Postgres migration executes, enforces tenant/version relationships and den
   await db.query("INSERT INTO vis_catalog_sources(workspace_id,source_id,kind,state) VALUES ($1,'owned','vis_sqlite','ready')",[a])
   await db.query("INSERT INTO vis_catalog_assets(workspace_id,source_id,asset_id,title,media_type) VALUES ($1,'owned','asset_1','Copper Fox','image')",[a])
   await db.query("INSERT INTO vis_catalog_versions(workspace_id,source_id,asset_id,version_id,sha256,width,height,observed_at) VALUES ($1,'owned','asset_1','v1',$2,1200,800,now())",[a,'a'.repeat(64)])
+  await db.exec(await fs.readFile(new URL('../platform/migrations/20261118_vis_review_receipts.sql',import.meta.url),'utf8'))
+  const insertReceipt = "INSERT INTO vis_review_receipts VALUES ($1,'owned','asset_1','v1',$2,$3,1,'comment','candidate',$4,now())"
+  const receipt = [a,'a'.repeat(64),b,{decision:{},signature:'synthetic'}]
+  await assert.rejects(db.query(insertReceipt,[b,...receipt.slice(1)]),/foreign key/)
+  await assert.rejects(db.query(insertReceipt,[a,'b'.repeat(64),...receipt.slice(2)]),/foreign key/)
+  await db.exec('SET ROLE service_role')
+  await db.query(insertReceipt,receipt)
+  await assert.rejects(db.query(insertReceipt,receipt),/unique/)
+  await assert.rejects(db.query('DELETE FROM vis_review_receipts'),/permission denied/)
+  await db.exec('RESET ROLE; SET ROLE authenticated')
+  await assert.rejects(db.query('SELECT * FROM vis_review_receipts'),/permission denied/)
+  await db.exec('RESET ROLE')
   const found=await db.query("SELECT asset_id,version_id,approval_status,aspect FROM vis_catalog_search WHERE workspace_id=$1 AND search_document @@ plainto_tsquery('simple','Copper Fox')",[a])
   assert.equal(found.rows[0].approval_status,'candidate')
   assert.equal(found.rows[0].aspect,'landscape')

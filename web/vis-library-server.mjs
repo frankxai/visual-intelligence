@@ -13,6 +13,7 @@ import http from 'http'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { pipeline } from 'stream/promises'
+import { applyDecision, bindReview, decisionTemplate, reviewRecord } from '../core/vis-review.mjs'
 import { expandPathTokens, findProjectRoot, loadConfig } from '../core/vis-core.mjs'
 import {
   decideProposal,
@@ -38,6 +39,12 @@ const RIGHTS = ['unknown', 'needs-review', 'owned', 'generated-owned', 'licensed
 export function createLibraryServer(root = findProjectRoot(), options = {}) {
   const config = loadConfig(root)
   const db = openLibraryDatabase(root, config)
+  const policy = options.reviewPolicy
+  const bound = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='review_workspace'").get()
+  if (bound && !policy) { db.close(); throw Error('Bound workspace requires --review-policy') }
+  if (policy) {
+    try { bindReview(db, policy.workspace, policy.enrollmentDigest) } catch (error) { db.close(); throw error }
+  }
   const operator = options.operator || 'operator-screen'
   const renditionsDir = expandPathTokens(libraryConfig(config).renditionsDir)
 
@@ -46,6 +53,40 @@ export function createLibraryServer(root = findProjectRoot(), options = {}) {
       if (!loopbackHost(req)) return json(res, 403, { error: 'host not allowed' })
       const url = new URL(req.url, 'http://local')
       const parts = url.pathname.split('/').filter(Boolean)
+
+      if (policy) {
+        res.setHeader('referrer-policy','no-referrer')
+        res.setHeader('content-security-policy',"default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
+        if (req.headers['sec-fetch-site'] === 'cross-site') return json(res,403,{error:'Local workspace required'})
+        if (req.method === 'GET') {
+          const files = new Map([['/', ['index.html','text/html']], ['/review',['index.html','text/html']],
+            ['/review/style.css',['style.css','text/css']], ['/review/app.js',['app.js','text/javascript']]])
+          const file = files.get(url.pathname)
+          if (file) return sendFile(res,path.join(__dirname,'review',file[0]),file[1],'no-store')
+          if (url.pathname === '/api/review') {
+            const assets = db.prepare('SELECT asset_id,title FROM asset ORDER BY title,asset_id').all()
+            return json(res,200,{workspace:policy.workspace,assets})
+          }
+          if (parts.length === 4 && parts[0] === 'api' && parts[1] === 'review') {
+            const record = reviewRecord(db,parts[3])
+            if (parts[2] === 'asset') return json(res,200,record)
+            if (parts[2] === 'scope') return json(res,200,decisionTemplate(record,policy.workspace,url.searchParams.get('action'),''))
+          }
+        }
+        if (req.method === 'POST' && parts.length === 4 && parts.slice(0,3).join('/') === 'api/review/asset') {
+          if (req.headers.origin !== 'http://' + req.headers.host || req.headers['x-vis-operator'] !== '1')
+            return json(res,403,{error:'Same-origin reviewer required'})
+          const envelope = await readJson(req)
+          try {
+            const latest=options.loadReviewPolicy ? options.loadReviewPolicy() : policy
+            if (latest?.workspace !== policy.workspace) throw Error('Workspace policy changed')
+            return json(res,200,applyDecision(db,latest,envelope,parts[3]))
+          }
+          catch (error) { return json(res,403,{error:error.message}) }
+        }
+        // Only previews pass through to the original server. Legacy write routes stay closed.
+        if (req.method !== 'GET' || parts.length !== 3 || parts[0] !== 'r') return json(res,404,{error:'Review route not found'})
+      }
 
       if (req.method === 'GET' && url.pathname === '/identity-decisions') {
         res.setHeader('Referrer-Policy', 'no-referrer')
@@ -188,6 +229,7 @@ function readJson(req) {
   return new Promise((resolve, reject) => {
     let raw = ''
     req.on('data', chunk => {
+      if (raw.length > 64 * 1024) return
       raw += chunk
       if (raw.length > 64 * 1024) reject(new Error('body too large'))
     })

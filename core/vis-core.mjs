@@ -3822,6 +3822,9 @@ export function recordPublication(dbOrRoot, args = {}) {
     if (!assetId) throw new Error('Asset not found for publication record')
     const asset = getAsset(db, assetId, { compact: true })
     const publishGate = assetPublishGate(asset, { intendedUse: `${args.platform || 'unknown'} publication record` })
+    if (args.status === 'published' && db.prepare("SELECT 1 FROM sqlite_master WHERE name='review_workspace' AND type='table'").get()) {
+      return {dryRun:true,refused:true,note:'A bound review workspace requires a signed provider receipt.'}
+    }
     const payload = {
       publicationId: args.publicationId || stableId('pub', `${assetId}:${args.platform}:${args.url || args.route}:${Date.now()}`),
       assetId,
