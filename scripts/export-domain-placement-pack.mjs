@@ -1,0 +1,336 @@
+#!/usr/bin/env node
+/**
+ * Exports per-domain production placement kits (`route-media-map.json`,
+ * `HeroMediaSlot.snippet.tsx`, `schema-org-media.json`, and `image-video-sitemap.xml`)
+ * from verified (`>= 26/30`, non-rejected) DAM deliverables.
+ */
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { pathToFileURL } from 'url'
+
+const DEFAULT_JOB_ROOT =
+  process.env.VIS_JOB_ROOT ||
+  path.join(os.homedir(), 'brands/image-system/jobs/2026-11-16-flow-godmode')
+
+function escXml(str) {
+  return String(str ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;')
+}
+
+function isStagingUrl(url) {
+  return /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i.test(String(url || ''))
+}
+
+function buildRouteMapForBrand(brand, meta, manifest, r2ByAsset) {
+  const routes = meta.routes || ['/']
+  const baseUrl = meta.targetBase || `https://${meta.primaryDomain}`
+  const isStaging = isStagingUrl(baseUrl)
+
+  const passingMasters = (manifest.assets || []).filter(
+    (a) =>
+      a.brand === brand &&
+      a.stage === 'ready_for_publish' &&
+      a.qa?.decision === 'pass' &&
+      Number(a.qa?.total || 0) >= 26
+  )
+
+  const passingFlow = (manifest.flowClips || []).filter(
+    (f) =>
+      f.brand === brand &&
+      f.stage === 'ready_for_publish' &&
+      f.qaDecision === 'pass' &&
+      Number(f.qaTotal || 0) >= 26
+  )
+
+  const defaultHero = passingMasters.find((a) => a.targetUrls?.[0]?.endsWith('/')) || passingMasters[0] || null
+  const primaryMotion = passingFlow.find((f) => f.modality === 'video') || null
+
+  const entries = routes.map((route) => {
+    const exactTarget = `${baseUrl}${route}`
+    const matchedMaster =
+      passingMasters.find((a) => (a.targetUrls || []).includes(exactTarget)) || defaultHero
+    const r2 = matchedMaster ? r2ByAsset[matchedMaster.assetId] || null : null
+    const motionR2 = primaryMotion ? r2ByAsset[primaryMotion.assetId] || null : null
+
+    return {
+      route,
+      url: exactTarget,
+      brand,
+      brandDisplayName: meta.displayName,
+      funnelArchetype: meta.funnelArchetype || 'Archetype 2: Workbench',
+      preserveFrame: Boolean(matchedMaster?.role?.includes('Turnaround')),
+      stillAsset: matchedMaster
+        ? {
+            assetId: matchedMaster.assetId,
+            title: matchedMaster.title,
+            alt: `${meta.displayName}: ${matchedMaster.title} (${matchedMaster.subtitle})`,
+            qaTotal: matchedMaster.qa.total,
+            r2MasterKey: r2?.r2?.masterKey || null,
+            r2PreviewKey: r2?.r2?.previewKey || null,
+            og1200x630: `${brand}/edited/${matchedMaster.assetId}-og-1200x630.webp`,
+            srcSet: [
+              { width: 640, src: `${brand}/edited/${matchedMaster.assetId}-hero-640w.webp` },
+              { width: 1280, src: `${brand}/edited/${matchedMaster.assetId}-hero-1280w.webp` },
+              { width: 1920, src: `${brand}/edited/${matchedMaster.assetId}-hero-1920w.webp` },
+            ],
+          }
+        : null,
+      motionClip:
+        route === '/' || route === '/motion'
+          ? primaryMotion
+            ? {
+                assetId: primaryMotion.assetId,
+                src: primaryMotion.relPath,
+                poster: primaryMotion.posterRelPath || null,
+                model: primaryMotion.model,
+                qaTotal: primaryMotion.qaTotal,
+                r2MasterKey: motionR2?.r2?.masterKey || null,
+                reducedMotionPolicy: 'static-poster-fallback',
+              }
+            : null
+          : null,
+    }
+  })
+
+  return {
+    schemaVersion: 'vis.domain-placement-map.v1',
+    brand,
+    displayName: meta.displayName,
+    baseUrl,
+    isStaging,
+    markFile: meta.markFile ? `brand-image-system/svg-marks/${meta.markFile}` : null,
+    eligibleMastersCount: passingMasters.length,
+    eligibleFlowClipsCount: passingFlow.length,
+    routes: entries,
+  }
+}
+
+function buildHeroSnippetTsx(routeMap) {
+  const hero = routeMap.routes[0] || {}
+  const still = hero.stillAsset
+  const motion = hero.motionClip
+  const componentName = `${routeMap.brand
+    .split('-')
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join('')}HeroMediaSlot`
+
+  const altLiteral = JSON.stringify(still?.alt || `${routeMap.displayName} visual plate`)
+  const posterLiteral = JSON.stringify(
+    still ? `/assets/${routeMap.brand}/${still.assetId}-hero-1920w.webp` : '/assets/placeholder.webp'
+  )
+  const src640 = still ? `/assets/${routeMap.brand}/${still.assetId}-hero-640w.webp` : '/assets/placeholder-640w.webp'
+  const src1280 = still ? `/assets/${routeMap.brand}/${still.assetId}-hero-1280w.webp` : '/assets/placeholder-1280w.webp'
+  const src1920 = still ? `/assets/${routeMap.brand}/${still.assetId}-hero-1920w.webp` : '/assets/placeholder-1920w.webp'
+
+  return `import React from 'react'
+
+/**
+ * Generated by visual-intelligence/scripts/export-domain-placement-pack.mjs
+ * Brand: ${routeMap.displayName} (${routeMap.brand})
+ * Reduced-motion policy: renders inspected static 1920w WebP when prefers-reduced-motion matches.
+ */
+export function ${componentName}({ enableMotion = ${Boolean(motion)} }: { enableMotion?: boolean }) {
+  const [reducedMotion, setReducedMotion] = React.useState(false)
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    setReducedMotion(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  ${
+    motion
+      ? `if (enableMotion && !reducedMotion) {
+    return (
+      <figure className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+        <video
+          className="h-full w-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="none"
+          poster=${posterLiteral}
+          aria-label=${altLiteral}
+        >
+          <source src={${JSON.stringify(`/assets/${routeMap.brand}/${path.basename(motion.src)}`)}} type="video/mp4" />
+        </video>
+      </figure>
+    )
+  }\n`
+      : ''
+  }
+  return (
+    <figure className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+      <picture>
+        <source
+          type="image/webp"
+          srcSet="${src640} 640w, ${src1280} 1280w, ${src1920} 1920w"
+          sizes="(max-width: 768px) 100vw, 1280px"
+        />
+        <img
+          src=${posterLiteral}
+          alt=${altLiteral}
+          width={1920}
+          height={1080}
+          loading="eager"
+          decoding="async"
+          className="h-full w-full object-cover"
+        />
+      </picture>
+    </figure>
+  )
+}
+`
+}
+
+function buildSchemaOrgJsonLd(routeMap) {
+  const graph = []
+  for (const r of routeMap.routes) {
+    if (r.stillAsset) {
+      graph.push({
+        '@type': 'ImageObject',
+        '@id': `${r.url}#primaryimage`,
+        name: r.stillAsset.title,
+        caption: r.stillAsset.alt,
+        width: 1920,
+        height: 1080,
+        encodingFormat: 'image/webp',
+        contentUrl: `${routeMap.baseUrl}/assets/${routeMap.brand}/${r.stillAsset.assetId}-hero-1920w.webp`,
+      })
+    }
+    if (r.motionClip) {
+      graph.push({
+        '@type': 'VideoObject',
+        '@id': `${r.url}#primaryvideo`,
+        name: `${routeMap.displayName} Ambient Motion`,
+        description: r.stillAsset?.alt || `${routeMap.displayName} ambient hero loop`,
+        duration: 'PT8S',
+        thumbnailUrl: r.stillAsset
+          ? `${routeMap.baseUrl}/assets/${routeMap.brand}/${r.stillAsset.assetId}-hero-1920w.webp`
+          : undefined,
+        contentUrl: `${routeMap.baseUrl}/assets/${routeMap.brand}/${path.basename(r.motionClip.src)}`,
+      })
+    }
+  }
+  return {
+    '@context': 'https://schema.org',
+    '@graph': graph,
+  }
+}
+
+function buildMediaSitemapXml(routeMap) {
+  if (routeMap.isStaging) {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+  <!-- Staging-only local surface (${escXml(routeMap.baseUrl)}) omitted from public XML sitemap -->
+</urlset>
+`
+  }
+
+  const urlBlocks = routeMap.routes.map((r) => {
+    const imgLoc = r.stillAsset
+      ? `${routeMap.baseUrl}/assets/${routeMap.brand}/${r.stillAsset.assetId}-hero-1920w.webp`
+      : null
+    const imageTag = r.stillAsset
+      ? `    <image:image>
+      <image:loc>${escXml(imgLoc)}</image:loc>
+      <image:title>${escXml(r.stillAsset.title)}</image:title>
+      <image:caption>${escXml(r.stillAsset.alt)}</image:caption>
+    </image:image>`
+      : ''
+    const videoTag = r.motionClip
+      ? `\n    <video:video>
+      <video:thumbnail_loc>${escXml(imgLoc || `${routeMap.baseUrl}/assets/${routeMap.brand}/poster.webp`)}</video:thumbnail_loc>
+      <video:title>${escXml(routeMap.displayName)} Motion Loop</video:title>
+      <video:description>${escXml(r.stillAsset?.alt || routeMap.displayName)}</video:description>
+      <video:content_loc>${escXml(`${routeMap.baseUrl}/assets/${routeMap.brand}/${path.basename(r.motionClip.src)}`)}</video:content_loc>
+      <video:duration>8</video:duration>
+    </video:video>`
+      : ''
+    return `  <url>
+    <loc>${escXml(r.url)}</loc>
+${imageTag}${videoTag}
+  </url>`
+  })
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+${urlBlocks.join('\n')}
+</urlset>
+`
+}
+
+export function exportDomainPlacementPacks({ jobRoot = DEFAULT_JOB_ROOT } = {}) {
+  const manifestPath = path.join(jobRoot, 'asset-manifest.json')
+  const r2Path = path.join(jobRoot, 'r2-dam-plan.json')
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`Missing manifest: ${manifestPath}`)
+  }
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+  const r2Plan = fs.existsSync(r2Path)
+    ? JSON.parse(fs.readFileSync(r2Path, 'utf8'))
+    : { uploadManifest: [] }
+  const r2ByAsset = Object.fromEntries(
+    (r2Plan.uploadManifest || []).map((entry) => [entry.assetId, entry])
+  )
+
+  const placementsRoot = path.join(jobRoot, 'placements')
+  fs.mkdirSync(placementsRoot, { recursive: true })
+
+  const summary = []
+  for (const [brand, meta] of Object.entries(manifest.brandMeta || {})) {
+    const brandDir = path.join(placementsRoot, brand)
+    fs.mkdirSync(brandDir, { recursive: true })
+
+    const routeMap = buildRouteMapForBrand(brand, meta, manifest, r2ByAsset)
+    const snippetTsx = buildHeroSnippetTsx(routeMap)
+    const jsonLd = buildSchemaOrgJsonLd(routeMap)
+    const sitemapXml = buildMediaSitemapXml(routeMap)
+
+    fs.writeFileSync(
+      path.join(brandDir, 'route-media-map.json'),
+      `${JSON.stringify(routeMap, null, 2)}\n`,
+      'utf8'
+    )
+    fs.writeFileSync(path.join(brandDir, 'HeroMediaSlot.snippet.tsx'), snippetTsx, 'utf8')
+    fs.writeFileSync(
+      path.join(brandDir, 'schema-org-media.json'),
+      `${JSON.stringify(jsonLd, null, 2)}\n`,
+      'utf8'
+    )
+    fs.writeFileSync(path.join(brandDir, 'image-video-sitemap.xml'), sitemapXml, 'utf8')
+
+    summary.push({
+      brand,
+      routesCount: routeMap.routes.length,
+      eligibleMastersCount: routeMap.eligibleMastersCount,
+      eligibleFlowClipsCount: routeMap.eligibleFlowClipsCount,
+      isStaging: routeMap.isStaging,
+    })
+  }
+
+  return {
+    schemaVersion: 'vis.placement-export-summary.v1',
+    placementsRoot,
+    brandCount: summary.length,
+    brands: summary,
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  const res = exportDomainPlacementPacks()
+  console.log(JSON.stringify(res, null, 2))
+}

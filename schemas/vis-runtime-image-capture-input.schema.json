@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://frankx.ai/schemas/vis-runtime-image-capture-input.schema.json",
+  "title": "Authorized local runtime event copies for VIS image capture",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "batch_id", "source", "captured_at", "cursor", "coverage", "records"],
+  "properties": {
+    "schema_version": { "const": "vis.runtime-image-capture-input.v1" },
+    "batch_id": { "$ref": "vis-image-capture.schema.json#/properties/batch_id" },
+    "source": { "$ref": "vis-image-capture.schema.json#/$defs/source" },
+    "captured_at": { "$ref": "vis-image-capture.schema.json#/properties/captured_at" },
+    "cursor": {
+      "allOf": [
+        { "$ref": "vis-image-capture.schema.json#/properties/cursor" },
+        { "required": ["revision"] }
+      ]
+    },
+    "coverage": { "$ref": "vis-image-capture.schema.json#/properties/coverage" },
+    "records": {
+      "type": "array", "maxItems": 250,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["object_key", "record_path"],
+        "properties": {
+          "object_key": { "type": "string", "minLength": 1, "maxLength": 1024, "description": "Actual immutable source key: media-capture/<request_id>/<requested|completed|failed>.json" },
+          "record_path": { "type": "string", "minLength": 1, "maxLength": 4096, "description": "Local JSON copy relative to the separately declared records root." },
+          "expected_record_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+          "local_path": { "type": ["string", "null"], "minLength": 1, "maxLength": 4096, "description": "Completed events only: original image copy relative to the separately declared media root." }
+        }
+      }
+    }
+  }
+}

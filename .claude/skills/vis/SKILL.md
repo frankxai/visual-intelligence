@@ -37,7 +37,7 @@ Before generating ANY new image, query the visual registry:
 jq '[.[] | select(.tags | contains(["music"])) | select(.mood == "atmospheric")]' data/visual-registry.json
 ```
 
-If a suitable image exists, USE IT. Only generate new images when nothing fits.
+For portfolio work, load the [Frontier Experience Constitution](https://github.com/Starlight-Intelligence/starlight-design-intelligence/blob/e25fab4c5a0dac2ea8c7b91e9397972f5af4b454/portfolio/frontier-experience-constitution.md). Resolve the exact edition and its placement rights in VIS before reuse. A missing logo or recurring character master blocks that placement. Restrict generation to original artwork permitted by the brief.
 
 ### 2. Scan Images
 Rebuild the registry after adding new images:
