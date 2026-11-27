@@ -163,3 +163,33 @@ test('cache read verifies the hash; a corrupt file is a miss and is re-fetched',
   assert.equal(calls, 1); assert.equal(again.fetched, true)
   assert.equal((await cacheRead(dir, h)).toString(), 'good bytes')
 })
+
+test('split-field rejected lineage with proposal status keeps the conflict and withholds shared hashes', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-m-'))
+  const p = join(dir, 'm.json')
+  const base = { drive_file_id: 'D', stable_id: 'test.char.ox' }
+  writeFileSync(p, JSON.stringify([
+    { ...base, identity_name: 'Test Ox', family: 'Arcanea', edition: 'Fire', status: 'proposal', sha256: sha('x') },
+    { ...base, identity_name: 'Test Ox', edition: 'Plain', status: 'original', sha256: sha('x') },
+    { ...base, identity_name: 'Test Ox', edition: 'Other', status: 'original', sha256: sha('y') },
+  ]))
+  const r = await resolveCharacter({ name: 'Test Ox' }, { manifestPath: p, cache: { dir } })
+  assert.equal(r.rejected_lineages.length, 1)
+  assert.ok(r.conflicts.some(c => c.type === 'status_conflicts_with_rejected_lineage' && c.claimed_status === 'proposal'))
+  assert.ok(r.conflicts.some(c => c.type === 'sha256_shared_with_rejected_lineage'))
+  assert.deepEqual(r.positive_references.map(e => e.sha256), [sha('y')])
+})
+
+test('rejected lineage match is not widened to unrelated rows', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-m-'))
+  const p = join(dir, 'm.json')
+  const row = o => ({ identity_name: 'Test Ox', stable_id: 'test.char.ox', drive_file_id: 'D', status: 'original', ...o })
+  writeFileSync(p, JSON.stringify([
+    row({ edition: 'Fire', sha256: sha('f') }),
+    row({ family: 'Arcanea Guardian', edition: 'Plain', sha256: sha('g') }),
+  ]))
+  const r = await resolveCharacter({ name: 'Test Ox' }, { manifestPath: p, cache: { dir } })
+  assert.equal(r.rejected_lineages.length, 0)
+  assert.equal(r.conflicts.length, 0)
+  assert.equal(r.positive_references.length, 2)
+})
