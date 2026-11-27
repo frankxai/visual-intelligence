@@ -19,7 +19,11 @@ test('operator HTTP and CLI both refuse missing or untrusted authority', async t
   const root=mkdtempSync(join(tmpdir(),'vis-identity-'))
   writeFileSync(join(root,'vis.config.json'),'{}')
   const {server,url}=await serveLibrary(root,{port:0})
-  t.after(()=>{server.close();rmSync(root,{recursive:true,force:true})})
+  t.after(async ()=>{
+    server.closeAllConnections?.()
+    await new Promise((resolve)=>server.close(()=>resolve()))
+    rmSync(root,{recursive:true,force:true,maxRetries:5,retryDelay:50})
+  })
   assert.match(await (await fetch(url+'identities')).text(),/Registered original/)
   const params=new URLSearchParams({...q,authority_root:'/untrusted'})
   const r=await fetch(url+'api/identity/resolve?'+params)
@@ -33,7 +37,11 @@ test('private previews require the operator header and reject foreign origins', 
   const root = mkdtempSync(join(tmpdir(), 'vis-preview-'))
   writeFileSync(join(root, 'vis.config.json'), '{}')
   const {server, url} = await serveLibrary(root, {port:0})
-  t.after(() => { server.close(); rmSync(root, {recursive:true, force:true}) })
+  t.after(async () => {
+    server.closeAllConnections?.()
+    await new Promise((resolve) => server.close(() => resolve()))
+    rmSync(root, {recursive:true, force:true, maxRetries:5, retryDelay:50})
+  })
   for (const headers of [{}, {'x-vis-operator':'1', origin:'https://elsewhere.invalid'}]) {
     const response = await fetch(url + 'api/identity/preview', {method:'POST', headers, body:'{}'})
     assert.equal(response.status, 403)

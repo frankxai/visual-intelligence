@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { fileURLToPath } from 'node:url'
 import { DatabaseSync } from 'node:sqlite'
 import { execFileSync } from 'node:child_process'
 import { createSchema, buildAssetEntry, upsertAssetGraph, traceAsset } from '../core/vis-core.mjs'
@@ -17,7 +18,7 @@ const exact = value => ({ value, status: 'exact', evidence_ref: 'synthetic:tool-
 const item = (source_item_id = 'image-1', extra = {}) => ({ source_item_id, filename: 'gemini-model-from-name.png', discovered_at: now, ...extra })
 const batch = (items = [item()], extra = {}) => ({ schema_version: 'vis.image-capture.v1', batch_id: 'page-1', source: { provider: 'fixture', scope: 'private-account-a' }, mode: 'backfill', captured_at: now, cursor: { previous: null, next: 'page-2' }, coverage: { exhausted: false, note: 'Synthetic bounded page' }, items, ...extra })
 function database(t) { const db = new DatabaseSync(':memory:'); createSchema(db); t.after(() => db.close()); return db }
-function fixture(t) { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-image-capture-')); t.after(() => fs.rmSync(root, { recursive: true, force: true })); fs.writeFileSync(path.join(root, 'original.png'), png); return root }
+function fixture(t) { const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-image-capture-')); t.after(() => fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })); fs.writeFileSync(path.join(root, 'original.png'), png); return root }
 const count = (db, table) => db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n
 
 test('metadata-only capture preserves unknowns and created time, never inventing assets or model', t => {
@@ -189,14 +190,16 @@ test('CLI dry run does not create a database; execute writes private receipt/ind
   const root = fixture(t)
   const manifest = path.join(root, 'page.json'), db = path.join(root, 'vis.sqlite'), receipt = path.join(root, 'receipt.json'), index = path.join(root, 'index.json')
   fs.writeFileSync(manifest, JSON.stringify(batch()))
-  const script = new URL('../scripts/image-capture.mjs', import.meta.url).pathname
+  const script = fileURLToPath(new URL('../scripts/image-capture.mjs', import.meta.url))
   const run = args => JSON.parse(execFileSync(process.execPath, [script, '--manifest', manifest, '--db', db, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }))
   assert.equal(run(['--out', receipt]).dry_run, true)
   assert.equal(fs.existsSync(db), false)
   assert.equal(run(['--execute', '--out', receipt, '--index-out', index]).counts.metadata_only, 1)
   assert.equal(JSON.parse(fs.readFileSync(index)).observations.length, 1)
-  assert.equal(fs.statSync(receipt).mode & 0o777, 0o600)
-  assert.equal(fs.statSync(db).mode & 0o777, 0o600)
+  if (process.platform !== 'win32') {
+    assert.equal(fs.statSync(receipt).mode & 0o777, 0o600)
+    assert.equal(fs.statSync(db).mode & 0o777, 0o600)
+  }
   assert.equal(run(['--execute']).replayed, true)
   assert.equal(run([]).dry_run, true)
   assert.throws(() => parseArgs(['--db', 'a', '--db', 'b']), /Duplicate/)
@@ -208,7 +211,7 @@ test('CLI rejects output symlink/hardlink aliases without damaging database or m
   const manifest = path.join(root, 'page.json'), db = path.join(root, 'vis.sqlite')
   fs.writeFileSync(manifest, JSON.stringify(batch()))
   const catalog = new DatabaseSync(db); createSchema(catalog); catalog.close()
-  const script = new URL('../scripts/image-capture.mjs', import.meta.url).pathname
+  const script = fileURLToPath(new URL('../scripts/image-capture.mjs', import.meta.url))
   const databaseBefore = fs.readFileSync(db), manifestBefore = fs.readFileSync(manifest)
   for (const target of [db, manifest]) {
     for (const method of ['symlinkSync', 'linkSync']) {
@@ -226,7 +229,7 @@ test('CLI rejects prospective aliases through symlinked parents and dangling DB 
   const manifest = path.join(root, 'page.json')
   fs.writeFileSync(manifest, JSON.stringify(batch()))
   fs.symlinkSync(root, path.join(root, 'alias'), 'dir')
-  const script = new URL('../scripts/image-capture.mjs', import.meta.url).pathname
+  const script = fileURLToPath(new URL('../scripts/image-capture.mjs', import.meta.url))
   const db = path.join(root, 'not-yet-created.sqlite')
   assert.throws(() => execFileSync(process.execPath, [script, '--manifest', manifest, '--db', db, '--out', path.join(root, 'alias', 'not-yet-created.sqlite')], { stdio: 'pipe' }), /including aliases/)
   fs.symlinkSync(db, path.join(root, 'dangling-db'))
@@ -239,7 +242,7 @@ test('CLI atomically replaces unrelated output links without overwriting their t
   const manifest = path.join(root, 'page.json'), db = path.join(root, 'vis.sqlite'), target = path.join(root, 'keep.txt')
   fs.writeFileSync(manifest, JSON.stringify(batch()))
   fs.writeFileSync(target, 'keep this content')
-  const script = new URL('../scripts/image-capture.mjs', import.meta.url).pathname
+  const script = fileURLToPath(new URL('../scripts/image-capture.mjs', import.meta.url))
   for (const method of ['symlinkSync', 'linkSync']) {
     const out = path.join(root, `${method}.json`)
     fs[method](target, out)
