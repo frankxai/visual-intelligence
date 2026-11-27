@@ -21,7 +21,11 @@ export const normalize = s => String(s ?? '').normalize('NFKD').replace(/[̀-ͯ]
 const splitList = v => Array.isArray(v) ? v.map(String)
   : typeof v === 'string' ? v.split(/[;|]/).map(s => s.trim()).filter(Boolean) : []
 
-const isRejectedLineage = row => REJECTED_LINEAGE.some(re => [row.family, row.edition, row.identity_name, row.stable_id].some(f => re.test(String(f ?? ''))))
+// Terms may be split across fields (family "Arcanea" + edition "Fire"), so test the joined fields.
+const isRejectedLineage = row => {
+  const joined = [row.family, row.edition, row.identity_name, row.stable_id].map(f => String(f ?? '')).join(' ')
+  return REJECTED_LINEAGE.some(re => re.test(joined))
+}
 const isVendorGuest = (row, names) => [row.identity_name, ...names].some(n => VENDOR_GUEST.some(re => re.test(String(n ?? '').trim())))
 
 export async function loadManifest(path = process.env.VIS_CHARACTER_MANIFEST) {

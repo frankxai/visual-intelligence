@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { resolveCharacter, normalize } from '../core/character-resolver.mjs'
-import { ensureCached, cacheHas, cacheKey } from '../core/character-cache.mjs'
+import { ensureCached, cacheHas, cacheKey, cacheRead } from '../core/character-cache.mjs'
 
 const FIXTURE = new URL('./fixtures/character-manifest.synthetic.json', import.meta.url).pathname
 const opts = { manifestPath: FIXTURE, cache: { dir: mkdtempSync(join(tmpdir(), 'vis-char-cache-')) } }
@@ -134,4 +134,32 @@ test('MCP tool visual.character.resolve is advertised and resolves', () => {
   assert.ok(rows.find(x => x.id === 1).result.tools.some(t => t.name === 'visual.character.resolve'))
   const out = JSON.parse(rows.find(x => x.id === 2).result.content[0].text)
   assert.equal(out.identity_id, 'test.char.fox'); assert.equal(out.rights, 'unknown')
+})
+
+test('rejected lineage terms split across fields are still rejected', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-m-'))
+  const p = join(dir, 'm.json')
+  const row = o => ({ identity_name: 'Test Ox', stable_id: 'test.char.ox', drive_file_id: 'D', status: 'original', ...o })
+  writeFileSync(p, JSON.stringify([
+    row({ family: 'Arcanea', edition: 'Fire', sha256: sha('a') }),
+    row({ family: 'Unity', edition: 'v1', sha256: sha('b') }),
+    row({ family: 'Unity', edition: 'V2', sha256: sha('c') }),
+    row({ family: 'Test Family', edition: 'v1', sha256: sha('d') }),
+  ]))
+  const r = await resolveCharacter({ name: 'Test Ox' }, { manifestPath: p, cache: { dir } })
+  assert.equal(r.rejected_lineages.length, 3)
+  assert.deepEqual(r.positive_references.map(e => e.sha256), [sha('d')])
+})
+
+test('cache read verifies the hash; a corrupt file is a miss and is re-fetched', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-cache-'))
+  const bytes = Buffer.from('good bytes'); const h = sha(bytes)
+  const { path } = await ensureCached(dir, h, async () => bytes)
+  writeFileSync(path, 'corrupted')
+  assert.equal(await cacheHas(dir, h), false)
+  await assert.rejects(cacheRead(dir, h), /cache_corrupt/)
+  let calls = 0
+  const again = await ensureCached(dir, h, async () => { calls++; return bytes })
+  assert.equal(calls, 1); assert.equal(again.fetched, true)
+  assert.equal((await cacheRead(dir, h)).toString(), 'good bytes')
 })

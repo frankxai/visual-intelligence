@@ -1,7 +1,7 @@
 // Content-addressed local cache keyed by sha256. Same bytes are never fetched twice.
 // The cache directory is operator-supplied (VIS_CHARACTER_CACHE) and never lives in git.
 import { createHash } from 'node:crypto'
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export const SHA256_RE = /^[0-9a-f]{64}$/
@@ -15,9 +15,13 @@ export function cacheDir() {
   return process.env.VIS_CHARACTER_CACHE || null
 }
 
+// A hit is only trusted after re-hashing the stored bytes; a corrupt file counts as a miss.
 export async function cacheHas(dir, sha256) {
   if (!dir || !SHA256_RE.test(sha256 ?? '')) return false
-  try { return (await stat(join(dir, cacheKey(sha256)))).isFile() } catch { return false }
+  try {
+    const bytes = await readFile(join(dir, cacheKey(sha256)))
+    return createHash('sha256').update(bytes).digest('hex') === sha256
+  } catch { return false }
 }
 
 export async function cachePut(dir, sha256, bytes) {
@@ -41,5 +45,7 @@ export async function ensureCached(dir, sha256, fetcher) {
 }
 
 export async function cacheRead(dir, sha256) {
-  return readFile(join(dir, cacheKey(sha256)))
+  const bytes = await readFile(join(dir, cacheKey(sha256)))
+  if (createHash('sha256').update(bytes).digest('hex') !== sha256) throw new Error('cache_corrupt')
+  return bytes
 }
