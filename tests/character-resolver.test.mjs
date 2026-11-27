@@ -5,7 +5,7 @@ import { mkdtempSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
-import { resolveCharacter, normalize } from '../core/character-resolver.mjs'
+import { resolveCharacter, normalize, normaliseLineageText } from '../core/character-resolver.mjs'
 import { ensureCached, cacheHas, cacheKey, cacheRead } from '../core/character-cache.mjs'
 
 const FIXTURE = new URL('./fixtures/character-manifest.synthetic.json', import.meta.url).pathname
@@ -272,3 +272,28 @@ test('rejected lineage match normalises separators (dot, slash, paren, camelCase
   assert.deepEqual(r.rejected_lineages.map(e => e.sha256).sort(), bad.map(n => sha('bad:' + n)).sort())
   assert.deepEqual(r.positive_references.map(e => e.sha256).sort(), ok.map(n => sha('ok:' + n)).sort())
 })
+
+// One test per required synthetic row; each row also carries the lineage text in file_name/family/edition variants.
+const lineageRow = o => ({ identity_name: 'Test Ox', stable_id: 'test.char.ox', drive_file_id: 'D', status: 'original', sha256: sha('x'), ...o })
+const lineageCheck = async (fields, expectRejected) => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-n-'))
+  const p = join(dir, 'm.json')
+  writeFileSync(p, JSON.stringify([lineageRow(fields)]))
+  const r = await resolveCharacter({ name: 'Test Ox' }, { manifestPath: p, cache: { dir } })
+  assert.equal(r.rejected_lineages.length, expectRejected ? 1 : 0, JSON.stringify(fields))
+  assert.equal(r.positive_references.length, expectRejected ? 0 : 1, JSON.stringify(fields))
+  if (expectRejected) assert.ok(r.conflicts.some(c => c.type === 'status_conflicts_with_rejected_lineage'))
+}
+test('normaliseLineageText splits camelCase and collapses separators', () => {
+  assert.equal(normaliseLineageText('ArcaneaFire'), 'arcanea fire')
+  assert.equal(normaliseLineageText('(Arcanea/Fire).v2'), 'arcanea fire v2')
+})
+for (const n of ['Arcanea Fire v1', 'Arcanea.Fire', 'Arcanea/Fire/v2', 'arcanea_fire_v1.png', 'Arcanea-Fire_v2', 'ArcaneaFire',
+  '(Arcanea Fire)', 'x_Arcanea_Fire', 'Unity.v1', 'Unity_V2', 'Unity_v1_final', 'arcanea_unity_v2.png']) {
+  test(`lineage rejected: ${n}`, () => lineageCheck({ family: n }, true))
+  test(`lineage rejected via file_name: ${n}`, () => lineageCheck({ file_name: n }, true))
+}
+test('lineage rejected: family Arcanea + edition Fire', () => lineageCheck({ family: 'Arcanea', edition: 'Fire' }, true))
+for (const n of ['Arcanea Firefly', 'Arcanea Fireside', 'Arcanea Unityx', 'Unity v10', 'Unity v1a', 'Arcanea Guardian']) {
+  test(`lineage stays positive: ${n}`, () => lineageCheck({ family: n }, false))
+}

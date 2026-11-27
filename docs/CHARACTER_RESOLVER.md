@@ -15,6 +15,7 @@ Manifest fields: `identity_name, aliases, stable_id, edition, file_name, sha256,
 
 - `original` is recovered bytes only, never rights or canon approval. `rights` and `approval` are always `unknown`; manifest values are ignored.
 - Rows in Arcanea Fire or Unity v1/v2 lineages are `rejected_lineages`, whatever their status. A sha256 shared with a rejected lineage is withheld from positives and reported as a conflict.
+  Lineage text (family, edition, identity name, stable id and file name, joined) goes through `normaliseLineageText`, which splits camelCase boundaries, lowercases, turns every run of non-alphanumeric characters into one space and trims. Token patterns such as `arcanea fire` and `unity v1`/`v2` are then matched on word boundaries, so separator forms (`.`, `/`, `_`, `-`, parentheses, camelCase) are covered by one rule and near-miss words like `Firefly` or `v10` stay positive.
 - Matching is exact on normalized name or alias. Near-identical aliases (one edit apart) are reported as `confusable_alias_not_merged` and never merged. An alias shared by two identities returns `ambiguous`.
 - Vendor guests (Clawd, Claude, Codex pets, GitHub Mona) resolve with `class: "vendor-guest"`, `unofficial: true`, `rights: "pending"`.
 - Exit code 3 and a non-`resolved` status block the identity slot.
