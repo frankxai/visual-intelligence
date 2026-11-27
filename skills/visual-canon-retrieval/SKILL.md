@@ -39,3 +39,11 @@ If VIS or private skill is unavailable, use exact source links as a **reference 
 ```json
 {"character_id":null,"lineage":null,"source_uri":null,"source_sha256":null,"hash_verified":false,"approval":"unverified","rights":"unknown","output_uri":null,"qa_score":null,"published":false}
 ```
+
+## Required runtime preflight
+
+On the VIS host mount the reviewed estate implementation read-only and set `VIS_ESTATE_ROOT` to its absolute path. Set `VIS_FOLIO_ROOT` to the private installed character bundle for internal folio reviews. The stdio tool is `visual.identity.resolve`. For clients without this MCP connection, pipe the same request to `node bin/vis-identity.mjs`; on the operator host the same API is available at `GET /api/identity/resolve` with query parameters. ChatGPT Work, Claude Code, Gemini, Antigravity and OpenCode must record which adapter actually responded. A disconnected client returns unresolved.
+
+    {"identity_id":"custom.nilo","variant":"reference-sheet","intended_use":"identity reference","channel":"internal","required_approval":"identity"}
+
+Record identity ID and variant alongside asset ID, version, and digest. Three characters can share a sheet. Resolve each character and attach every required anchor before drafting. A new scene needs a separate human comparison against the named character. Composite the exact verified logo file in website, deck, editorial, newsletter and social layouts. Verify the actual compositor input bytes immediately before use. Retry with the saved version and measured input digest. A nonzero CLI exit, unresolved receipt or missing field blocks the identity slot. Export and public release require separate scoped decisions.

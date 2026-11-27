@@ -130,3 +130,5 @@ When a task concerns Mini Frank, Nilo, Brio, Riff, Starlight Queen, conductor fo
 8. Record QA and release separately. Human gates for R2 writes, rights, external publication and deployment still apply through issue #41.
 
 Source verification and design-lineage work belongs in bounded issues and draft PRs. This hook does not install skills into unrelated repositories or external agents.
+
+For an owned identity slot, call `visual.identity.resolve` before generation, editing or delivery. Use the scoped example and fallback CLI in `skills/visual-canon-retrieval/SKILL.md`. A catalog search, previous screenshot, shared cast-sheet hash or gallery recommendation cannot authorize an individual candidate rendition.

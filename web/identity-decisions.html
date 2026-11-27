@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Placement decisions · VIS</title>
+<style>
+:root{color-scheme:dark;background:#101316;color:#f5f3ed;font:16px/1.55 system-ui,sans-serif}*{box-sizing:border-box}body{max-width:62rem;margin:auto;padding:clamp(1rem,4vw,3rem)}a{color:#b6e2ca}h1{font-size:clamp(2.1rem,5vw,3.5rem);letter-spacing:-.045em;line-height:1.1}h2{font-size:1.18rem;margin:0 0 .8rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr));gap:1rem}section,fieldset{border:1px solid #45514c;border-radius:.8rem;background:#1a2020;padding:1.1rem;margin:1rem 0}fieldset{min-width:0}label{display:block;margin:.7rem 0}input,select,button{font:inherit;color:inherit;padding:.6rem .8rem;border:1px solid #737e77;border-radius:.35rem;background:#242b2a;width:100%}button{color:#13231c;background:#b8dfc4;font-weight:650;cursor:pointer}button:disabled{opacity:.5;cursor:default}input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #ecc66a;outline-offset:2px}p,li,dd,dt{overflow-wrap:anywhere}dt{color:#bdc7c3}dd{margin:0 0 .6rem}img{display:block;max-height:15rem;max-width:100%;margin:.5rem auto}[hidden]{display:none!important}output{display:block;color:#b5e0c6}#message{min-height:1.6rem}small{color:#c2cac5}input[type=file]{font-size:.85rem}
+</style>
+<main><a href="/identities">← Identity review</a><h1>Placement decisions</h1><p>Inspect the exact edition, its rights and review history. Decisions apply to one identity, use and channel.</p>
+<p id="message" role="status">Checking reviewer connection…</p>
+<fieldset id="session" disabled><legend>Reviewer session</legend><small id="project"></small>
+<label>Human access token from your MFA session<input id="token" type="password" autocomplete="off" spellcheck="false"></label>
+<label>Placement decision ID<input id="placement" inputmode="numeric" pattern="[0-9]+" autocomplete="off"></label>
+<button id="load">Open placement</button></fieldset>
+<div id="details" hidden><section><h2>Current placement</h2><dl id="record"></dl></section>
+<div class="grid">
+<section><h2>Master</h2><label>Verify original file<input id="master" type="file" accept="image/*"></label><output id="master-state"></output><img id="master-preview" alt="Verified master" hidden></section>
+<section><h2>Candidate</h2><label>Verify placement file<input id="candidate" type="file" accept="image/*"></label><output id="candidate-state"></output><img id="candidate-preview" alt="Verified placement candidate" hidden></section></div>
+<section><h2>Review decision</h2><label for="action">Action</label><select id="action"><option value="">Select an action</option><option value="approve_use">Approve this use</option><option value="request_revision">Request revision</option><option value="reject">Reject</option><option value="archive">Archive placement</option><option value="recover">Recover archived placement</option><option value="revoke">Revoke permission</option></select>
+<label>Review evidence or reason<input id="evidence" maxlength="1024"></label><button id="save" disabled>Record decision</button></section>
+<section><h2>Version and decision history</h2><ol id="history"></ol></section></div>
+<p><small>Changing the canonical master requires the estate’s signed replacement procedure. Permanent deletion has no authority on this screen.</small></p>
+</main><script type="module" src="/identity-decisions.mjs"></script></html>

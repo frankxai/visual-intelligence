@@ -10,7 +10,7 @@
  * publish-gate blockers, and Cloudflare Artifacts / Derivative Plan handoffs.
  */
 
-import { assetPublishGate, getAsset, resolveAssetId } from './vis-core.mjs'
+import { assetPublishGate, getAsset } from './vis-core.mjs'
 
 export const PLACEMENT_FRAMES = Object.freeze([
   {
@@ -366,7 +366,9 @@ export function compareAssetPlacements(db, options = {}) {
   let targetIds = []
   const notFound = []
   for (const ref of rawRefs.slice(0, 6)) {
-    const resolved = resolveAssetId(db, ref)
+    // A studio selection is an asset ID. The search helper also does fuzzy title matching.
+    const id = String(ref).replace(/^visual:\/\/asset\//, '')
+    const resolved = db.prepare('SELECT asset_id FROM asset WHERE asset_id = ?').get(id)?.asset_id
     if (resolved) {
       if (!targetIds.includes(resolved)) targetIds.push(resolved)
     } else {
@@ -375,7 +377,7 @@ export function compareAssetPlacements(db, options = {}) {
   }
 
   // If no explicit assets were passed, pick up to 4 top-ranked or recent image assets for studio preview.
-  if (targetIds.length === 0) {
+  if (rawRefs.length === 0) {
     const fallbackRows = db.prepare(`
       SELECT a.asset_id
       FROM asset a
@@ -398,7 +400,7 @@ export function compareAssetPlacements(db, options = {}) {
     .map((candidate, index) => ({ ...candidate, rank: index + 1 }))
 
   const publishableWinner = candidates.find(c => c.publish_gate.allowed)
-  const winner = publishableWinner || candidates[0] || null
+  const winner = notFound.length || rawRefs.length > 6 ? null : (publishableWinner || candidates[0] || null)
   const repoName = options.repoName || options.repo || frame.defaultRepo
 
   const handoff = winner

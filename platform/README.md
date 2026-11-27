@@ -107,3 +107,19 @@ unavailable until an authorized rendition resolver is enrolled. Existing local
 previews are exercised. Library and Cloudinary connections are not silently imported
 or mirrored. No background ingestion, billing, analytics collection or publication is
 installed. See [public release preparation](release/PUBLIC_RELEASE.md).
+
+## Scoped identity reviews
+
+The optional placement ledger and human review migrations follow the base VIS catalog in this order.
+
+1. `20261105_vis_catalog.sql`
+2. `20261118_vis_identity_decisions.sql`
+3. `20261118_vis_human_review.sql`
+
+Stage them in an isolated project first. The catalog uses existing platform tenants, principals and memberships. An operator enrolls exact parent and derivative versions, identity tags, brand, object keys and rights evidence as an initial placement decision. Reviewers may supersede only an existing scope. An archived decision requires explicit recovery. Revoked grants require independent enrollment with new rights evidence. Changes to canonical identity require the estate's separately signed procedure.
+
+On the loopback VIS operator host configure `VIS_REVIEW_PROJECT_URL` as the exact project origin and `VIS_REVIEW_PUBLISHABLE_KEY` as the public key. At `/identity-decisions` an enrolled owner or admin uses a short-lived, MFA-verified Supabase user session. Credentials travel directly from the browser to the configured project's RPC endpoints. The service role, anonymous client and unaffiliated subjects cannot write decisions. The review page binds the selected placement to both file digests before enabling approval or recovery. Reread decisions before every downstream use. No production schema or grant is installed by opening the review page.
+
+To roll back, remove the reviewer configuration and revoke EXECUTE on the two human RPCs from authenticated. Disable the downstream binding before reverting code. Preserve the append-only ledger. A review decision does not authorize deletion or public distribution.
+
+For original-versus-rendered regression, supply the independently retrieved original and a request JSON with its pinned digest and version to `node scripts/check-identity-preview.mjs <loopback-origin> <request.json> <original-file>`. The check exercises the actual review endpoint, compares dimensions and channel values, and fails when the authority or source is missing. Keep private folios outside the public test tree.
