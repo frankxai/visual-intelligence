@@ -209,3 +209,18 @@ test('rejected lineage match respects word boundaries on both sides', async () =
   assert.deepEqual(r.positive_references.map(e => e.sha256).sort(), [sha('e'), sha('f'), sha('g')].sort())
   assert.deepEqual(r.rejected_lineages.map(e => e.sha256).sort(), [sha('h'), sha('i')].sort())
 })
+
+test('rejected lineage match handles underscore-joined and file-name forms', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-m-'))
+  const p = join(dir, 'm.json')
+  const names = ['Arcanea_Fire_v1', 'Arcanea-Fire_v2', 'x_Arcanea_Fire', 'Unity_v1_final', 'Unity-v2_x']
+  const ok = ['Arcanea_Firefly', 'Unity_v10', 'Unity_v3']
+  const row = o => ({ identity_name: 'Test Ox', stable_id: 'test.char.ox', drive_file_id: 'D', status: 'original', ...o })
+  writeFileSync(p, JSON.stringify([
+    ...names.map(n => row({ family: n, sha256: sha('bad:' + n) })),
+    ...ok.map(n => row({ family: n, sha256: sha('ok:' + n) })),
+  ]))
+  const r = await resolveCharacter({ name: 'Test Ox' }, { manifestPath: p, cache: { dir } })
+  assert.deepEqual(r.rejected_lineages.map(e => e.sha256).sort(), names.map(n => sha('bad:' + n)).sort())
+  assert.deepEqual(r.positive_references.map(e => e.sha256).sort(), ok.map(n => sha('ok:' + n)).sort())
+})
