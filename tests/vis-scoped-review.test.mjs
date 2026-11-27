@@ -23,10 +23,13 @@ import { serveLibrary } from '../web/vis-library-server.mjs'
 
 async function setup(t) {
   const project = fs.mkdtempSync(path.join(os.tmpdir(), 'vis-scoped-'))
-  t.after(() => fs.rmSync(project, { recursive: true, force: true }))
   fs.writeFileSync(path.join(project, 'vis.config.json'), '{}')
   const db = openLibraryDatabase(project, loadConfig(project))
-  t.after(() => db.close())
+  const cleanups = [() => db.close()]
+  t.after(async () => {
+    while (cleanups.length > 0) await cleanups.pop()()
+    fs.rmSync(project, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })
+  })
   const key = generateKeyPairSync('ed25519'),
     actor = 'human:reviewer',
     workspace = 'synthetic-a'
@@ -104,6 +107,7 @@ async function setup(t) {
     apply,
     asset,
     destination,
+    onCleanup: (fn) => cleanups.push(fn),
   }
 }
 test('signed import deduplicates, decodes raster and restores bytes in a new workspace database', async (t) => {
@@ -119,7 +123,7 @@ test('signed import deduplicates, decodes raster and restores bytes in a new wor
   fs.mkdirSync(project2)
   fs.writeFileSync(path.join(project2, 'vis.config.json'), '{}')
   const db2 = openLibraryDatabase(project2, loadConfig(project2))
-  t.after(() => db2.close())
+  f.onCleanup(() => db2.close())
   const second = await importOriginal({
     db: db2,
     project: project2,
@@ -265,7 +269,10 @@ test('identity, canon, replacement and destination handoff require specific live
 test('bound browser serves renditions and refuses legacy write routes and unsigned decisions', async (t) => {
   const f = await setup(t),
     { server, url } = await serveLibrary(f.project, { port: 0, reviewPolicy: f.policy })
-  t.after(() => server.close())
+  f.onCleanup(() => new Promise((resolve) => {
+    server.closeAllConnections?.()
+    server.close(() => resolve())
+  }))
   assert.equal((await fetch(url + 'r/' + f.asset + '/preview')).status, 200)
   assert.equal((await fetch(url + 'api/asset/' + f.asset + '/rights', { method: 'POST' })).status, 404)
   const endpoint = url + 'api/review/asset/' + f.asset

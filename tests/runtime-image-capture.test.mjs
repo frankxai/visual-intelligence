@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { fileURLToPath } from 'node:url'
 import { DatabaseSync } from 'node:sqlite'
 import { execFileSync } from 'node:child_process'
 import { createSchema, buildAssetEntry, upsertAssetGraph, traceAsset } from '../core/vis-core.mjs'
@@ -126,7 +127,7 @@ test('runtime CLI projects and captures locally; output aliases cannot overwrite
   const f = fixture(t)
   const input = path.join(f.root, 'input.json'), db = path.join(f.root, 'vis.sqlite')
   fs.writeFileSync(input, JSON.stringify(f.input))
-  const script = new URL('../scripts/image-capture.mjs', import.meta.url).pathname
+  const script = fileURLToPath(new URL('../scripts/image-capture.mjs', import.meta.url))
   const args = [script, '--runtime-input', input, '--records-root', f.root, '--media-root', f.root, '--db', db]
   const dry = JSON.parse(execFileSync(process.execPath, args, { stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8' }))
   assert.equal(dry.counts.metadata_only, 2)
