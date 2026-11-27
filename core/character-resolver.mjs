@@ -12,7 +12,8 @@ export const characterSchema = {
 
 const STATUSES = new Set(['original', 'proposal', 'rejected', 'not accessible'])
 // Rejected lineages can never be positive references, whatever a manifest row claims.
-const REJECTED_LINEAGE = [/(?<![a-z0-9])arcanea[\s_-]*fire(?![a-z0-9])/i, /(?<![a-z0-9])unity[\s_-]*v?[12](?![a-z0-9])/i] // letter/digit lookarounds: "_" is a word char, so \b would fail open on file-name forms
+// Matched on normalised text (lowercase, every non-alphanumeric run -> one space), so "_", ".", "/", "(", camelCase and hyphen forms all reduce to the same tokens.
+const REJECTED_LINEAGE = [/\barcanea\s*fire\b/, /\bunity\s*v?[12]\b/]
 const VENDOR_GUEST = [/\bclawd\b/i, /\bclaude\b/i, /\bcodex[\s_-]*pets?\b/i, /\bgithub[\s_-]*mona\b/i, /^mona$/i]
 
 export const normalize = s => String(s ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '')
@@ -21,10 +22,10 @@ export const normalize = s => String(s ?? '').normalize('NFKD').replace(/[̀-ͯ]
 const splitList = v => Array.isArray(v) ? v.map(String)
   : typeof v === 'string' ? v.split(/[;|]/).map(s => s.trim()).filter(Boolean) : []
 
-// Terms may be split across fields (family "Arcanea" + edition "Fire"), so test the joined fields.
+// Terms may be split across fields (family "Arcanea" + edition "Fire"), so normalise the joined fields.
 const isRejectedLineage = row => {
-  const joined = [row.family, row.edition, row.identity_name, row.stable_id].map(f => String(f ?? '')).join(' ')
-  return REJECTED_LINEAGE.some(re => re.test(joined))
+  const text = normalize([row.family, row.edition, row.identity_name, row.stable_id].map(f => String(f ?? '')).join(' '))
+  return REJECTED_LINEAGE.some(re => re.test(text))
 }
 const isVendorGuest = (row, names) => [row.identity_name, ...names].some(n => VENDOR_GUEST.some(re => re.test(String(n ?? '').trim())))
 
