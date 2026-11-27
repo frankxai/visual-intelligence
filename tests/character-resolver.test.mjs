@@ -193,3 +193,19 @@ test('rejected lineage match is not widened to unrelated rows', async () => {
   assert.equal(r.conflicts.length, 0)
   assert.equal(r.positive_references.length, 2)
 })
+
+test('rejected lineage match respects word boundaries on both sides', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'vis-char-m-'))
+  const p = join(dir, 'm.json')
+  const row = o => ({ identity_name: 'Test Ox', stable_id: 'test.char.ox', drive_file_id: 'D', status: 'original', ...o })
+  writeFileSync(p, JSON.stringify([
+    row({ family: 'Arcanea', edition: 'Firefly', sha256: sha('e') }),
+    row({ family: 'Arcanea Fireside', edition: 'v1', sha256: sha('f') }),
+    row({ family: 'Unity', edition: 'v10', sha256: sha('g') }),
+    row({ family: 'Arcanea', edition: 'Fire', sha256: sha('h') }),
+    row({ family: 'Arcanea_Fire', edition: 'v3', sha256: sha('i') }),
+  ]))
+  const r = await resolveCharacter({ name: 'Test Ox' }, { manifestPath: p, cache: { dir } })
+  assert.deepEqual(r.positive_references.map(e => e.sha256).sort(), [sha('e'), sha('f'), sha('g')].sort())
+  assert.deepEqual(r.rejected_lineages.map(e => e.sha256).sort(), [sha('h'), sha('i')].sort())
+})

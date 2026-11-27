@@ -12,7 +12,7 @@ export const characterSchema = {
 
 const STATUSES = new Set(['original', 'proposal', 'rejected', 'not accessible'])
 // Rejected lineages can never be positive references, whatever a manifest row claims.
-const REJECTED_LINEAGE = [/arcanea[\s_-]*fire/i, /\bunity[\s_-]*v?[12]\b/i]
+const REJECTED_LINEAGE = [/\barcanea[\s_-]*fire\b/i, /\bunity[\s_-]*v?[12]\b/i]
 const VENDOR_GUEST = [/\bclawd\b/i, /\bclaude\b/i, /\bcodex[\s_-]*pets?\b/i, /\bgithub[\s_-]*mona\b/i, /^mona$/i]
 
 export const normalize = s => String(s ?? '').normalize('NFKD').replace(/[̀-ͯ]/g, '')
