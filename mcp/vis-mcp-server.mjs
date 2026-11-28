@@ -94,15 +94,24 @@ import {
   openLibraryDatabase,
   proposalStats,
   proposeForAsset,
+  renditionPath,
   resolveLibraryRoots,
 } from '../core/vis-library.mjs'
+import {
+  CatalogError,
+  catalogTools,
+  projectCatalogAsset,
+  validateCatalogInput,
+} from '../core/vis-catalog-access.mjs'
 
 const ROOT = path.resolve(process.env.VIS_ROOT || findProjectRoot(process.cwd()))
 const CONFIG = loadConfig(ROOT)
 const WRITE_ENABLED = process.env.VIS_ENABLE_WRITES === '1'
 const RIGHTS_ENABLED = process.env.VIS_ENABLE_RIGHTS === '1'
 const PUBLISH_ENABLED = process.env.VIS_ENABLE_PUBLISH === '1'
-const LIBRARY_ROOTS = resolveLibraryRoots(ROOT, CONFIG).map(r => r.path)
+// Declared library roots are this workspace's catalog sources. Label, not path, is the source_id.
+const LIBRARY_SOURCES = resolveLibraryRoots(ROOT, CONFIG)
+const LIBRARY_ROOTS = LIBRARY_SOURCES.map(r => r.path)
 const MCP_PROTOCOL_VERSION = process.env.VIS_MCP_PROTOCOL_VERSION || '2025-06-18'
 const MCP_MODE = process.env.VIS_MCP_MODE === 'dynamic' ? 'dynamic' : 'full'
 const ALLOWED_ROOTS = [
@@ -1142,8 +1151,140 @@ function toolGetCharacterCanonBrief(args = {}) {
   })
 }
 
+// ---------------------------------------------------------------------------
+// Catalog read tools. A read-only projection over the existing local index:
+// declared library roots are the sources, asset_rendition holds thumbs and
+// previews. No second index, no source enrollment, no account connection.
+
+function catalogCoverageRows(db) {
+  if (!tableExists(db, 'library_file_state')) return []
+  return db.prepare(`
+SELECT root_label AS source_id, COUNT(DISTINCT asset_id) AS asset_count, MAX(seen_at) AS indexed_at
+FROM library_file_state
+GROUP BY root_label
+ORDER BY root_label`).all()
+}
+
+/** Core schema opens with every tool call; library tables only exist after a library run. */
+function tableExists(db, name) {
+  return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name))
+}
+
+function toolGetAssetSources(args = {}) {
+  validateCatalogInput('get_asset_sources', args)
+  return withDb(db => {
+    const indexed = new Map(catalogCoverageRows(db).map(row => [row.source_id, row]))
+    const coverage = []
+    if (!LIBRARY_SOURCES.length && !indexed.size) {
+      coverage.push({
+        source_id: 'local-library',
+        kind: 'local-library',
+        state: 'not_configured',
+        indexed_at: null,
+        asset_count: null,
+        exhaustive: false,
+      })
+    }
+    for (const source of LIBRARY_SOURCES) {
+      const row = indexed.get(source.label)
+      indexed.delete(source.label)
+      coverage.push({
+        source_id: source.label,
+        kind: 'local-library',
+        state: source.exists ? 'ready' : 'unavailable',
+        indexed_at: row?.indexed_at || null,
+        asset_count: source.exists ? (Number.isSafeInteger(row?.asset_count) ? row.asset_count : 0) : null,
+        exhaustive: false,
+      })
+    }
+    // Rows left over belong to roots that were enrolled once and are no longer declared.
+    for (const row of indexed.values()) {
+      coverage.push({
+        source_id: row.source_id,
+        kind: 'local-library',
+        state: 'unavailable',
+        indexed_at: row.indexed_at || null,
+        asset_count: row.asset_count ?? null,
+        exhaustive: false,
+      })
+    }
+    return {
+      workspace_id: 'local',
+      retrieval: 'metadata',
+      assets: [],
+      coverage,
+      complete: coverage.length > 0 && coverage.every(source => source.state === 'ready' && source.exhaustive === true),
+      truncated: false,
+      no_matches: false,
+    }
+  })
+}
+
+function toolGetAssetPreview(args = {}) {
+  const input = validateCatalogInput('get_asset_preview', args)
+  return withDb(db => {
+    const { source_id: sourceId, asset_id: assetId, version_id: versionId } = input
+    // The host owns the source list; a caller cannot name an arbitrary path or provider.
+    const source = LIBRARY_SOURCES.find(item => item.label === sourceId)
+      || catalogCoverageRows(db).find(row => row.source_id === sourceId)
+    if (!source) throw new CatalogError('not_found', 404)
+    const asset = db.prepare(`
+SELECT asset_id, title, media_type, rights_status, approval_status, tags_json, last_seen_at
+FROM asset WHERE asset_id = ?`).get(assetId)
+    if (!asset) throw new CatalogError('not_found', 404)
+    const inSource = tableExists(db, 'library_file_state')
+      ? db.prepare('SELECT 1 FROM library_file_state WHERE asset_id = ? AND root_label = ? LIMIT 1').get(assetId, sourceId)
+      : null
+    if (!inSource) throw new CatalogError('not_found', 404)
+    const version = db.prepare(`
+SELECT version_id, sha256, media_type, width, height FROM asset_version WHERE version_id = ? AND asset_id = ?`).get(versionId, assetId)
+    if (!version) throw new CatalogError('not_found', 404)
+    // The local index records renditions per asset, not per version.
+    const rendition = tableExists(db, 'asset_rendition')
+      ? db.prepare(`
+SELECT sha256, kind, mime_type, width, height, byte_size FROM asset_rendition
+WHERE asset_id = ? AND storage = 'local' AND kind IN ('preview', 'thumb')
+ORDER BY CASE kind WHEN 'preview' THEN 0 ELSE 1 END LIMIT 1`).get(assetId)
+      : null
+    const previewPath = rendition ? renditionPath(ROOT, db, assetId, rendition.kind) : null
+    if (!rendition || !previewPath) throw new CatalogError('preview_unavailable', 404)
+    const thumbhash = db.prepare("SELECT data_text FROM asset_rendition WHERE asset_id = ? AND kind = 'thumbhash' LIMIT 1").get(assetId)
+    return {
+      asset: projectCatalogAsset({
+        asset_id: asset.asset_id,
+        version_id: version.version_id,
+        title: asset.title,
+        media_type: version.media_type || asset.media_type,
+        sha256: version.sha256,
+        width: version.width,
+        height: version.height,
+        tags: parseJson(asset.tags_json, []),
+        rights_status: asset.rights_status,
+        approval_status: asset.approval_status,
+        approval_scope: 'asset_record',
+        last_seen_at: asset.last_seen_at,
+        preview_available: true,
+      }, sourceId),
+      preview: {
+        kind: rendition.kind,
+        storage: 'local',
+        mime_type: rendition.mime_type || 'image/webp',
+        width: rendition.width,
+        height: rendition.height,
+        byte_size: rendition.byte_size,
+        sha256: /^[0-9a-f]{64}$/.test(rendition.sha256 || '') ? rendition.sha256 : null,
+        path: previewPath,
+        thumbhash: thumbhash?.data_text || null,
+        master_bytes: false,
+      },
+    }
+  })
+}
+
 const TOOL_HANDLERS = {
   library_search: toolLibrarySearch,
+  get_asset_sources: toolGetAssetSources,
+  get_asset_preview: toolGetAssetPreview,
   library_get_asset: toolLibraryGetAsset,
   library_list_proposals: toolLibraryListProposals,
   library_find_placements: toolLibraryFindPlacements,
@@ -1268,6 +1409,10 @@ const TOOLS = [
     decision: stringProp('accepted or dismissed'),
     execute: booleanProp('Persist when VIS_ENABLE_WRITES=1'),
   }),
+  // Catalog contract tools. Schema, required fields and read-only annotations come
+  // from core/vis-catalog-access.mjs so this server cannot drift from the rollout doc.
+  catalogTool('get_asset_sources', 'Inspect this workspace catalog coverage and index timestamps. Call this first. The local index is a projection over declared library roots, not a second index. Declared sources are reported as not_configured or unavailable instead of being silently skipped. Does not connect accounts or scan files. Read-only.'),
+  catalogTool('get_asset_preview', 'Load one existing thumbnail or preview rendition for an exact asset version from this workspace source. An absent rendition is reported as preview_unavailable. Does not generate, upload, approve, publish, or serve original masters. Read-only.'),
   tool('search_assets', 'Search VIS assets by query, tag, mood, category, media type, or extracted color palette.', {
     query: stringProp('Search query'),
     tag: stringProp('Tag filter'),
@@ -1801,6 +1946,13 @@ function tool(name, description, properties) {
       additionalProperties: true,
     },
   }
+}
+
+/** Contract tools reuse the exact schema and read-only annotations from catalogTools. */
+function catalogTool(name, description) {
+  const defined = catalogTools.find(entry => entry.name === name)
+  if (!defined) throw new Error(`Unknown catalog tool: ${name}`)
+  return { ...defined, description }
 }
 
 function stringProp(description) {
