@@ -10,6 +10,7 @@
  */
 
 import { identitySchema, resolveVisualIdentity } from '../core/visual-identity.mjs'
+import { characterSchema, resolveCharacter } from '../core/character-resolver.mjs'
 import { createInterface } from 'readline'
 import path from 'path'
 import {
@@ -824,6 +825,7 @@ const TOOL_CATEGORY_MAP = {
   dam_discover_tools: 'governance',
   dam_describe_tool: 'governance',
   'visual.identity.resolve': 'character',
+  'visual.character.resolve': 'character',
   get_character_canon_brief: 'character',
   search_assets: 'search',
   get_asset: 'search',
@@ -886,7 +888,7 @@ const TOOL_CATEGORY_MAP = {
 
 const READ_ONLY_TOOL_NAMES = new Set([
   'dam_capabilities', 'dam_discover_tools', 'dam_describe_tool',
-  'visual.identity.resolve', 'library_search', 'library_get_asset', 'library_find_placements',
+  'visual.identity.resolve', 'visual.character.resolve', 'library_search', 'library_get_asset', 'library_find_placements',
   'library_list_proposals', 'list_placement_frames', 'compare_asset_placements',
   'search_assets', 'get_asset', 'trace_asset', 'map_usage', 'find_duplicates', 'find_orphans',
   'find_similar_assets', 'score_asset', 'score_collection', 'create_curation_packet',
@@ -1148,6 +1150,7 @@ const TOOL_HANDLERS = {
   list_placement_frames: toolListPlacementFrames,
   compare_asset_placements: toolCompareAssetPlacements,
   'visual.identity.resolve': resolveVisualIdentity,
+  'visual.character.resolve': resolveCharacter,
   search_assets: toolSearchAssets,
   get_asset: toolGetAsset,
   trace_asset: toolTraceAsset,
@@ -1214,6 +1217,7 @@ const TOOL_HANDLERS = {
 }
 
 const TOOLS = [
+  { name: 'visual.character.resolve', description: 'Resolve a character name or alias to an immutable identity ID with sha256 editions, positive references, rejected lineages, source locators, and missing or conflicting references. Rights and approval are always unknown or pending. Read only.', inputSchema: characterSchema },
   { name: 'visual.identity.resolve', description: 'Resolve the exact owned master for a named use and channel. Unresolved blocks the workflow. Read only.', inputSchema: identitySchema },
   tool('library_search', 'Search the watched library (declared roots only). Returns hash, rights, rank, ThumbHash, location count, and open proposals. Read-only.', {
     query: stringProp('Match title, path, or tag'),
