@@ -1129,12 +1129,15 @@ function toolGetCharacterCanonBrief(args = {}) {
   return withDb(db => {
     const assets = searchAssets(db, { maxResults: 500 })
     const taste = getTasteDirectives(db, { brand: args.brand || undefined, limit: 100 })
-    const directives = [...(taste.positive || []), ...(taste.negative || [])]
+    const directives = Array.isArray(taste.entries)
+      ? taste.entries
+      : [...(taste.positive || []), ...(taste.negative || [])]
     return buildCharacterCanonBrief({
       characterId,
       brand: args.brand || null,
       assets,
       tasteDirectives: directives,
+      identityReceipt: args.identity_receipt || args.identityReceipt || null,
     })
   })
 }
@@ -1636,9 +1639,10 @@ const TOOLS = [
     spec_filter: stringProp('Optional transform spec filter'),
     reason: stringProp('Purge rationale'),
   }),
-  tool('get_character_canon_brief', 'Build an agent-ready Character Canon & Negative-Taste briefing combining approved masters, rejected drift examples, and estate taste doctrines. Read-only.', {
+  tool('get_character_canon_brief', 'Build an agent-ready Character Canon & Negative-Taste briefing combining approved masters, rejected drift examples, and estate taste doctrines. Ready only with a resolved identity receipt. Read-only.', {
     character_id: stringProp('Character identifier slug'),
     brand: stringProp('Optional brand scope (e.g. arcanea, frankx, starlight)'),
+    identity_receipt: { type: 'object', description: 'Optional resolved visual.identity.resolve receipt' },
   }),
   tool('vis_search', 'Legacy alias for search_assets.', {
     query: stringProp('Search query'),

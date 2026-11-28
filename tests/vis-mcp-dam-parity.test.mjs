@@ -23,9 +23,15 @@ function seedDamProject(t) {
     .run('arcanea', JSON.stringify(['brand:arcanea', 'character:sable']), 'approved', 'generated-owned', asset.asset_id)
   db.close()
 
+  const tasteLedger = path.join(base, 'taste-ledger.jsonl')
+  fs.writeFileSync(tasteLedger, [
+    JSON.stringify({ brand: 'arcanea', polarity: 'positive', doctrine: 'Sharp obsidian rim lighting' }),
+    JSON.stringify({ brand: 'estate', polarity: 'negative', doctrine: 'No plastic skin texture', defects: ['plastic-skin'] }),
+  ].join('\n') + '\n')
+
   const sha = crypto.createHash('sha256').update(PNG).digest('hex')
   t.after(() => fs.rmSync(base, { recursive: true, force: true }))
-  return { base, assetId: asset.asset_id, sha }
+  return { base, assetId: asset.asset_id, sha, tasteLedger }
 }
 
 function spawnMcp(t, projectRoot, extraEnv = {}) {
@@ -77,8 +83,8 @@ function spawnMcp(t, projectRoot, extraEnv = {}) {
 }
 
 test('vis-mcp exposes Cloudinary-parity DAM tools and static DAM resources in full mode', async t => {
-  const { base, assetId, sha } = seedDamProject(t)
-  const mcp = spawnMcp(t, base, { VIS_MEDIA_SIGNING_KEY: 'mcp-test-signing-key' })
+  const { base, assetId, sha, tasteLedger } = seedDamProject(t)
+  const mcp = spawnMcp(t, base, { VIS_MEDIA_SIGNING_KEY: 'mcp-test-signing-key', VIS_TASTE_LEDGER: tasteLedger })
 
   const init = await mcp.rpc('initialize', {})
   assert.equal(init.result.serverInfo.mcpMode, 'full')
@@ -150,9 +156,21 @@ test('vis-mcp exposes Cloudinary-parity DAM tools and static DAM resources in fu
   assert.equal(purge.data.purgeCount, 1)
   assert.equal(purge.data.refusedCount, 1)
 
-  const canon = await mcp.call('get_character_canon_brief', { character_id: 'sable', brand: 'arcanea' })
-  assert.equal(canon.data.readyForGeneration, true)
-  assert.equal(canon.data.canonicalReferences.length, 1)
+  const canonUnresolved = await mcp.call('get_character_canon_brief', { character_id: 'sable', brand: 'arcanea' })
+  assert.equal(canonUnresolved.data.readyForGeneration, false)
+  assert.equal(canonUnresolved.data.status, 'unresolved_identity_authority')
+  assert.equal(canonUnresolved.data.canonicalReferences.length, 1)
+  assert.deepEqual(canonUnresolved.data.positiveDirectives, ['Sharp obsidian rim lighting'])
+  assert.deepEqual(canonUnresolved.data.negativeTasteRules, ['No plastic skin texture'])
+  assert.ok(canonUnresolved.data.avoidDefects.includes('plastic-skin'))
+
+  const canonResolved = await mcp.call('get_character_canon_brief', {
+    character_id: 'sable',
+    brand: 'arcanea',
+    identity_receipt: { status: 'resolved', approved_version: 'v1', sha256: sha },
+  })
+  assert.equal(canonResolved.data.readyForGeneration, true)
+  assert.equal(canonResolved.data.status, 'resolved')
 
   // Static DAM resources
   const resources = await mcp.rpc('resources/list', {})

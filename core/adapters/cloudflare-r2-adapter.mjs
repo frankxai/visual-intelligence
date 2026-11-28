@@ -215,6 +215,9 @@ export function createR2PresignedUrl({
   if (upperMethod === 'DELETE' && (key.startsWith('masters/') || key.startsWith('renditions/'))) {
     throw new Error(`DELETE presign refused for immutable prefix: ${key}`)
   }
+  if (upperMethod === 'PUT' && key.startsWith('masters/') && (typeof contentSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(contentSha256))) {
+    throw new Error('contentSha256 is required for presigned PUT to masters/')
+  }
 
   const baseEndpoint = endpoint || (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : null)
   if (!baseEndpoint) throw new Error('R2 endpoint or accountId is required')
@@ -243,8 +246,17 @@ export function createR2PresignedUrl({
     headerLines.push(`content-type:${contentType}`)
     requiredHeaders['content-type'] = contentType
   }
-  if (contentSha256 && upperMethod === 'PUT') {
-    requiredHeaders['x-content-sha256'] = contentSha256
+  let payloadHash = 'UNSIGNED-PAYLOAD'
+  if (upperMethod === 'PUT' && typeof contentSha256 === 'string' && /^[a-f0-9]{64}$/.test(contentSha256)) {
+    const checksumSha256Base64 = Buffer.from(contentSha256, 'hex').toString('base64')
+    signedHeaderNames.push('x-amz-checksum-sha256', 'x-amz-content-sha256')
+    headerLines.push(
+      `x-amz-checksum-sha256:${checksumSha256Base64}`,
+      `x-amz-content-sha256:${contentSha256}`
+    )
+    requiredHeaders['x-amz-checksum-sha256'] = checksumSha256Base64
+    requiredHeaders['x-amz-content-sha256'] = contentSha256
+    payloadHash = contentSha256
   }
   signedHeaderNames.sort()
   headerLines.sort()
@@ -264,7 +276,7 @@ export function createR2PresignedUrl({
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&')
 
-  const canonicalRequest = `${upperMethod}\n${canonicalUri}\n${canonicalQuery}\n${canonicalHeaders}\n${signedHeaders}\nUNSIGNED-PAYLOAD`
+  const canonicalRequest = `${upperMethod}\n${canonicalUri}\n${canonicalQuery}\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`
   const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${crypto.createHash('sha256').update(canonicalRequest).digest('hex')}`
 
   const kDate = hmac(`AWS4${secretAccessKey}`, dateStamp)

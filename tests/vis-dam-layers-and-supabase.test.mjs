@@ -100,6 +100,31 @@ test('R2 S3v4 presigned URLs sign cleanly and refuse DELETE on immutable prefixe
   assert.equal(signedGet.url.includes(secret), false)
 
   assert.throws(() => createR2PresignedUrl({
+    method: 'PUT',
+    key: `masters/${SHA_MASTER.slice(0, 2)}/${SHA_MASTER}`,
+    accountId: 'acc123456',
+    accessKeyId: 'AKIAEXAMPLE123',
+    secretAccessKey: secret,
+  }), /contentSha256 is required/)
+
+  const signedPut = createR2PresignedUrl({
+    method: 'PUT',
+    bucket: 'starlight-media-private',
+    key: `masters/${SHA_MASTER.slice(0, 2)}/${SHA_MASTER}`,
+    accountId: 'acc123456',
+    accessKeyId: 'AKIAEXAMPLE123',
+    secretAccessKey: secret,
+    contentType: 'image/png',
+    contentSha256: SHA_MASTER,
+    now: new Date('2026-11-28T00:00:00Z'),
+  })
+  const expectedChecksumB64 = Buffer.from(SHA_MASTER, 'hex').toString('base64')
+  assert.ok(signedPut.signedHeaders.includes('x-amz-checksum-sha256'))
+  assert.ok(signedPut.signedHeaders.includes('x-amz-content-sha256'))
+  assert.equal(signedPut.headers['x-amz-checksum-sha256'], expectedChecksumB64)
+  assert.equal(signedPut.headers['x-amz-content-sha256'], SHA_MASTER)
+
+  assert.throws(() => createR2PresignedUrl({
     method: 'DELETE',
     key: `masters/${SHA_MASTER.slice(0, 2)}/${SHA_MASTER}`,
     accountId: 'acc123456',
@@ -131,8 +156,8 @@ test('planDerivativePurge only targets derived/ keys and protects masters/ and r
   assert.equal(plan.mastersUntouched, true)
 })
 
-test('buildCharacterCanonBrief & hybridScoreAssets combine canon, negative taste, and cosine RRF', () => {
-  const brief = buildCharacterCanonBrief({
+test('buildCharacterCanonBrief requires resolved identityReceipt and hybridScoreAssets combines RRF', () => {
+  const sharedInput = {
     characterId: 'sable',
     brand: 'arcanea',
     assets: [
@@ -143,11 +168,21 @@ test('buildCharacterCanonBrief & hybridScoreAssets combine canon, negative taste
       { brand: 'arcanea', polarity: 'positive', doctrine: 'Maintain bronze collar insignia and silver iris specular highlights' },
       { brand: 'estate', polarity: 'negative', doctrine: 'Avoid plastic skin smoothing', defects: ['plastic-skin', 'off-model'] },
     ],
+  }
+  const unresolvedBrief = buildCharacterCanonBrief(sharedInput)
+  assert.equal(unresolvedBrief.readyForGeneration, false)
+  assert.equal(unresolvedBrief.status, 'unresolved_identity_authority')
+  assert.equal(unresolvedBrief.canonicalReferences.length, 1)
+  assert.equal(unresolvedBrief.rejectedDriftExamples.length, 1)
+  assert.ok(unresolvedBrief.avoidDefects.includes('plastic-skin'))
+
+  const brief = buildCharacterCanonBrief({
+    ...sharedInput,
+    identityReceipt: { status: 'resolved', approved_version: 'v1', sha256: SHA_MASTER },
   })
   assert.equal(brief.readyForGeneration, true)
-  assert.equal(brief.canonicalReferences.length, 1)
-  assert.equal(brief.rejectedDriftExamples.length, 1)
-  assert.ok(brief.avoidDefects.includes('plastic-skin'))
+  assert.equal(brief.status, 'resolved')
+  assert.equal(brief.identityReceipt.approved_version, 'v1')
 
   assert.equal(Math.round(cosineSimilarity([1, 0, 0], [1, 0, 0]) * 100), 100)
   const ranked = hybridScoreAssets([
@@ -255,4 +290,19 @@ test('createSupabaseWorkspaceCatalog extended DAM methods enforce strict tenant 
   await assert.rejects(adapter.getCharacterProfile('sable', { workspaceId: WS_B }), /workspace_forbidden/)
   await assert.rejects(adapter.listUploadPresets({ workspaceId: WS_B }), /workspace_forbidden/)
   assert.equal(await adapter.preview('asset_sable', 'v1', { workspaceId: WS_A }), null)
+
+  let capturedCtx = null
+  const sourced = createSupabaseWorkspaceCatalog({
+    ...base,
+    workspaceId: WS_A,
+    sourceId: 'owned',
+    fetchImpl: async () => Response.json([]),
+    renditionResolver: async (assetId, versionId, ctx) => {
+      capturedCtx = { assetId, versionId, ctx }
+      return { mimeType: 'image/webp', data: 'ok' }
+    },
+  })
+  const previewResult = await sourced.preview('asset_sable', 'v1', { workspaceId: WS_A })
+  assert.equal(previewResult.mimeType, 'image/webp')
+  assert.equal(capturedCtx.ctx.sourceId, 'owned')
 })

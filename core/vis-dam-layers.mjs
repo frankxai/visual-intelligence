@@ -470,6 +470,7 @@ export function buildCharacterCanonBrief({
   assets = [],
   tasteDirectives = [],
   lineageRecords = [],
+  identityReceipt = null,
 }) {
   if (!characterId || typeof characterId !== 'string') {
     throw new Error('characterId is required to build a character canon brief')
@@ -494,8 +495,19 @@ export function buildCharacterCanonBrief({
 
   const isOwnedOrApprovedRights = r => ['owned', 'generated-owned', 'licensed'].includes(r)
   const canonicalReferences = matchingAssets
-    .filter(a => a.approval_status === 'approved' && isOwnedOrApprovedRights(a.rights_status))
+    .filter(a => a.approval_status === 'approved' && isOwnedOrApprovedRights(a.rights_status) && SHA256_RE.test(a.sha256 || ''))
     .map(compactAssetSummary)
+
+  const identityResolved = Boolean(
+    identityReceipt &&
+    identityReceipt.status === 'resolved' &&
+    SHA256_RE.test(identityReceipt.sha256 || '') &&
+    typeof identityReceipt.approved_version === 'string' &&
+    identityReceipt.approved_version.trim()
+  )
+  const matchedIdentityRef = identityResolved
+    ? canonicalReferences.find(c => c.sha256 === identityReceipt.sha256) || null
+    : null
 
   const approvedVariants = matchingAssets
     .filter(a => a.approval_status === 'approved' && !canonicalReferences.some(c => c.asset_id === a.asset_id))
@@ -532,6 +544,8 @@ export function buildCharacterCanonBrief({
 
   return {
     schemaVersion: 'vis.character-canon-brief.v1',
+    status: matchedIdentityRef ? 'resolved' : 'unresolved_identity_authority',
+    publish_authorized: false,
     characterId: needle,
     brand: brandNeedle,
     matchedCount: matchingAssets.length,
@@ -542,12 +556,19 @@ export function buildCharacterCanonBrief({
     positiveDirectives: [...new Set(positiveDirectives)],
     negativeTasteRules: [...new Set(negativeTasteRules)],
     avoidDefects: [...defects],
+    identityReceipt: identityResolved
+      ? {
+          status: identityReceipt.status,
+          approved_version: identityReceipt.approved_version,
+          sha256: identityReceipt.sha256,
+        }
+      : null,
     guardrails: [
-      'Always anchor generation on a verified canonicalReferences[].sha256 master rather than unapproved candidates.',
+      'A resolved, version-and-digest-bound visual.identity.resolve receipt matching canonicalReferences[].sha256 is required BEFORE generation or placement.',
       'Do not infer rights from folder names; require rights_status in owned|generated-owned|licensed before publication.',
-      'Cross-check visual.identity.resolve before channel placement.',
+      'Cross-check visual.identity.resolve again before channel placement.',
     ],
-    readyForGeneration: canonicalReferences.length > 0,
+    readyForGeneration: Boolean(matchedIdentityRef),
   }
 }
 

@@ -105,7 +105,7 @@ export function createSupabaseWorkspaceCatalog(config) {
     async preview(assetId, versionId, context) {
       if (typeof config.renditionResolver === 'function') {
         if (context.workspaceId !== config.workspaceId) throw new CatalogError('workspace_forbidden', 403)
-        return config.renditionResolver(assetId, versionId, context)
+        return config.renditionResolver(assetId, versionId, { ...context, sourceId: config.sourceId })
       }
       return null // Enroll an authorized rendition resolver before exposing any R2 bytes.
     },

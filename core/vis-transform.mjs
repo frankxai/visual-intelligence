@@ -396,15 +396,69 @@ export function parseTransformSpec(spec) {
 }
 
 /**
+ * Parses HTTP Accept header media ranges per RFC 9110 and returns q-factor for a given MIME type.
+ */
+function parseAcceptHeader(acceptHeader) {
+  const ranges = []
+  for (const part of String(acceptHeader || '').split(',')) {
+    const tokens = part.trim().toLowerCase().split(';').map(s => s.trim()).filter(Boolean)
+    if (!tokens.length || !tokens[0].includes('/')) continue
+    const mediaRange = tokens[0]
+    let q = 1
+    for (let i = 1; i < tokens.length; i++) {
+      const m = tokens[i].match(/^q=(0(?:\.\d{1,3})?|1(?:\.0{1,3})?)$/)
+      if (m) {
+        q = Number(m[1])
+        break
+      }
+    }
+    const [type, subtype] = mediaRange.split('/')
+    ranges.push({ type, subtype, q })
+  }
+  return ranges
+}
+
+function acceptMatchForMime(ranges, mimeType) {
+  const [targetType, targetSub] = mimeType.split('/')
+  let bestSpec = 0
+  let bestQ = null
+  for (const r of ranges) {
+    let spec = 0
+    if (r.type === targetType && r.subtype === targetSub) spec = 3
+    else if (r.type === targetType && r.subtype === '*') spec = 2
+    else if (r.type === '*' && r.subtype === '*') spec = 1
+    if (spec > bestSpec || (spec === bestSpec && bestSpec > 0 && r.q > bestQ)) {
+      bestSpec = spec
+      bestQ = r.q
+    }
+  }
+  return bestSpec > 0 ? { q: bestQ, spec: bestSpec } : { q: 0, spec: 0 }
+}
+
+/**
  * Negotiates concrete output image format and Vary header behavior from `f_<fmt>` + HTTP `Accept`.
  */
 export function negotiateFormat(requestedFormat = 'auto', acceptHeader = '') {
   const req = String(requestedFormat || 'auto').toLowerCase()
   if (req === 'auto') {
-    const accept = String(acceptHeader || '').toLowerCase()
-    if (accept.includes('image/avif')) return { ...FORMAT_META.avif, varyAccept: true }
-    if (accept.includes('image/webp')) return { ...FORMAT_META.webp, varyAccept: true }
-    return { ...FORMAT_META.jpeg, varyAccept: true }
+    const ranges = parseAcceptHeader(acceptHeader)
+    if (!ranges.length) return { ...FORMAT_META.jpeg, varyAccept: true }
+
+    const candidates = [
+      { key: 'avif', explicitPref: 3, wildcardPref: 1, ...acceptMatchForMime(ranges, FORMAT_META.avif.mimeType) },
+      { key: 'webp', explicitPref: 2, wildcardPref: 2, ...acceptMatchForMime(ranges, FORMAT_META.webp.mimeType) },
+      { key: 'jpeg', explicitPref: 1, wildcardPref: 3, ...acceptMatchForMime(ranges, FORMAT_META.jpeg.mimeType) },
+    ].filter(c => c.q > 0)
+
+    if (!candidates.length) {
+      throw new TransformError('not_acceptable', 'No acceptable output format matched Accept header', 406)
+    }
+    candidates.sort((a, b) => {
+      if (b.q !== a.q) return b.q - a.q
+      if (b.spec !== a.spec) return b.spec - a.spec
+      return a.spec === 3 ? b.explicitPref - a.explicitPref : b.wildcardPref - a.wildcardPref
+    })
+    return { ...FORMAT_META[candidates[0].key], varyAccept: true }
   }
   if (FORMAT_META[req]) {
     return { ...FORMAT_META[req], varyAccept: false }
@@ -571,7 +625,13 @@ export async function buildResponsiveDeliveryManifest({
   const cleanFormats = formats.map(f => String(f).toLowerCase()).filter(f => f !== 'auto' && ALLOWED_FORMATS.has(f))
   if (!cleanFormats.length) throw new TransformError('invalid_formats', 'At least one concrete output format is required')
 
-  const arParts = (aspectRatio || baseParsed.ar || '').split(':').map(Number)
+  let arParts = (aspectRatio || baseParsed.ar || '').split(':').map(Number)
+  if (!(arParts.length === 2 && arParts[0] > 0 && arParts[1] > 0) && baseParsed.w && baseParsed.h) {
+    let x = Math.abs(baseParsed.w), y = Math.abs(baseParsed.h)
+    while (y) { const t = y; y = x % y; x = t }
+    const g = x || 1
+    arParts = [baseParsed.w / g, baseParsed.h / g]
+  }
   const hasAr = arParts.length === 2 && arParts[0] > 0 && arParts[1] > 0
 
   const buildEntry = async (width, fmt) => {

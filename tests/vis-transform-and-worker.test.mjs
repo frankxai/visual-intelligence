@@ -79,10 +79,14 @@ test('parseTransformSpec enforces canonical order, named preset overrides, aspec
   }
 })
 
-test('negotiateFormat selects AVIF -> WebP -> JPEG for f_auto with Vary: Accept', () => {
+test('negotiateFormat selects AVIF -> WebP -> JPEG for f_auto with RFC 9110 Accept q-values and Vary: Accept', () => {
   assert.deepEqual(negotiateFormat('auto', 'image/avif,image/webp,*/*'), { format: 'avif', ext: 'avif', mimeType: 'image/avif', varyAccept: true })
   assert.deepEqual(negotiateFormat('auto', 'image/webp,image/png'), { format: 'webp', ext: 'webp', mimeType: 'image/webp', varyAccept: true })
   assert.deepEqual(negotiateFormat('auto', 'image/png,*/*'), { format: 'jpeg', ext: 'jpeg', mimeType: 'image/jpeg', varyAccept: true })
+  assert.deepEqual(negotiateFormat('auto', 'image/avif;q=0,image/webp;q=1'), { format: 'webp', ext: 'webp', mimeType: 'image/webp', varyAccept: true })
+  assert.deepEqual(negotiateFormat('auto', 'image/webp;q=0.5,image/avif;q=0.9'), { format: 'avif', ext: 'avif', mimeType: 'image/avif', varyAccept: true })
+  assert.deepEqual(negotiateFormat('auto', 'image/avif;q=0,image/webp;q=0,*/*;q=0.8'), { format: 'jpeg', ext: 'jpeg', mimeType: 'image/jpeg', varyAccept: true })
+  assert.throws(() => negotiateFormat('auto', 'image/avif;q=0,image/webp;q=0,image/jpeg;q=0'), err => err instanceof TransformError && err.status === 406)
   assert.deepEqual(negotiateFormat('png', 'image/avif'), { format: 'png', ext: 'png', mimeType: 'image/png', varyAccept: false })
 
   const parsed = parseTransformSpec('t_og_card,dpr_2,e_grayscale')
@@ -212,4 +216,13 @@ test('buildResponsiveDeliveryManifest generates signed AVIF/WebP/JPEG picture so
   assert.equal(manifest.sources[0].format, 'avif')
   assert.match(manifest.sources[0].srcset, /480w.*960w/)
   assert.equal(manifest.img.height, Math.round((manifest.img.width * 9) / 16))
+
+  const presetManifest = await buildResponsiveDeliveryManifest({
+    sha256: SHA,
+    preset: 'hero_desktop',
+    widths: [480, 960],
+    formats: ['webp'],
+  })
+  assert.equal(presetManifest.aspectRatio, '16:9')
+  assert.equal(presetManifest.sources[0].urls[0].spec, 'c_fill,w_480,h_270,g_auto,q_auto,f_webp')
 })
