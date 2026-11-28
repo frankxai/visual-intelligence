@@ -1148,7 +1148,9 @@ function toolGetCharacterCanonBrief(args = {}) {
       tasteDirectives: directives,
       identityReceipt: args.identity_receipt || args.identityReceipt || null,
     })
-||||||| parent of 37f325c (feat(mcp): expose get_asset_sources and get_asset_preview)
+  })
+}
+
 // ---------------------------------------------------------------------------
 // Catalog read tools. A read-only projection over the existing local index:
 // declared library roots are the sources, asset_rendition holds thumbs and
