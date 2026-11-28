@@ -6,7 +6,7 @@ export const DEFAULT_R2_BUCKET = 'starlight-media-private'
 export const DEFAULT_DRIVE_VAULT_ROOT = 'Google Drive/Starlight Creative Vault'
 
 const SHA256_RE = /^[a-f0-9]{64}$/
-const SAFE_KEY_RE = /^(masters|renditions|test)\/[A-Za-z0-9._\-/]{1,300}$/
+const SAFE_KEY_RE = /^(masters|renditions|derived|test)\/[A-Za-z0-9._\-/]{1,300}$/
 const FORBIDDEN_HOST_RE = /(?:^|\.)(?:workers|r2)\.dev$/i
 
 /**
@@ -66,6 +66,12 @@ export function validateUploadKey(key, expectedSha256) {
       const validPreview = renditionKey(expectedSha256, 'preview')
       if (key !== validThumb && key !== validPreview) {
         return { valid: false, reason: 'rendition_key_sha256_mismatch' }
+      }
+    }
+    if (key.startsWith('derived/')) {
+      const derivedRe = new RegExp(`^derived/${expectedSha256.slice(0, 2)}/${expectedSha256}\\.[a-f0-9]{16}\\.(avif|webp|jpg|jpeg|png)$`)
+      if (!derivedRe.test(key)) {
+        return { valid: false, reason: 'derived_key_sha256_mismatch' }
       }
     }
   }

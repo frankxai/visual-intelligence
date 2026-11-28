@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://visualintelligence.dev/schemas/vis-structured-metadata.schema.json",
+  "title": "VIS Structured Asset Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "brand": { "type": "string", "enum": ["frankx", "arcanea", "starlight", "gencreator", "music", "estate", "fixture"] },
+    "content_pillar": { "type": "string", "enum": ["hero", "character-canon", "editorial", "social", "product", "album-art", "diagram", "research"] },
+    "campaign": { "type": "string", "maxLength": 120 },
+    "character_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-_]{1,119}$" },
+    "character_outfit": { "type": "string", "maxLength": 120 },
+    "arcanea_gate": { "type": "string", "enum": ["foundation", "flow", "fire", "heart", "voice", "sight", "crown", "starweave", "unity", "source"] },
+    "arcanea_house": { "type": "string", "enum": ["lumina", "nero", "pyros", "aqualis", "terran", "ventis", "aetheris"] },
+    "aspect_intent": { "type": "string", "enum": ["square", "landscape", "portrait", "ultrawide", "vertical-story"] },
+    "usage_channels": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["website", "og-social", "newsletter", "youtube", "x", "linkedin", "music-cover", "print", "docs"] }
+    },
+    "license_expiry": { "type": "string", "format": "date-time" },
+    "qa_score": { "type": "integer", "minimum": 0, "maximum": 30 },
+    "alt_text": { "type": "string", "maxLength": 500 },
+    "negative_taste_flags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "enum": ["plastic-skin", "blurry", "hallucinated-text", "all-caps-heading", "purple-gradient-slop", "off-model", "watermarked", "cropped-face"] }
+    }
+  }
+}

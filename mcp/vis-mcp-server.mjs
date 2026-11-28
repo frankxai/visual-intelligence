@@ -65,6 +65,27 @@ import {
   tasteLedgerPath,
 } from '../core/vis-core.mjs'
 import {
+  NAMED_TRANSFORMS,
+  TRANSFORM_LIMITS,
+  parseTransformSpec,
+  negotiateFormat,
+  computeSpecHash,
+  derivedKey,
+  toCloudflareImageTransform,
+  createSignedTransformUrl,
+  buildResponsiveDeliveryManifest,
+} from '../core/vis-transform.mjs'
+import {
+  DEFAULT_METADATA_FIELDS,
+  DEFAULT_CONDITIONAL_RULES,
+  DEFAULT_UPLOAD_PRESETS,
+  validateStructuredMetadata,
+  planDerivativePurge,
+  buildCharacterCanonBrief,
+} from '../core/vis-dam-layers.mjs'
+import { planContentAddressedR2Intake } from '../core/adapters/cloudflare-r2-adapter.mjs'
+import { resolvePrivateWorkerBase } from '../core/vis-r2-dam-plan.mjs'
+import {
   decideProposal,
   getLibraryAsset,
   ingestLibrary,
@@ -83,6 +104,7 @@ const RIGHTS_ENABLED = process.env.VIS_ENABLE_RIGHTS === '1'
 const PUBLISH_ENABLED = process.env.VIS_ENABLE_PUBLISH === '1'
 const LIBRARY_ROOTS = resolveLibraryRoots(ROOT, CONFIG).map(r => r.path)
 const MCP_PROTOCOL_VERSION = process.env.VIS_MCP_PROTOCOL_VERSION || '2025-06-18'
+const MCP_MODE = process.env.VIS_MCP_MODE === 'dynamic' ? 'dynamic' : 'full'
 const ALLOWED_ROOTS = [
   ROOT,
   ...(process.env.VIS_ALLOWED_ROOTS || '').split(path.delimiter).filter(Boolean),
@@ -780,6 +802,346 @@ function toolCompareAssetPlacements(args = {}) {
   }))
 }
 
+function resolveShaFromArgs(args = {}) {
+  const directSha = args.sha256
+  if (typeof directSha === 'string' && /^[a-f0-9]{64}$/.test(directSha)) {
+    return { sha256: directSha, asset_id: args.asset_id || args.assetId || null }
+  }
+  const ref = args.asset_id || args.assetId || args.uri || args.path
+  if (!ref) throw new Error('Provide sha256 or asset_id/uri/path')
+  return withDb(db => {
+    const asset = getAsset(db, ref)
+    if (!asset) throw new Error(`Asset not found: ${ref}`)
+    const sha = asset.sha256 || asset.source_hash || asset.versions?.[0]?.sha256
+    if (!sha || !/^[a-f0-9]{64}$/.test(sha)) {
+      throw new Error(`Asset ${asset.asset_id} has no valid 64-hex sha256`)
+    }
+    return { sha256: sha, asset_id: asset.asset_id }
+  })
+}
+
+const TOOL_CATEGORY_MAP = {
+  dam_capabilities: 'governance',
+  dam_discover_tools: 'governance',
+  dam_describe_tool: 'governance',
+  'visual.identity.resolve': 'character',
+  'visual.character.resolve': 'character',
+  get_character_canon_brief: 'character',
+  search_assets: 'search',
+  get_asset: 'search',
+  trace_asset: 'search',
+  map_usage: 'search',
+  find_duplicates: 'search',
+  find_orphans: 'search',
+  find_similar_assets: 'search',
+  library_search: 'search',
+  library_get_asset: 'search',
+  library_find_placements: 'search',
+  list_smart_collections: 'search',
+  evaluate_smart_collection: 'search',
+  list_saved_searches: 'search',
+  save_search: 'search',
+  list_transform_presets: 'transform',
+  build_transform_url: 'transform',
+  build_responsive_delivery: 'transform',
+  list_derivative_presets: 'transform',
+  plan_asset_derivatives: 'transform',
+  plan_derivative_purge: 'transform',
+  list_structured_metadata_schemas: 'metadata',
+  validate_structured_metadata: 'metadata',
+  annotate_asset: 'metadata',
+  bulk_annotate_assets: 'metadata',
+  batch_rename_assets: 'metadata',
+  record_generation_provenance: 'metadata',
+  list_upload_presets: 'storage',
+  plan_r2_intake: 'storage',
+  plan_storage_upload: 'storage',
+  route_asset_destination: 'storage',
+  get_storage_status: 'storage',
+  plan_creative_vault: 'storage',
+  init_creative_vault: 'storage',
+  scan_gdrive_vault: 'storage',
+  build_artifacts_curation_packet: 'storage',
+  library_ingest: 'storage',
+  import_eagle_library: 'storage',
+  export_cloudinary_manifest: 'storage',
+  export_nft_metadata_report: 'storage',
+  review_assets: 'curation',
+  score_asset: 'curation',
+  score_collection: 'curation',
+  create_curation_packet: 'curation',
+  list_asset_action_recipes: 'curation',
+  run_asset_action_recipe: 'curation',
+  library_list_proposals: 'curation',
+  library_propose: 'curation',
+  library_decide_proposal: 'curation',
+  list_placement_frames: 'curation',
+  compare_asset_placements: 'curation',
+  record_curation_feedback: 'curation',
+  undo_curation_feedback: 'curation',
+  drain_feedback_outbox: 'curation',
+  get_taste_directives: 'curation',
+  record_publication: 'governance',
+  list_music_releases: 'curation',
+  create_music_release_packet: 'curation',
+}
+
+const READ_ONLY_TOOL_NAMES = new Set([
+  'dam_capabilities', 'dam_discover_tools', 'dam_describe_tool',
+  'visual.identity.resolve', 'visual.character.resolve', 'library_search', 'library_get_asset', 'library_find_placements',
+  'library_list_proposals', 'list_placement_frames', 'compare_asset_placements',
+  'search_assets', 'get_asset', 'trace_asset', 'map_usage', 'find_duplicates', 'find_orphans',
+  'find_similar_assets', 'score_asset', 'score_collection', 'create_curation_packet',
+  'list_asset_action_recipes', 'list_derivative_presets', 'plan_asset_derivatives', 'plan_derivatives',
+  'list_smart_collections', 'evaluate_smart_collection', 'get_smart_collection', 'list_saved_searches',
+  'list_music_releases', 'create_music_release_packet', 'plan_creative_vault',
+  'export_cloudinary_manifest', 'export_nft_metadata_report', 'plan_storage_upload',
+  'route_asset_destination', 'get_storage_status', 'scan_gdrive_vault', 'build_artifacts_curation_packet',
+  'get_taste_directives', 'list_transform_presets', 'build_transform_url', 'build_responsive_delivery',
+  'list_structured_metadata_schemas', 'validate_structured_metadata', 'list_upload_presets',
+  'plan_r2_intake', 'plan_derivative_purge', 'get_character_canon_brief',
+  'vis_search', 'vis_report', 'vis_audit', 'vis_suggest', 'vis_intelligence',
+])
+
+const DYNAMIC_CORE_TOOL_NAMES = new Set([
+  'dam_discover_tools',
+  'dam_describe_tool',
+  'dam_capabilities',
+  'visual.identity.resolve',
+  'search_assets',
+  'get_asset',
+  'build_transform_url',
+  'build_responsive_delivery',
+  'plan_r2_intake',
+  'get_character_canon_brief',
+  'validate_structured_metadata',
+  'get_taste_directives',
+])
+
+function toolDamCapabilities() {
+  return {
+    server: 'vis-mcp',
+    version: '2.1.0',
+    mcpMode: MCP_MODE,
+    totalTools: TOOLS.length,
+    gates: {
+      writesEnabled: WRITE_ENABLED,
+      rightsEnabled: RIGHTS_ENABLED,
+      publishEnabled: PUBLISH_ENABLED,
+      signingConfigured: Boolean(process.env.VIS_MEDIA_SIGNING_KEY),
+    },
+    layers: {
+      transforms: {
+        presetCount: Object.keys(NAMED_TRANSFORMS).length,
+        presets: Object.keys(NAMED_TRANSFORMS),
+        limits: TRANSFORM_LIMITS,
+      },
+      structuredMetadata: {
+        fieldCount: Object.keys(DEFAULT_METADATA_FIELDS).length,
+        fields: Object.keys(DEFAULT_METADATA_FIELDS),
+        ruleCount: DEFAULT_CONDITIONAL_RULES.length,
+      },
+      uploadPresets: {
+        count: Object.keys(DEFAULT_UPLOAD_PRESETS).length,
+        presets: Object.keys(DEFAULT_UPLOAD_PRESETS),
+        rightsLock: 'unknown',
+      },
+      storage: {
+        canonicalR2Bucket: 'starlight-media-private',
+        immutablePrefixes: ['masters/', 'renditions/'],
+        purgeablePrefixes: ['derived/', 'test/'],
+      },
+    },
+  }
+}
+
+function toolDamDiscoverTools(args = {}) {
+  const query = String(args.query || '').trim().toLowerCase()
+  const category = String(args.category || 'all').trim().toLowerCase()
+  const limit = Math.max(1, Math.min(100, Number(args.limit || 25)))
+  const words = query.split(/\s+/).filter(Boolean)
+
+  const matches = []
+  for (const t of TOOLS) {
+    const toolCat = TOOL_CATEGORY_MAP[t.name] || 'other'
+    if (category !== 'all' && toolCat !== category) continue
+    const hay = `${t.name} ${toolCat} ${t.description || ''}`.toLowerCase()
+    if (words.length && !words.every(w => hay.includes(w))) continue
+    matches.push({
+      name: t.name,
+      category: toolCat,
+      readOnly: READ_ONLY_TOOL_NAMES.has(t.name),
+      summary: String(t.description || '').slice(0, 180),
+    })
+  }
+
+  return {
+    mcpMode: MCP_MODE,
+    totalCatalogTools: TOOLS.length,
+    matchedCount: matches.length,
+    tools: matches.slice(0, limit),
+  }
+}
+
+function toolDamDescribeTool(args = {}) {
+  const requested = [
+    ...(Array.isArray(args.names) ? args.names : []),
+    args.name,
+  ].filter(Boolean)
+  if (!requested.length) throw new Error('Provide name or names[]')
+
+  const described = []
+  const missing = []
+  for (const name of requested.slice(0, 20)) {
+    const found = TOOLS.find(t => t.name === name)
+    if (!found) {
+      missing.push(name)
+      continue
+    }
+    described.push({
+      name: found.name,
+      category: TOOL_CATEGORY_MAP[found.name] || 'other',
+      readOnly: READ_ONLY_TOOL_NAMES.has(found.name),
+      requiresWriteGate: !READ_ONLY_TOOL_NAMES.has(found.name),
+      description: found.description,
+      inputSchema: found.inputSchema,
+    })
+  }
+
+  return { tools: described, missing }
+}
+
+function toolListTransformPresets() {
+  return {
+    limits: TRANSFORM_LIMITS,
+    presets: NAMED_TRANSFORMS,
+  }
+}
+
+async function toolBuildTransformUrl(args = {}) {
+  const { sha256, asset_id } = resolveShaFromArgs(args)
+  const rawSpec = args.preset
+    ? (args.spec ? `t_${args.preset},${args.spec}` : `t_${args.preset}`)
+    : (args.spec || 't_preview')
+  const parsed = parseTransformSpec(rawSpec)
+  const negotiated = negotiateFormat(parsed.f, args.accept || 'image/webp,image/*')
+  const specHash = await computeSpecHash(parsed.canonical, negotiated.format)
+  const cacheKey = derivedKey(sha256, specHash, negotiated.ext)
+  const workerBase = resolvePrivateWorkerBase(args.worker_base || args.workerBase || process.env.VIS_MEDIA_WORKER_BASE || null)
+  const signingKey = args.signing_key || args.signingKey || process.env.VIS_MEDIA_SIGNING_KEY || null
+
+  let url = workerBase ? `${workerBase}/t/${sha256}/${parsed.canonical}` : `/t/${sha256}/${parsed.canonical}`
+  let signed = false
+  let exp = null
+  if (signingKey) {
+    const res = await createSignedTransformUrl({
+      workerBase,
+      sha256,
+      spec: parsed.canonical,
+      signingKey,
+      ttlSeconds: args.ttl_seconds || args.ttlSeconds || 3600,
+    })
+    url = res.url
+    signed = true
+    exp = res.exp
+  }
+
+  return {
+    asset_id,
+    sha256,
+    canonical: parsed.canonical,
+    parsed,
+    negotiated,
+    specHash,
+    derivedKey: cacheKey,
+    cloudflareImages: toCloudflareImageTransform(parsed, negotiated),
+    signed,
+    exp,
+    url,
+  }
+}
+
+async function toolBuildResponsiveDelivery(args = {}) {
+  const { sha256, asset_id } = resolveShaFromArgs(args)
+  const workerBase = resolvePrivateWorkerBase(args.worker_base || args.workerBase || process.env.VIS_MEDIA_WORKER_BASE || null)
+  const signingKey = args.signing_key || args.signingKey || process.env.VIS_MEDIA_SIGNING_KEY || null
+  const manifest = await buildResponsiveDeliveryManifest({
+    sha256,
+    workerBase,
+    signingKey,
+    preset: args.preset || null,
+    baseSpec: args.base_spec || args.baseSpec || args.spec || null,
+    widths: Array.isArray(args.widths) ? args.widths : undefined,
+    formats: Array.isArray(args.formats) ? args.formats : undefined,
+    sizes: args.sizes || '100vw',
+    aspectRatio: args.aspect_ratio || args.aspectRatio || null,
+    ttlSeconds: args.ttl_seconds || args.ttlSeconds || 3600,
+  })
+  return { asset_id, ...manifest }
+}
+
+function toolListStructuredMetadataSchemas() {
+  return {
+    fields: DEFAULT_METADATA_FIELDS,
+    conditionalRules: DEFAULT_CONDITIONAL_RULES,
+  }
+}
+
+function toolValidateStructuredMetadata(args = {}) {
+  return validateStructuredMetadata(args.metadata || {}, {
+    strict: args.strict === true,
+  })
+}
+
+function toolListUploadPresets() {
+  return {
+    rightsLock: 'unknown',
+    approvalLock: 'candidate',
+    presets: DEFAULT_UPLOAD_PRESETS,
+  }
+}
+
+function toolPlanR2Intake(args = {}) {
+  return planContentAddressedR2Intake({
+    preset: args.preset || 'brand_hero_intake',
+    filename: args.filename || 'intake.png',
+    mimeType: args.mime_type || args.mimeType || 'image/png',
+    byteSize: Number(args.byte_size ?? args.byteSize ?? 0),
+    sha256: args.sha256 || '',
+    metadata: args.metadata || {},
+    bucket: args.bucket || 'starlight-media-private',
+    workerBase: args.worker_base || args.workerBase || process.env.VIS_MEDIA_WORKER_BASE || null,
+  })
+}
+
+function toolPlanDerivativePurge(args = {}) {
+  return planDerivativePurge({
+    sha256: args.sha256 || null,
+    derivatives: Array.isArray(args.derivatives) ? args.derivatives : [],
+    specFilter: args.spec_filter || args.specFilter || null,
+    reason: args.reason || 'cache-invalidation',
+  })
+}
+
+function toolGetCharacterCanonBrief(args = {}) {
+  const characterId = args.character_id || args.characterId || args.character
+  if (!characterId) throw new Error('character_id is required')
+  return withDb(db => {
+    const assets = searchAssets(db, { maxResults: 500 })
+    const taste = getTasteDirectives(db, { brand: args.brand || undefined, limit: 100 })
+    const directives = Array.isArray(taste.entries)
+      ? taste.entries
+      : [...(taste.positive || []), ...(taste.negative || [])]
+    return buildCharacterCanonBrief({
+      characterId,
+      brand: args.brand || null,
+      assets,
+      tasteDirectives: directives,
+      identityReceipt: args.identity_receipt || args.identityReceipt || null,
+    })
+  })
+}
+
 const TOOL_HANDLERS = {
   library_search: toolLibrarySearch,
   library_get_asset: toolLibraryGetAsset,
@@ -836,6 +1198,18 @@ const TOOL_HANDLERS = {
   undo_curation_feedback: toolUndoCurationFeedback,
   drain_feedback_outbox: toolDrainFeedbackOutbox,
   get_taste_directives: toolGetTasteDirectives,
+  dam_capabilities: toolDamCapabilities,
+  dam_discover_tools: toolDamDiscoverTools,
+  dam_describe_tool: toolDamDescribeTool,
+  list_transform_presets: toolListTransformPresets,
+  build_transform_url: toolBuildTransformUrl,
+  build_responsive_delivery: toolBuildResponsiveDelivery,
+  list_structured_metadata_schemas: toolListStructuredMetadataSchemas,
+  validate_structured_metadata: toolValidateStructuredMetadata,
+  list_upload_presets: toolListUploadPresets,
+  plan_r2_intake: toolPlanR2Intake,
+  plan_derivative_purge: toolPlanDerivativePurge,
+  get_character_canon_brief: toolGetCharacterCanonBrief,
 
   // Backward-compatible legacy VIS tools.
   vis_search: toolSearchAssets,
@@ -1207,6 +1581,69 @@ const TOOLS = [
     polarity: stringProp('Optional polarity filter: positive, negative, or neutral'),
     limit: numberProp('Maximum doctrines to retrieve (default 50)'),
   }),
+  tool('dam_capabilities', 'Inspect live VIS DAM capability matrix across edge transforms, structured metadata, upload presets, governance gates, and R2/Supabase layers. Read-only.', {}),
+  tool('dam_discover_tools', 'Progressive tool discovery: filter VIS DAM tools by category or keyword without inflating LLM context. Read-only.', {
+    query: stringProp('Optional keyword search across tool names and descriptions'),
+    category: stringProp('search, transform, metadata, character, storage, curation, governance, or all'),
+    limit: numberProp('Maximum matching tools (default 25)'),
+  }),
+  tool('dam_describe_tool', 'Return full JSON inputSchema and gate requirements for one or more VIS DAM tools discovered via dam_discover_tools. Read-only.', {
+    name: stringProp('Single tool name to inspect'),
+    names: { type: 'array', items: { type: 'string' }, description: 'Multiple tool names to inspect (max 20)' },
+  }),
+  tool('list_transform_presets', 'List all 12 Cloudinary-parity edge transformation presets and DoS safety limits. Read-only.', {}),
+  tool('build_transform_url', 'Parse/validate a Cloudinary-style transform spec, compute Cloudflare Images options and derived R2 cache key, and sign the URL when VIS_MEDIA_SIGNING_KEY is present. Read-only.', {
+    sha256: stringProp('64-hex asset sha256 (optional if asset_id/uri/path is provided)'),
+    asset_id: stringProp('VIS asset_id'),
+    uri: stringProp('visual://asset/{asset_id}'),
+    path: stringProp('Local or relative asset path'),
+    preset: stringProp('Optional named transform preset, e.g. hero_desktop, og_card, lore_card'),
+    spec: stringProp('Cloudinary-style transform spec, e.g. c_fill,w_1200,h_630,g_auto,q_auto,f_auto'),
+    accept: stringProp('Optional HTTP Accept header for f_auto negotiation (default image/webp,image/*)'),
+    worker_base: stringProp('Optional custom HTTPS vis-media origin (rejects workers.dev / r2.dev)'),
+    ttl_seconds: numberProp('Signed URL TTL in seconds (default 3600)'),
+  }),
+  tool('build_responsive_delivery', 'Generate a multi-format AVIF/WebP/JPEG responsive <picture> and srcset delivery manifest for a VIS asset. Read-only.', {
+    sha256: stringProp('64-hex asset sha256 (optional if asset_id/uri/path is provided)'),
+    asset_id: stringProp('VIS asset_id'),
+    uri: stringProp('visual://asset/{asset_id}'),
+    path: stringProp('Local or relative asset path'),
+    preset: stringProp('Optional named preset'),
+    spec: stringProp('Optional base transform spec'),
+    widths: { type: 'array', items: { type: 'number' }, description: 'Responsive widths (default [480,768,1200,1600])' },
+    formats: { type: 'array', items: { type: 'string' }, description: 'Output formats (default ["avif","webp","jpeg"])' },
+    sizes: stringProp('CSS sizes attribute (default 100vw)'),
+    aspect_ratio: stringProp('Optional aspect ratio like 16:9 or 4:5'),
+    worker_base: stringProp('Optional custom HTTPS vis-media origin'),
+    ttl_seconds: numberProp('Signed URL TTL in seconds'),
+  }),
+  tool('list_structured_metadata_schemas', 'List typed VIS structured metadata fields and conditional brand/character validation rules. Read-only.', {}),
+  tool('validate_structured_metadata', 'Validate and normalize structured asset metadata against typed schemas and conditional rules before upload or DB save. Read-only.', {
+    metadata: { type: 'object', description: 'Key/value metadata payload to validate' },
+    strict: booleanProp('Reject unknown fields when true'),
+  }),
+  tool('list_upload_presets', 'List VIS R2 upload presets. Every preset hard-locks rights_default="unknown" and approval_default="candidate" per Issue #41. Read-only.', {}),
+  tool('plan_r2_intake', 'Dry-run content-addressed Cloudflare R2 upload planner for an intake file and metadata payload. Never uploads bytes or sets rights. Read-only.', {
+    preset: stringProp('brand_hero_intake, character_canon_intake, social_derivative_intake, music_cover_intake, or raw_master_archive'),
+    filename: stringProp('Candidate file name'),
+    mime_type: stringProp('Candidate MIME type'),
+    byte_size: numberProp('Candidate byte size'),
+    sha256: stringProp('64-hex SHA-256 checksum'),
+    metadata: { type: 'object', description: 'Structured metadata for preset validation' },
+    bucket: stringProp('Target private R2 bucket (default starlight-media-private)'),
+    worker_base: stringProp('Optional custom HTTPS vis-media origin'),
+  }),
+  tool('plan_derivative_purge', 'Plan safe cache invalidation of derived/ R2 objects while strictly blocking DELETE on immutable masters/ and renditions/. Read-only dry-run.', {
+    sha256: stringProp('Optional 64-hex parent sha256 scope'),
+    derivatives: { type: 'array', items: { type: 'string' }, description: 'Candidate R2 keys or derivative objects to evaluate' },
+    spec_filter: stringProp('Optional transform spec filter'),
+    reason: stringProp('Purge rationale'),
+  }),
+  tool('get_character_canon_brief', 'Build an agent-ready Character Canon & Negative-Taste briefing combining approved masters, rejected drift examples, and estate taste doctrines. Ready only with a resolved identity receipt. Read-only.', {
+    character_id: stringProp('Character identifier slug'),
+    brand: stringProp('Optional brand scope (e.g. arcanea, frankx, starlight)'),
+    identity_receipt: { type: 'object', description: 'Optional resolved visual.identity.resolve receipt' },
+  }),
   tool('vis_search', 'Legacy alias for search_assets.', {
     query: stringProp('Search query'),
     mood: stringProp('Mood filter'),
@@ -1261,6 +1698,30 @@ function listResources() {
     return {
       resources: [
         {
+          uri: 'visual://dam/capabilities',
+          name: 'VIS DAM Capabilities',
+          description: 'Live DAM capability matrix, gates, presets, and storage boundaries.',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'visual://transform/presets',
+          name: 'VIS Transform Presets',
+          description: 'Cloudinary-parity named transformation presets and DoS limits.',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'visual://dam/metadata-schemas',
+          name: 'VIS Structured Metadata Schemas',
+          description: 'Typed structured metadata fields and conditional validation rules.',
+          mimeType: 'application/json',
+        },
+        {
+          uri: 'visual://dam/upload-presets',
+          name: 'VIS Upload Presets',
+          description: 'Content-addressed R2 upload presets locked to rights=unknown.',
+          mimeType: 'application/json',
+        },
+        {
           uri: 'visual://brand/starlight/approved',
           name: 'Approved Starlight Assets',
           description: 'Approved Starlight/SIS brand assets if marked approved.',
@@ -1278,6 +1739,10 @@ function listResources() {
 }
 
 function readResource(uri) {
+  if (uri === 'visual://dam/capabilities') return resourceContents(uri, toolDamCapabilities())
+  if (uri === 'visual://transform/presets') return resourceContents(uri, toolListTransformPresets())
+  if (uri === 'visual://dam/metadata-schemas') return resourceContents(uri, toolListStructuredMetadataSchemas())
+  if (uri === 'visual://dam/upload-presets') return resourceContents(uri, toolListUploadPresets())
   return withDb(db => {
     const parsed = parseVisualUri(uri)
     if (!parsed) throw new Error(`Unsupported VIS resource: ${uri}`)
@@ -1405,13 +1870,16 @@ rl.on('line', async (line) => {
       send(id, {
         protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: { tools: {}, resources: {} },
-        serverInfo: { name: 'vis-mcp', version: '2.0.0', root: ROOT, readOnlyDefault: !WRITE_ENABLED, rightsEnabled: RIGHTS_ENABLED, publishEnabled: PUBLISH_ENABLED },
+        serverInfo: { name: 'vis-mcp', version: '2.1.0', root: ROOT, mcpMode: MCP_MODE, readOnlyDefault: !WRITE_ENABLED, rightsEnabled: RIGHTS_ENABLED, publishEnabled: PUBLISH_ENABLED },
       })
       return
     }
     if (method === 'notifications/initialized') return
     if (method === 'tools/list') {
-      send(id, { tools: TOOLS })
+      const visibleTools = MCP_MODE === 'dynamic'
+        ? TOOLS.filter(t => DYNAMIC_CORE_TOOL_NAMES.has(t.name))
+        : TOOLS
+      send(id, { tools: visibleTools })
       return
     }
     if (method === 'tools/call') {

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://visualintelligence.dev/schemas/vis-transform.schema.json",
+  "title": "VIS Cloudinary-Parity Edge Transformation Spec",
+  "type": "object",
+  "required": ["canonical", "dpr", "q", "f"],
+  "additionalProperties": false,
+  "properties": {
+    "preset": {
+      "type": "string",
+      "enum": [
+        "thumb", "preview", "hero_desktop", "hero_mobile", "og_card",
+        "avatar_sm", "avatar_lg", "lore_card", "product_card",
+        "square_1080", "cover_3000", "lqip"
+      ]
+    },
+    "c": { "type": "string", "enum": ["fill", "fit", "scale", "crop", "pad", "thumb", "limit"] },
+    "w": { "type": "integer", "minimum": 1, "maximum": 4096 },
+    "h": { "type": "integer", "minimum": 1, "maximum": 4096 },
+    "ar": { "type": "string", "pattern": "^[1-9][0-9]{0,2}:[1-9][0-9]{0,2}$" },
+    "g": {
+      "type": "string",
+      "enum": ["auto", "center", "face", "north", "south", "east", "west", "north_east", "north_west", "south_east", "south_west"]
+    },
+    "dpr": { "type": "number", "enum": [1, 1.5, 2, 3] },
+    "q": {
+      "oneOf": [
+        { "const": "auto" },
+        { "type": "integer", "minimum": 10, "maximum": 100 }
+      ]
+    },
+    "f": { "type": "string", "enum": ["auto", "avif", "webp", "jpeg", "png"] },
+    "e": { "type": "string", "pattern": "^(grayscale|blur(:([1-9][0-9]?|100))?|sharpen(:([1-9]|10))?)$" },
+    "b": { "type": "string", "pattern": "^(transparent|[0-9a-f]{6})$" },
+    "canonical": { "type": "string", "minLength": 1, "maxLength": 256 }
+  }
+}
