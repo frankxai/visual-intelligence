@@ -83,6 +83,31 @@ export function createSupabaseWorkspaceCatalog(config) {
       const rows = await read('vis_catalog_search', { ...scope(context), select:fields, asset_id:'eq.' + assetId, ...(versionId ? {version_id:'eq.' + versionId} : {}), order:'observed_at.desc', limit:1 })
       return rows[0] ? project(rows[0]) : null
     },
-    async preview() { return null }, // Enroll an authorized rendition resolver before exposing any R2 bytes.
+    async listDerivatives(assetId, versionId, context) {
+      await describe(context)
+      const params = { ...scope(context), select: 'asset_id,version_id,parent_sha256,spec_hash,transform_spec,format,width,height,byte_size,r2_object_key,created_at', asset_id: 'eq.' + assetId, order: 'created_at.desc', limit: 50 }
+      if (versionId) params.version_id = 'eq.' + versionId
+      return read('vis_asset_derivatives', params)
+    },
+    async listMetadataFields(context) {
+      if (context.workspaceId !== config.workspaceId) throw new CatalogError('workspace_forbidden', 403)
+      return read('vis_structured_metadata_fields', { workspace_id: 'eq.' + config.workspaceId, select: 'field_id,field_type,required,allowed_values,validation_json', order: 'field_id.asc', limit: 100 })
+    },
+    async getCharacterProfile(characterId, context) {
+      if (context.workspaceId !== config.workspaceId) throw new CatalogError('workspace_forbidden', 403)
+      const rows = await read('vis_character_profiles', { workspace_id: 'eq.' + config.workspaceId, character_id: 'eq.' + characterId, select: 'character_id,brand,display_name,canon_summary,canonical_master_sha256,style_directives,negative_taste_rules,updated_at', limit: 1 })
+      return rows[0] || null
+    },
+    async listUploadPresets(context) {
+      if (context.workspaceId !== config.workspaceId) throw new CatalogError('workspace_forbidden', 403)
+      return read('vis_upload_presets', { workspace_id: 'eq.' + config.workspaceId, select: 'preset_id,folder,allowed_mime_types,max_bytes,rights_default,approval_default,auto_transforms', order: 'preset_id.asc', limit: 50 })
+    },
+    async preview(assetId, versionId, context) {
+      if (typeof config.renditionResolver === 'function') {
+        if (context.workspaceId !== config.workspaceId) throw new CatalogError('workspace_forbidden', 403)
+        return config.renditionResolver(assetId, versionId, context)
+      }
+      return null // Enroll an authorized rendition resolver before exposing any R2 bytes.
+    },
   }
 }

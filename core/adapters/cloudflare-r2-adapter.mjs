@@ -2,6 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 import { getMimeType } from './vercel-blob-adapter.mjs'
+import { validateUploadKey, resolvePrivateWorkerBase, DEFAULT_R2_BUCKET } from '../vis-r2-dam-plan.mjs'
+import { evaluateUploadAgainstPreset } from '../vis-dam-layers.mjs'
 
 export function planCloudflareR2Upload(assets, options = {}) {
   const bucket = options.bucket || 'media-masters'
@@ -175,4 +177,153 @@ function hmac(key, str) {
 
 function slugify(value) {
   return String(value || 'asset').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'asset'
+}
+
+/**
+ * Generates an AWS S3v4 pre-signed URL for Cloudflare R2 without third-party SDK dependencies.
+ * Enforces VIS key hygiene and blocks DELETE against immutable `masters/` and `renditions/` prefixes.
+ */
+export function createR2PresignedUrl({
+  method = 'GET',
+  bucket = DEFAULT_R2_BUCKET,
+  key,
+  endpoint,
+  accountId,
+  accessKeyId,
+  secretAccessKey,
+  expiresIn = 300,
+  contentType = null,
+  contentSha256 = undefined,
+  now = new Date(),
+}) {
+  const upperMethod = String(method || 'GET').toUpperCase()
+  if (!['GET', 'HEAD', 'PUT', 'DELETE'].includes(upperMethod)) {
+    throw new Error(`Unsupported R2 presign HTTP method: ${upperMethod}`)
+  }
+  if (!key || typeof key !== 'string') {
+    throw new Error('R2 object key is required')
+  }
+  if (key.includes('\0') || key.includes('\\') || key.includes('..') || /%2e|%2f|%5c/i.test(key)) {
+    throw new Error(`Unsafe R2 object key rejected: ${key}`)
+  }
+  if (/^(masters|renditions|derived|test)\//.test(key)) {
+    const check = validateUploadKey(key, contentSha256)
+    if (!check.valid) {
+      throw new Error(`Invalid R2 key (${check.reason}): ${key}`)
+    }
+  }
+  if (upperMethod === 'DELETE' && (key.startsWith('masters/') || key.startsWith('renditions/'))) {
+    throw new Error(`DELETE presign refused for immutable prefix: ${key}`)
+  }
+
+  const baseEndpoint = endpoint || (accountId ? `https://${accountId}.r2.cloudflarestorage.com` : null)
+  if (!baseEndpoint) throw new Error('R2 endpoint or accountId is required')
+  const parsedEndpoint = new URL(baseEndpoint)
+  if (parsedEndpoint.protocol !== 'https:') {
+    throw new Error('R2 endpoint must use https:')
+  }
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error('accessKeyId and secretAccessKey are required to presign R2 URLs')
+  }
+
+  const cleanExpires = Math.max(1, Math.min(3600, Math.floor(Number(expiresIn) || 300)))
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '')
+  const dateStamp = amzDate.slice(0, 8)
+  const region = 'auto'
+  const service = 's3'
+  const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`
+  const encodedKey = key.split('/').map(seg => encodeURIComponent(seg)).join('/')
+  const canonicalUri = `/${encodeURIComponent(bucket)}/${encodedKey}`
+
+  const signedHeaderNames = ['host']
+  const headerLines = [`host:${parsedEndpoint.host}`]
+  const requiredHeaders = {}
+  if (contentType && upperMethod === 'PUT') {
+    signedHeaderNames.push('content-type')
+    headerLines.push(`content-type:${contentType}`)
+    requiredHeaders['content-type'] = contentType
+  }
+  if (contentSha256 && upperMethod === 'PUT') {
+    requiredHeaders['x-content-sha256'] = contentSha256
+  }
+  signedHeaderNames.sort()
+  headerLines.sort()
+
+  const signedHeaders = signedHeaderNames.join(';')
+  const canonicalHeaders = `${headerLines.join('\n')}\n`
+
+  const queryParams = [
+    ['X-Amz-Algorithm', 'AWS4-HMAC-SHA256'],
+    ['X-Amz-Credential', `${accessKeyId}/${credentialScope}`],
+    ['X-Amz-Date', amzDate],
+    ['X-Amz-Expires', String(cleanExpires)],
+    ['X-Amz-SignedHeaders', signedHeaders],
+  ].sort(([a], [b]) => a.localeCompare(b))
+
+  const canonicalQuery = queryParams
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&')
+
+  const canonicalRequest = `${upperMethod}\n${canonicalUri}\n${canonicalQuery}\n${canonicalHeaders}\n${signedHeaders}\nUNSIGNED-PAYLOAD`
+  const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${crypto.createHash('sha256').update(canonicalRequest).digest('hex')}`
+
+  const kDate = hmac(`AWS4${secretAccessKey}`, dateStamp)
+  const kRegion = hmac(kDate, region)
+  const kService = hmac(kRegion, service)
+  const kSigning = hmac(kService, 'aws4_request')
+  const signature = crypto.createHmac('sha256', kSigning).update(stringToSign).digest('hex')
+
+  const url = `${parsedEndpoint.origin}${canonicalUri}?${canonicalQuery}&X-Amz-Signature=${signature}`
+  const expiresAt = new Date(now.getTime() + cleanExpires * 1000).toISOString()
+
+  return {
+    method: upperMethod,
+    bucket,
+    key,
+    url,
+    expiresIn: cleanExpires,
+    expiresAt,
+    signedHeaders,
+    headers: requiredHeaders,
+  }
+}
+
+/**
+ * Dry-run planner for content-addressed Cloudflare R2 intake with upload preset & private Worker endpoint checks.
+ */
+export function planContentAddressedR2Intake({
+  preset = 'brand_hero_intake',
+  filename,
+  mimeType,
+  byteSize,
+  sha256,
+  metadata = {},
+  bucket = DEFAULT_R2_BUCKET,
+  workerBase = null,
+}) {
+  const normalizedBase = resolvePrivateWorkerBase(workerBase)
+  const evaluation = evaluateUploadAgainstPreset({
+    preset,
+    filename,
+    mimeType,
+    byteSize,
+    sha256,
+    metadata,
+    bucket,
+  })
+  const endpointPrefix = normalizedBase || ''
+  return {
+    schemaVersion: 'vis.r2-intake-plan.v1',
+    dryRun: true,
+    ...evaluation,
+    workerBase: normalizedBase,
+    putMasterEndpoint: evaluation.key ? `${endpointPrefix}/o/${evaluation.key}` : null,
+    transformPaths: evaluation.sha256
+      ? evaluation.autoTransforms.map(t => ({
+          preset: t.preset,
+          canonical: t.canonical,
+          path: `${endpointPrefix}/t/${evaluation.sha256}/${t.canonical}`,
+        }))
+      : [],
+  }
 }
